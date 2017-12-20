@@ -1,0 +1,31 @@
+# Random Files and Directories
+.*.swp
+._*
+.DS_Store
+.hg
+.lock-wscript
+.wafpickle-*
+config.gypi
+*.log
+*.ctxt
+*.class
+hs_err_pid*
+target/
+dist/
+
+# Development Repositories
+CVS
+.svn
+.git
+.npmrc
+node_modules/
+nbproject/
+
+# Package Files
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
