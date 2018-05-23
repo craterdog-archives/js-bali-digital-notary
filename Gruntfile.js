@@ -13,7 +13,7 @@ module.exports = function(grunt) {
       files: [
         'Gruntfile.js',
         '**/*.js',
-        '!node_modules/**/*.js'
+        '!node_modules/**/*.js'  // must be last in the list
       ],
       options: {
         node: true
@@ -55,7 +55,10 @@ module.exports = function(grunt) {
       },
       dist: {
         // concatenate the source files and place the result in destination
-        src: ['**/*.js', '!node_modules/**/*.js'],
+        src: [
+          '**/*.js',
+          '!node_modules/**/*.js'  // must be last in the list
+        ],
         dest: 'dist/<%= pkg.name %>.js'
       }
     },
@@ -81,6 +84,6 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-uglify');
 
   grunt.registerTask('build', 'Build the library.', ['clean:build', 'jshint', 'mochaTest', 'concat', 'uglify']);
-  grunt.registerTask('default', 'Default targets.', ['build']);
+  grunt.registerTask('default', 'The default task.', ['build']);
 
 };
