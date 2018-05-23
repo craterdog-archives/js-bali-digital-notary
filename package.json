@@ -3,10 +3,6 @@
   "version": "1.0.0",
   "description": "This library provides JavaScript based digital notary capability for the Bali Cloud OS™.",
   "main": "Gruntfile.js",
-  "scripts": {
-    "pretest": "generate-parser",
-    "test": "test-roundtrip"
-  },
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/craterdog-bali/js-bali-digital-notary.git"
@@ -23,18 +19,17 @@
   },
   "homepage": "https://github.com/craterdog-bali/js-bali-digital-notary#readme",
   "devDependencies": {
-    "grunt": "^1.0.1",
+    "chai": "^4.1.2",
+    "grunt": "^1.0.2",
     "grunt-contrib-clean": "^1.1.0",
     "grunt-contrib-concat": "^1.0.1",
     "grunt-contrib-jshint": "^1.1.0",
-    "grunt-contrib-nodeunit": "^1.0.0",
-    "grunt-contrib-uglify": "^3.1.0",
-    "grunt-contrib-watch": "^1.0.0"
+    "grunt-contrib-uglify": "^3.3.0",
+    "grunt-contrib-watch": "^1.1.0",
+    "grunt-mocha-test": "^0.13.3",
+    "mocha": "^5.2.0"
   },
   "dependencies": {
-    "antlr4": "^4.7.0",
-    "js-big-integer": "^1.0.2",
-    "moment": "^2.19.1",
-    "node-forge": "^0.7.1"
+    "node-forge": "^0.7.5"
   }
 }
