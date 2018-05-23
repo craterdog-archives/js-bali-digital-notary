@@ -20,19 +20,6 @@ module.exports = function(grunt) {
       }
     },
 
-    // grunt-contrib-watch plugin configuration (monitor file changes)
-    watch: {
-      scripts: {
-        files: ['<%= jshint.files %>'],
-        tasks: ['clean', 'jshint', 'mochaTest', 'concat', 'uglify'],
-        test: 'mocha',
-        options: {
-          spawn: true,
-          reload: true
-        }
-      }
-    },
-
     // grunt-contrib-clean plugin configuration (clean up files)
     clean: {
       build: ['dist/*']
