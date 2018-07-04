@@ -50,11 +50,59 @@ exports.generateKeyPair = function(optionalVersion) {
     }
     switch(optionalVersion) {
         case '1':
-            var keypair = forge.rsa.generateKeyPair({bits: 2048, e: 0x10001});
+            var keypair = forge.rsa.generateKeyPair({bits: 2048});
             return keypair;
         default:
             throw new Error('SECURITY: The specified version is not supported: ' + optionalVersion);
     }
+};
+
+
+/**
+ * This function exports a public key into a PEM encoded string.
+ * 
+ * @param {PublicKey} publicKey The public key to be encoded.
+ * @returns {String} The PEM encoded string.
+ */
+exports.exportPublicKey = function(publicKey) {
+    var pem = forge.pki.publicKeyToPem(publicKey);
+    return pem;
+};
+
+
+/**
+ * This function imports a public key from a PEM encoded string.
+ * 
+ * @param {String} pem The PEM encoded string.
+ * @returns {PublicKey} The corresponding public key.
+ */
+exports.importPublicKey = function(pem) {
+    var publicKey = forge.pki.publicKeyFromPem(pem);
+    return publicKey;
+};
+
+
+/**
+ * This function exports a private key into a PEM encoded string.
+ * 
+ * @param {PrivateKey} privateKey The private key to be encoded.
+ * @returns {String} The PEM encoded string.
+ */
+exports.exportPrivateKey = function(privateKey) {
+    var pem = forge.pki.privateKeyToPem(privateKey);
+    return pem;
+};
+
+
+/**
+ * This function imports a private key from a PEM encoded string.
+ * 
+ * @param {String} pem The PEM encoded string.
+ * @returns {PrivateKey} The corresponding private key.
+ */
+exports.importPrivateKey = function(pem) {
+    var privateKey = forge.pki.privateKeyFromPem(pem);
+    return privateKey;
 };
 
 
