@@ -15,7 +15,9 @@ var expect = require('chai').expect;
 
 describe('Bali Digital Notary™', function() {
 
-    describe('Test Hashing and Signing', function() {
+    var keyPair = notary.generateKeyPair();
+
+    describe('Test Hashing', function() {
 
         it('should hash a random byte array properly', function() {
             for (var i = 0; i < 33; i++) {
@@ -24,7 +26,7 @@ describe('Bali Digital Notary™', function() {
                 var length = bytes.length;
                 var expected = i;
                 expect(length).to.equal(expected);
-                var hash = notary.sha512Hash(bytes);
+                var hash = notary.generateHash(bytes);
                 expect(hash).to.exist;  // jshint ignore:line
                 length = hash.length;
                 expected = 64;
@@ -32,13 +34,13 @@ describe('Bali Digital Notary™', function() {
             }
         });
 
+    });
+
+    describe('Test Signing and Verification', function() {
+
         it('should digitally sign a random byte array properly', function() {
-            var keyPair = notary.generateKeyPair();
-            expect(keyPair).to.exist;  // jshint ignore:line
             var publicKey = keyPair.publicKey;
-            expect(publicKey).to.exist;  // jshint ignore:line
             var privateKey = keyPair.privateKey;
-            expect(privateKey).to.exist;  // jshint ignore:line
             var bytes = '';
             for (var i = 0; i < 100; i++) {
                 bytes += i;
@@ -50,13 +52,26 @@ describe('Bali Digital Notary™', function() {
             expect(isValid).to.equal(true);
         });
 
-        it('should export and re-import a key pair properly', function() {
-            var keyPair = notary.generateKeyPair();
-            expect(keyPair).to.exist;  // jshint ignore:line
+    });
+
+    describe('Test Encryption and Decryption', function() {
+
+        it('should encrypt and decrypt a key properly', function() {
             var publicKey = keyPair.publicKey;
-            expect(publicKey).to.exist;  // jshint ignore:line
             var privateKey = keyPair.privateKey;
-            expect(privateKey).to.exist;  // jshint ignore:line
+            var bytes = 'This is a test...';
+            var encrypted = notary.encryptBytes(publicKey, bytes);
+            var decrypted = notary.decryptBytes(privateKey, encrypted);
+            expect(decrypted).to.equal(bytes);
+        });
+
+    });
+
+    describe('Test Exporting and Importing of Keys', function() {
+
+        it('should export and re-import a key pair properly', function() {
+            var publicKey = keyPair.publicKey;
+            var privateKey = keyPair.privateKey;
             var string = 'This is a test...';
             var signature = notary.signString(privateKey, string);
             var exported = notary.exportPublicKey(publicKey);
