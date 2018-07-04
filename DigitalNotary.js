@@ -197,13 +197,16 @@ exports.signatureIsValid = function(publicKey, string, signatureBytes, optionalV
 
 
 /**
+ * This function generates a random secret key and uses it to encrypt a message.  The
+ * random secret key is then encrypted using the public key and an authenticated
+ * encrypted message is returned.
  * 
  * @param {PublicKey} publicKey The public key to be used to encrypt a symmetric key
  * that is used to encrypt the message.
  * @param {String} message The message to be encrypted.
  * @param {String} optionalVersion An optional library version string for the
  * implementation (e.g. 'v1', 'v1.3', 'v2', etc.).  The default version is 'v1'.
- * @returns {exports.encryptKey.encrypted}
+ * @returns {Object} The authenticated encrypted message.
  */
 exports.encryptMessage = function(publicKey, message, optionalVersion) {
     var version = optionalVersion || 'v1';
@@ -216,7 +219,7 @@ exports.encryptMessage = function(publicKey, message, optionalVersion) {
             var key = result.key;
             var encryptedSeed = result.encapsulation;
  
-            // encrypt the message
+            // encrypt the message using the secret key
             var iv = forge.random.getBytesSync(12);
             var cipher = forge.cipher.createCipher('AES-GCM', key);
             cipher.start({iv: iv});
@@ -238,11 +241,23 @@ exports.encryptMessage = function(publicKey, message, optionalVersion) {
 };
 
 
+/**
+ * This function decrypts an authenticated encrypted message using the private key
+ * that is associated with the public key that was used to encrypt a random secret key
+ * that was used to encrypt a message. The decrypted message is returned.
+ * 
+ * @param {PrivateKey} privateKey The private key associated with the public key that
+ * was used to encrypt the secret key used to encrypt the message.
+ * @param {Object} authenticatedMessage The authenticated encrypted message.
+ * @param {String} optionalVersion An optional library version string for the
+ * implementation (e.g. 'v1', 'v1.3', 'v2', etc.).  The default version is 'v1'.
+ * @returns {String} The decrypted message.
+ */
 exports.decryptMessage = function(privateKey, authenticatedMessage, optionalVersion) {
     var version = optionalVersion || 'v1';
     switch(version) {
         case 'v1':
-            // decompose the authenticated message
+            // decompose the authenticated encrypted message
             var iv = authenticatedMessage.iv;
             var tag = authenticatedMessage.tag;
             var encryptedSeed = authenticatedMessage.encryptedSeed;
@@ -253,7 +268,7 @@ exports.decryptMessage = function(privateKey, authenticatedMessage, optionalVers
             var kem = forge.kem.rsa.create(kdf1);
             var key = kem.decrypt(privateKey, encryptedSeed, 16);
  
-            // decrypt the message
+            // decrypt the message using the secret key
             var message;
             var decipher = forge.cipher.createDecipher('AES-GCM', key);
             decipher.start({iv: iv, tag: tag});
