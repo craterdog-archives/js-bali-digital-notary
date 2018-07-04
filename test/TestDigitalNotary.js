@@ -59,10 +59,10 @@ describe('Bali Digital Notary™', function() {
         it('should encrypt and decrypt a key properly', function() {
             var publicKey = keyPair.publicKey;
             var privateKey = keyPair.privateKey;
-            var bytes = 'This is a test...';
-            var encrypted = notary.encryptBytes(publicKey, bytes);
-            var decrypted = notary.decryptBytes(privateKey, encrypted);
-            expect(decrypted).to.equal(bytes);
+            var message = 'This is a test...';
+            var encrypted = notary.encryptMessage(publicKey, message);
+            var decrypted = notary.decryptMessage(privateKey, encrypted);
+            expect(decrypted).to.equal(message);
         });
 
     });

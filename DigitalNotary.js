@@ -196,34 +196,74 @@ exports.signatureIsValid = function(publicKey, string, signatureBytes, optionalV
 };
 
 
-exports.encryptBytes = function(publicKey, bytes, optionalVersion) {
+/**
+ * 
+ * @param {PublicKey} publicKey The public key to be used to encrypt a symmetric key
+ * that is used to encrypt the message.
+ * @param {String} message The message to be encrypted.
+ * @param {String} optionalVersion An optional library version string for the
+ * implementation (e.g. 'v1', 'v1.3', 'v2', etc.).  The default version is 'v1'.
+ * @returns {exports.encryptKey.encrypted}
+ */
+exports.encryptMessage = function(publicKey, message, optionalVersion) {
     var version = optionalVersion || 'v1';
     switch(version) {
         case 'v1':
-            var encrypted = publicKey.encrypt(bytes, 'RSA-OAEP', {
-                md: forge.md.sha256.create(),
-                mgf1: {
-                    md: forge.md.sha1.create()
-                }
-            });
-            return encrypted;
+            // generate and encrypt a 16-byte secret key
+            var kdf1 = new forge.kem.kdf1(forge.md.sha1.create());
+            var kem = forge.kem.rsa.create(kdf1);
+            var result = kem.encrypt(publicKey, 16);
+            var key = result.key;
+            var encryptedSeed = result.encapsulation;
+ 
+            // encrypt the message
+            var iv = forge.random.getBytesSync(12);
+            var cipher = forge.cipher.createCipher('AES-GCM', key);
+            cipher.start({iv: iv});
+            cipher.update(forge.util.createBuffer(message));
+            cipher.finish();
+            var encryptedMessage = cipher.output.getBytes();
+            var tag = cipher.mode.tag.getBytes();
+
+            // return all components of the authenticated message
+            return {
+                iv: iv,
+                tag: tag,
+                encryptedSeed: encryptedSeed,
+                encryptedMessage: encryptedMessage
+            };
         default:
             throw new Error('SECURITY: The specified version is not supported: ' + optionalVersion);
     }
 };
 
 
-exports.decryptBytes = function(privateKey, bytes, optionalVersion) {
+exports.decryptMessage = function(privateKey, authenticatedMessage, optionalVersion) {
     var version = optionalVersion || 'v1';
     switch(version) {
         case 'v1':
-            var decrypted = privateKey.decrypt(bytes, 'RSA-OAEP', {
-                md: forge.md.sha256.create(),
-                mgf1: {
-                    md: forge.md.sha1.create()
-                }
-            });
-            return decrypted;
+            // decompose the authenticated message
+            var iv = authenticatedMessage.iv;
+            var tag = authenticatedMessage.tag;
+            var encryptedSeed = authenticatedMessage.encryptedSeed;
+            var encryptedMessage = authenticatedMessage.encryptedMessage;
+
+            // decrypt the 16-byte secret key
+            var kdf1 = new forge.kem.kdf1(forge.md.sha1.create());
+            var kem = forge.kem.rsa.create(kdf1);
+            var key = kem.decrypt(privateKey, encryptedSeed, 16);
+ 
+            // decrypt the message
+            var message;
+            var decipher = forge.cipher.createDecipher('AES-GCM', key);
+            decipher.start({iv: iv, tag: tag});
+            decipher.update(forge.util.createBuffer(encryptedMessage));
+            var authenticated = decipher.finish();
+            // authenticated is false if there was a failure (eg: authentication tag didn't match)
+            if(authenticated) {
+               message = decipher.output.getBytes();
+            }
+            return message;
         default:
             throw new Error('SECURITY: The specified version is not supported: ' + optionalVersion);
     }
