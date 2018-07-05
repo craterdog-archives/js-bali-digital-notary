@@ -15,7 +15,7 @@ var expect = require('chai').expect;
 
 describe('Bali Digital Notary™', function() {
 
-    var keyPair = notary.generateKeyPair();
+    var notaryKey = new notary.NotaryKey();
 
     describe('Test Hashing', function() {
 
@@ -39,16 +39,15 @@ describe('Bali Digital Notary™', function() {
     describe('Test Signing and Verification', function() {
 
         it('should digitally sign a random byte array properly', function() {
-            var publicKey = keyPair.publicKey;
-            var privateKey = keyPair.privateKey;
-            var bytes = '';
+            var certificate = notaryKey.certificate;
+            var message = '';
             for (var i = 0; i < 100; i++) {
-                bytes += i;
+                message += i;
             }
-            expect(bytes).to.exist;  // jshint ignore:line
-            var signatureBytes = notary.signString(privateKey, bytes);
-            expect(signatureBytes).to.exist;  // jshint ignore:line
-            var isValid = notary.signatureIsValid(publicKey, bytes, signatureBytes);
+            expect(message).to.exist;  // jshint ignore:line
+            var seal = notaryKey.generateSeal(message);
+            expect(seal).to.exist;  // jshint ignore:line
+            var isValid = certificate.sealIsValid(message, seal);
             expect(isValid).to.equal(true);
         });
 
@@ -57,11 +56,10 @@ describe('Bali Digital Notary™', function() {
     describe('Test Encryption and Decryption', function() {
 
         it('should encrypt and decrypt a key properly', function() {
-            var publicKey = keyPair.publicKey;
-            var privateKey = keyPair.privateKey;
+            var certificate = notaryKey.certificate;
             var message = 'This is a test...';
-            var encrypted = notary.encryptMessage(publicKey, message);
-            var decrypted = notary.decryptMessage(privateKey, encrypted);
+            var encrypted = certificate.encryptMessage(message);
+            var decrypted = notaryKey.decryptMessage(encrypted);
             expect(decrypted).to.equal(message);
         });
 
@@ -70,15 +68,17 @@ describe('Bali Digital Notary™', function() {
     describe('Test Exporting and Importing of Keys', function() {
 
         it('should export and re-import a key pair properly', function() {
-            var publicKey = keyPair.publicKey;
-            var privateKey = keyPair.privateKey;
-            var string = 'This is a test...';
-            var signature = notary.signString(privateKey, string);
-            var exported = notary.exportPublicKey(publicKey);
-            publicKey = notary.importPublicKey(exported);
-            exported = notary.exportPrivateKey(privateKey);
-            privateKey = notary.importPrivateKey(exported);
-            var isValid = notary.signatureIsValid(publicKey, string, signature);
+            var certificate = notaryKey.certificate;
+            var message = 'This is a test...';
+            var seal = notaryKey.generateSeal(message);
+            var exported = certificate.exportPem();
+            certificate = new notary.NotaryCertificate(exported);
+            var isValid = certificate.sealIsValid(message, seal);
+            expect(isValid).to.equal(true);
+            exported = notaryKey.exportPem();
+            var newKey = new notary.NotaryKey(exported);
+            var newSeal = newKey.generateSeal(message);
+            isValid = certificate.sealIsValid(message, newSeal);
             expect(isValid).to.equal(true);
         });
 
