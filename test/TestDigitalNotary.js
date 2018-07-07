@@ -9,6 +9,7 @@
  ************************************************************************/
 
 var notary = require('../DigitalNotary');
+var language = require('bali-language/BaliLanguage');
 var forge = require('node-forge');
 var mocha = require('mocha');
 var expect = require('chai').expect;
@@ -16,22 +17,13 @@ var expect = require('chai').expect;
 describe('Bali Digital Notary™', function() {
 
     var notaryKey = new notary.NotaryKey();
+    var citation = notaryKey.citation;
+    var certificate = notaryKey.certificate;
 
-    describe('Test Hashing', function() {
+    describe('Test Citations', function() {
 
-        it('should hash a random byte array properly', function() {
-            for (var i = 0; i < 33; i++) {
-                var bytes = forge.random.getBytesSync(i);
-                expect(bytes).to.exist;  // jshint ignore:line
-                var length = bytes.length;
-                var expected = i;
-                expect(length).to.equal(expected);
-                var hash = notary.generateHash(bytes);
-                expect(hash).to.exist;  // jshint ignore:line
-                length = hash.length;
-                expected = 64;
-                expect(length).to.equal(expected);
-            }
+        it('should validate the citation for the certificate', function() {
+            expect(citation.documentIsValid(certificate)).to.equal(true);
         });
 
     });
@@ -39,15 +31,10 @@ describe('Bali Digital Notary™', function() {
     describe('Test Signing and Verification', function() {
 
         it('should digitally sign a random byte array properly', function() {
-            var certificate = notaryKey.certificate;
-            var message = '';
-            for (var i = 0; i < 100; i++) {
-                message += i;
-            }
-            expect(message).to.exist;  // jshint ignore:line
-            var seal = notaryKey.generateSeal(message);
-            expect(seal).to.exist;  // jshint ignore:line
-            var isValid = certificate.sealIsValid(message, seal);
+            var document = language.parseDocument(notaryKey.toString());
+            expect(document).to.exist;  // jshint ignore:line
+            notaryKey.notarizeDocument(document);
+            var isValid = certificate.documentIsValid(document);
             expect(isValid).to.equal(true);
         });
 
@@ -56,7 +43,6 @@ describe('Bali Digital Notary™', function() {
     describe('Test Encryption and Decryption', function() {
 
         it('should encrypt and decrypt a key properly', function() {
-            var certificate = notaryKey.certificate;
             var message = 'This is a test...';
             var encrypted = certificate.encryptMessage(message);
             var decrypted = notaryKey.decryptMessage(encrypted);
@@ -65,21 +51,22 @@ describe('Bali Digital Notary™', function() {
 
     });
 
-    describe('Test Exporting and Importing of Keys', function() {
+    describe('Test Exporting and Importing', function() {
 
-        it('should export and re-import a key pair properly', function() {
-            var certificate = notaryKey.certificate;
-            var message = 'This is a test...';
-            var seal = notaryKey.generateSeal(message);
-            var exported = certificate.exportPem();
-            certificate = new notary.NotaryCertificate(exported);
-            var isValid = certificate.sealIsValid(message, seal);
-            expect(isValid).to.equal(true);
-            exported = notaryKey.exportPem();
-            var newKey = new notary.NotaryKey(exported);
-            var newSeal = newKey.generateSeal(message);
-            isValid = certificate.sealIsValid(message, newSeal);
-            expect(isValid).to.equal(true);
+        it('should export and re-import a notary key properly', function() {
+            var source1 = notaryKey.toString();
+            var document1 = language.parseDocument(source1);
+            var copy = new notary.NotaryKey(document1);
+            var source2 = copy.toString();
+            expect(source1).to.equal(source2);
+        });
+
+        it('should export and re-import a notary certificate properly', function() {
+            var source1 = certificate.toString();
+            var document1 = language.parseDocument(source1);
+            var copy = new notary.NotaryCertificate(document1);
+            var source2 = copy.toString();
+            expect(source1).to.equal(source2);
         });
 
     });
