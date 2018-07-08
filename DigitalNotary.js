@@ -377,8 +377,12 @@ NotaryCertificate.prototype.documentIsValid = function(document) {
                 mgf: forge.mgf1.create(forge.sha512.create()),
                 saltLength: 20
             });
-            var isValid = this.key.verify(hash, bytes, signer);
-
+            var isValid;
+            try {  // must do this in a try block due to a bug in forge.pss
+                 isValid = this.key.verify(hash, bytes, signer);
+            } catch (e) {
+                 isValid = false;
+            }
             return isValid;
         default:
             throw new Error('NOTARY: The specified version is not supported: ' + this.version);

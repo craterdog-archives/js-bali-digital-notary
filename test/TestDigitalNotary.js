@@ -65,13 +65,14 @@ describe('Bali Digital Notary™', function() {
             notaryKey.notarizeDocument(document);
             var isValid = certificate.documentIsValid(document);
             expect(isValid).to.equal(true);
+
             notaryKey.regenerateKey();
+
             document = language.parseDocument(source);
             notaryKey.notarizeDocument(document);
-            /*
             isValid = certificate.documentIsValid(document);
             expect(isValid).to.equal(false);
-            */
+
             isValid = notaryKey.certificate.documentIsValid(document);
             expect(isValid).to.equal(true);
         });
