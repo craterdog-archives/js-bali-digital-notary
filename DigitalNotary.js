@@ -508,7 +508,7 @@ DocumentCitation.prototype.toString = function() {
  * @param {String} document The Bali document to be validated.
  * @returns {Boolean} Whether or not the Bali document is valid.
  */
-DocumentCitation.prototype.documentIsValid = function(document) {
+DocumentCitation.prototype.documentMatches = function(document) {
     // validate the argument
     if (!document || document.constructor.name !== 'TreeNode' || document.type !== NodeTypes.DOCUMENT) {
         throw new Error('NOTARY: The constructor only requires a Bali document: ' + document);
