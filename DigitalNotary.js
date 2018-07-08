@@ -25,23 +25,24 @@ var V1_KEY =
         '    $d: %d\n' +
         '    $p: %p\n' +
         '    $q: %q\n' +
-        '    $dp: %dp\n' +
-        '    $dq: %dq\n' +
-        '    $qinv: %qinv\n' +
         ']';
 
 /**
- * This constructor creates a new notary key. If an optional PEM formatted string is
+ * This constructor creates a notary key that can be used to digitally notarize
+ * Bali documents. If a Bali document containing the notary key definition is
  * passed into the constructor, the key definition will be used to construct the
- * notary key. Otherwise, a new notary key and associated certificate will be
+ * notary key. Otherwise, a new notary key and its associated certificate will be
  * generated. The associated notary certificate may then be retrieved from
- * 'this.certificate'.
+ * 'this.certificate'. If a version string is passed into the constructor, that
+ * version of the Bali Notary Protocol will be used to construct the notary key
+ * and certificate. Otherwise, a new 'v1' notary key and certificate will be
+ * created.
  * 
  * @constructor
- * @param {TreeNode|String} documentOrVersion An optional Bali document containing the notary key
- * definition or the version of the new notary key to be generated. If neither is passed, a new
- * 'v1' notary key will be generated.
- * @returns {NotaryKey} The notary key.
+ * @param {TreeNode|String} documentOrVersion An optional Bali document containing
+ * the notary key definition or the protocol version to be used to generate a new
+ * notary key and associated certificate.
+ * @returns {NotaryKey} The resulting notary key.
  */
 function NotaryKey(documentOrVersion) {
     // initialize the arguments
@@ -74,10 +75,7 @@ function NotaryKey(documentOrVersion) {
                 var d = new forge.jsbn.BigInteger(language.getValueForKey(document, '$d').toString());
                 var p = new forge.jsbn.BigInteger(language.getValueForKey(document, '$p').toString());
                 var q = new forge.jsbn.BigInteger(language.getValueForKey(document, '$q').toString());
-                var dp = new forge.jsbn.BigInteger(language.getValueForKey(document, '$dp').toString());
-                var dq = new forge.jsbn.BigInteger(language.getValueForKey(document, '$dq').toString());
-                var qinv = new forge.jsbn.BigInteger(language.getValueForKey(document, '$qinv').toString());
-                this.key = forge.pki.rsa.setPrivateKey(n, e, d, p, q, dp, dq, qinv);
+                this.key = forge.pki.rsa.setPrivateKey(n, e, d, p, q);
 
             } else {
                 // generate a unique tag for this notary key
@@ -106,7 +104,7 @@ function NotaryKey(documentOrVersion) {
             this.certificate = new exports.NotaryCertificate(document);
             return this;
         default:
-            throw new Error('NOTARY: The specified version is not supported: ' + version);
+            throw new Error('NOTARY: The specified protocol version is not supported: ' + version);
     }
 }
 NotaryKey.prototype.constructor = NotaryKey;
@@ -114,9 +112,9 @@ exports.NotaryKey = NotaryKey;
 
 
 /**
- * This method exports the notary key definition as a Bali document.
+ * This method exports the notary key definition as Bali document source.
  * 
- * @returns {String} A string containing the corresponding Bali document.
+ * @returns {String} A string containing the resulting Bali document.
  */
 NotaryKey.prototype.toString = function() {
     switch(this.version) {
@@ -127,22 +125,19 @@ NotaryKey.prototype.toString = function() {
             document = document.replace(/%d/, this.key.d.toString());
             document = document.replace(/%p/, this.key.p.toString());
             document = document.replace(/%q/, this.key.q.toString());
-            document = document.replace(/%dp/, this.key.dP.toString());
-            document = document.replace(/%dq/, this.key.dQ.toString());
-            document = document.replace(/%qinv/, this.key.qInv.toString());
             return document;
         default:
-            throw new Error('NOTARY: The specified version is not supported: ' + this.version);
+            throw new Error('NOTARY: The specified protocol version is not supported: ' + this.version);
     }
 };
 
 
 /**
- * This method generates a new notary key and associated notary certificate. It
+ * This method regenerates a notary key and associated notary certificate. It
  * uses the old notary key to notarize the new notary certificate to prove its
- * place in the certificate chain.
+ * place in the notary certificate chain.
  * 
- * @returns {PublicKey} The new notary certificate.
+ * @returns {NotaryCertificate} The new notary certificate.
  */
 NotaryKey.prototype.regenerateKey = function() {
     switch(this.version) {
@@ -178,20 +173,19 @@ NotaryKey.prototype.regenerateKey = function() {
 
             // cache the certificate
             this.certificate = new exports.NotaryCertificate(document, this.version);
-            break;
+            return this.certificate;
         default:
-            throw new Error('NOTARY: The specified version is not supported: ' + this.version);
+            throw new Error('NOTARY: The specified protocol version is not supported: ' + this.version);
     }
 };
 
 
 /**
  * This method digitally notarizes a Bali document using this notary key. The resulting
- * notary seal can be validated using the <code>sealIsValid()</code> method on the
- * associated notary certificate.
+ * notary seal is appended to the document and can be validated using the
+ * <code>documentIsValid()</code> method on the associated notary certificate.
  * 
  * @param {TreeNode} document The Bali document to be notarized.
- * @returns {String} The binary string containing the notary seal.
  */
 NotaryKey.prototype.notarizeDocument = function(document) {
     // validate the argument
@@ -203,7 +197,7 @@ NotaryKey.prototype.notarizeDocument = function(document) {
             // prepare the document source
             var citation = '<' + this.citation.toString() + '>';
             var source = document.toString();
-            source += ' ' + citation;  // NOTE: the citation must be included in the signed source!
+            source += '\n' + citation;  // NOTE: the citation must be included in the signed source!
 
             // generate the notarization signature
             var hasher = forge.sha512.create();
@@ -220,7 +214,7 @@ NotaryKey.prototype.notarizeDocument = function(document) {
             language.addSeal(document, citation, signature);
             break;
         default:
-            throw new Error('NOTARY: The specified version is not supported: ' + this.version);
+            throw new Error('NOTARY: The specified protocol version is not supported: ' + this.version);
     }
 };
 
@@ -228,8 +222,8 @@ NotaryKey.prototype.notarizeDocument = function(document) {
 /**
  * This method decrypts an authenticated encrypted message generated using the notary
  * certificate associated with this notary key. The notary certificate generated and
- * encrypted a random secret key that was used to encrypt the message. The decrypted
- * message is returned.
+ * encrypted a random secret key that was used to encrypt the original message. The
+ * decrypted message is returned from this method.
  * 
  * @param {Object} authenticatedMessage The authenticated encrypted message.
  * @returns {String} The decrypted message.
@@ -260,7 +254,7 @@ NotaryKey.prototype.decryptMessage = function(authenticatedMessage) {
             }
             return message;
         default:
-            throw new Error('NOTARY: The specified version is not supported: ' + this.version);
+            throw new Error('NOTARY: The specified protocol version is not supported: ' + this.version);
     }
 };
 
@@ -275,11 +269,11 @@ var V1_CERTIFICATE =
         ']';
 
 /**
- * This constructor creates a notary certificate using the attributes passed in.
+ * This constructor creates a notary certificate using a Bali document that contains the
+ * notary certificate definition.
  * 
  * @constructor
- * @param {TreeNode} document An optional Bali document containing the notary certificate
- * definition.
+ * @param {TreeNode} document A Bali document containing the notary certificate definition.
  * @returns {NotaryCertificate} The notary certificate.
  */
 function NotaryCertificate(document) {
@@ -310,7 +304,7 @@ function NotaryCertificate(document) {
             }
             break;
         default:
-            throw new Error('NOTARY: The specified version is not supported: ' + version);
+            throw new Error('NOTARY: The specified protocol version is not supported: ' + version);
     }
     return this;
 }
@@ -336,20 +330,19 @@ NotaryCertificate.prototype.toString = function() {
             }
             return document.toString();
         default:
-            throw new Error('NOTARY: The specified version is not supported: ' + this.version);
+            throw new Error('NOTARY: The specified protocol version is not supported: ' + this.version);
     }
 };
 
 
 /**
- * This method verifies a notary seal generated using the <code>generateSeal</code>
- * method on the associated notary key. This notary certificate is used to verify the
- * notary seal against the original Bali document.
+ * This method validates a Bali document that was notarized using the
+ * <code>notarizeDocument</code> method on the associated notary key. This notary
+ * certificate is used to verify the notary seal that is appended to the Bali
+ * document.
  * 
- * used to sign the string.
- * @param {String} document The original Bali document that was notarized.
- * @param {String} seal The notary seal generated for the Bali document.
- * @returns {boolean} Whether or not the notary seal is valid.
+ * @param {TreeNode} document The Bali document that was notarized.
+ * @returns {Boolean} Whether or not the notary seal on the document is valid.
  */
 NotaryCertificate.prototype.documentIsValid = function(document) {
     // validate the argument
@@ -364,7 +357,7 @@ NotaryCertificate.prototype.documentIsValid = function(document) {
             // calculate the hash of the document
             var citation = result.seal.children[0].toString();
             var source = result.document.toString();
-            source += ' ' + citation;  // NOTE: the citation must be included in the signed source!
+            source += '\n' + citation;  // NOTE: the citation must be included in the signed source!
             var hasher = forge.sha512.create();
             hasher.update(source);
             var hash = hasher.digest().getBytes();
@@ -385,20 +378,20 @@ NotaryCertificate.prototype.documentIsValid = function(document) {
             }
             return isValid;
         default:
-            throw new Error('NOTARY: The specified version is not supported: ' + this.version);
+            throw new Error('NOTARY: The specified protocol version is not supported: ' + this.version);
     }
 };
 
 
 /**
- * This method generates a random secret key and uses it to encrypt a message.  The
- * random secret key is then encrypted by the notary certificate and an authenticated
+ * This method generates a random symmetric key and uses it to encrypt a message.  The
+ * symmetric key is then encrypted by the notary certificate and an authenticated
  * encrypted message is returned. The resulting authenticated encrypted message can
  * be decrypted using the <code>decryptMessage</code> method on the corresponding
  * notary key.
  * 
  * @param {String} message The message to be encrypted.
- * @returns {Object} The authenticated encrypted message.
+ * @returns {Object} The resulting authenticated encrypted message.
  */
 NotaryCertificate.prototype.encryptMessage = function(message) {
     switch(this.version) {
@@ -427,32 +420,31 @@ NotaryCertificate.prototype.encryptMessage = function(message) {
                 encryptedMessage: encryptedMessage
             };
         default:
-            throw new Error('NOTARY: The specified version is not supported: ' + this.version);
+            throw new Error('NOTARY: The specified protocol version is not supported: ' + this.version);
     }
 };
 
 
 /**
- * This constructor creates a Bali document citation. It provides both a reference to
- * the Bali document as well as a SHA-512 cryptographic hash of the contents of the
- * Bali document. If anything in the contents of the document changes later on, the
- * hash value won't match.
+ * This constructor creates a Bali document citation. It provides a reference to a
+ * Bali document as well as either the actual Bali document or a SHA-512 cryptographic
+ * hash of the Bali document. If anything in the contents of the document changes later
+ * on, the hash value won't match and the changes can be detected.
  * 
  * @constructor
- * @param {String} reference The URI for the Bali document to be cited.
+ * @param {String} reference The URI string for the Bali document to be cited.
  * @param {TreeNode|String} documentOrHash The actual Bali document to be cited or a hash of
  * the document.
- * @param {String} optionalVersion An optional library version string for the
- * implementation (e.g. 'v1', 'v1.3', 'v2', etc.).  The default version is 'v1'.
+ * @param {String} version The version of the Bali Notary Protocol™ that should be used to
+ * create the document citation (e.g. 'v1', 'v1.3', 'v2', etc.).
  * @returns {DocumentCitation} The Bali document citation.
  */
-function DocumentCitation(reference, documentOrHash, optionalVersion) {
+function DocumentCitation(reference, documentOrHash, version) {
     // validate the arguments
     var document;
     var hash;
-    var version;
     if (!reference || reference.constructor.name !== 'String') {
-        throw new Error('NOTARY: The constructor requires a Bali reference: ' + reference);
+        throw new Error('NOTARY: The constructor requires a Bali reference as the first argument: ' + reference);
     }
     if (documentOrHash) {
         if (documentOrHash.constructor.name === 'String' && /^\'[0-9A-DF-HJ-NP-TV-Z]*\'$/g.test(documentOrHash)) {
@@ -460,19 +452,13 @@ function DocumentCitation(reference, documentOrHash, optionalVersion) {
         } else if (documentOrHash.constructor.name === 'TreeNode' && documentOrHash.type === NodeTypes.DOCUMENT) {
             document = documentOrHash;
         } else {
-            throw new Error('NOTARY: The constructor only takes a Bali document or a hash value: ' + documentOrHash);
+            throw new Error('NOTARY: The constructor requires a Bali document or a hash value as the second argument: ' + documentOrHash);
         }
     } else {
-        throw new Error('NOTARY: The constructor only requires a Bali document or a hash value.');
+        throw new Error('NOTARY: The constructor requires a Bali document or a hash value as the second argument.');
     }
-    if (optionalVersion) {
-        if (optionalVersion.constructor.name === 'String' && /^v([1-9][0-9]*)(\.[1-9][0-9]*)*$/g.test(optionalVersion)) {
-            version = optionalVersion;
-        } else {
-            throw new Error('NOTARY: The constructor received an invalid version: ' + optionalVersion);
-        }
-    } else {
-        version = 'v1';  // NOTE: this default value CANNOT change later on!
+    if (!version || version.constructor.name !== 'String' || !/^v([1-9][0-9]*)(\.[1-9][0-9]*)*$/g.test(version)) {
+        throw new Error('NOTARY: The constructor received an invalid protocol version: ' + version);
     }
 
     switch(version) {
@@ -488,7 +474,7 @@ function DocumentCitation(reference, documentOrHash, optionalVersion) {
             }
             break;
         default:
-            throw new Error('NOTARY: The specified version is not supported: ' + version);
+            throw new Error('NOTARY: The specified protocol version is not supported: ' + version);
     }
     return this;
 }
@@ -497,7 +483,7 @@ exports.DocumentCitation = DocumentCitation;
 
 
 /**
- * This method returns a string version of the full reference including the hash
+ * This method exports the document citation as Bali document source.
  * value.
  * 
  * @returns {String} A string version of the document citation.
@@ -510,13 +496,13 @@ DocumentCitation.prototype.toString = function() {
             string += '&hash=' + this.hash;
             return string;
         default:
-            throw new Error('NOTARY: The specified version is not supported: ' + this.version);
+            throw new Error('NOTARY: The specified protocol version is not supported: ' + this.version);
     }
 };
 
 
 /**
- * This method returns whether or not the specified Bali document matches the
+ * This method determines whether or not the specified Bali document matches EXACTLY the
  * Bali document referenced by this citation.
  * 
  * @param {String} document The Bali document to be validated.
@@ -534,6 +520,6 @@ DocumentCitation.prototype.documentIsValid = function(document) {
             var hash = codex.base32Encode(hasher.digest().getBytes()).replace(/\s/g, "");
             return this.hash === hash;
         default:
-            throw new Error('NOTARY: The specified version is not supported: ' + this.version);
+            throw new Error('NOTARY: The specified protocol version is not supported: ' + this.version);
     }
 };
