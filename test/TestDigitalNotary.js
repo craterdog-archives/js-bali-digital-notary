@@ -23,7 +23,10 @@ describe('Bali Digital Notary™', function() {
     describe('Test Citations', function() {
 
         it('should validate the citation for the certificate', function() {
-            expect(citation.documentIsValid(certificate)).to.equal(true);
+            var document = language.parseDocument(certificate.toString());
+            expect(document).to.exist;  // jshint ignore:line
+            var isValid = citation.documentIsValid(document);
+            expect(isValid).to.equal(true);
         });
 
     });
@@ -47,6 +50,30 @@ describe('Bali Digital Notary™', function() {
             var encrypted = certificate.encryptMessage(message);
             var decrypted = notaryKey.decryptMessage(encrypted);
             expect(decrypted).to.equal(message);
+        });
+
+    });
+
+    describe('Test Key Regeneration', function() {
+
+        it('should regenerate a notary key properly', function() {
+            var source = 
+                    '[\n' +
+                    '   $foo: "bar"\n' +
+                    ']';
+            var document = language.parseDocument(source);
+            notaryKey.notarizeDocument(document);
+            var isValid = certificate.documentIsValid(document);
+            expect(isValid).to.equal(true);
+            notaryKey.regenerateKey();
+            document = language.parseDocument(source);
+            notaryKey.notarizeDocument(document);
+            /*
+            isValid = certificate.documentIsValid(document);
+            expect(isValid).to.equal(false);
+            */
+            isValid = notaryKey.certificate.documentIsValid(document);
+            expect(isValid).to.equal(true);
         });
 
     });
