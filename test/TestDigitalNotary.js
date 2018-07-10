@@ -33,7 +33,7 @@ describe('Bali Digital Notary™', function() {
 
     describe('Test Signing and Verification', function() {
 
-        it('should digitally sign a random byte array properly', function() {
+        it('should digitally sign a document properly', function() {
             var document = language.parseDocument(notaryKey.toString());
             expect(document).to.exist;  // jshint ignore:line
             notaryKey.notarizeDocument(document);
@@ -45,7 +45,7 @@ describe('Bali Digital Notary™', function() {
 
     describe('Test Encryption and Decryption', function() {
 
-        it('should encrypt and decrypt a key properly', function() {
+        it('should encrypt and decrypt a message properly', function() {
             var message = 'This is a test...';
             var encrypted = certificate.encryptMessage(message);
             var decrypted = notaryKey.decryptMessage(encrypted);

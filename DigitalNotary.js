@@ -69,7 +69,7 @@ function NotaryKey(documentOrVersion) {
 
                 // extract the notary key
                 this.key = language.getValueForKey(document, '$key').toString().slice(1, -1);
-                keypair = create(this.key);
+                keypair = recreateV1(this.key);
 
             } else {
                 // generate a unique tag for this notary key
@@ -77,7 +77,7 @@ function NotaryKey(documentOrVersion) {
                 this.tag = '#' + codex.base32Encode(bytes);
 
                 // generate a new notary key
-                keypair = generate();
+                keypair = generateV1();
                 this.key = keypair.privateKey;
             }
 
@@ -136,7 +136,7 @@ NotaryKey.prototype.regenerateKey = function() {
             var tag = '#' + codex.base32Encode(bytes);
 
             // generate a new notary key
-            var keypair = generate();
+            var keypair = generateV1();
 
             // construct a temporary citation for the certificate
             var citation = 'bali:/' + tag.toString().slice(1);  // no hash yet...
@@ -187,7 +187,7 @@ NotaryKey.prototype.notarizeDocument = function(document) {
             source += citation;  // NOTE: the citation must be included in the signed source!
 
             // generate the notarization signature
-            var signature = "'" + sign(this.key, source) + "'";
+            var signature = "'" + signV1(this.key, source) + "'";
 
             // append the notary seal to the document
             language.addSeal(document, citation, signature);
@@ -210,7 +210,7 @@ NotaryKey.prototype.notarizeDocument = function(document) {
 NotaryKey.prototype.decryptMessage = function(message) {
     switch(this.version) {
         case 'v1':
-            var plaintext = decrypt(this.key, message);
+            var plaintext = decryptV1(this.key, message);
             return plaintext;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + this.version);
@@ -316,7 +316,7 @@ NotaryCertificate.prototype.documentIsValid = function(document) {
 
             // verify the signature using this notary certificate
             var signature = result.seal.children[1].toString().slice(1, -1);  // remove the "'"s
-            var isValid = verify(this.key, source, signature);
+            var isValid = verifyV1(this.key, source, signature);
             return isValid;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + this.version);
@@ -337,7 +337,7 @@ NotaryCertificate.prototype.documentIsValid = function(document) {
 NotaryCertificate.prototype.encryptMessage = function(message) {
     switch(this.version) {
         case 'v1':
-            var ciphertext = encrypt(this.key, message);
+            var ciphertext = encryptV1(this.key, message);
             return ciphertext;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + this.version);
@@ -388,7 +388,7 @@ function DocumentCitation(reference, documentOrHash, version) {
             if (hash) {
                 this.hash = hash;
             } else {
-                this.hash = digest(document.toString());
+                this.hash = digestV1(document.toString());
             }
             break;
         default:
@@ -433,7 +433,7 @@ DocumentCitation.prototype.documentMatches = function(document) {
     }
     switch(this.version) {
         case 'v1':
-            var hash = digest(document.toString());
+            var hash = digestV1(document.toString());
             return this.hash === hash;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + this.version);
@@ -443,15 +443,19 @@ DocumentCitation.prototype.documentMatches = function(document) {
 
 // PRIVATE FUNCTIONS
 
-function digest(message) {
-    var hasher = crypto.createHash('sha512');
+var CURVE = 'secp521r1';
+var DIGEST = 'sha512';
+var SIGNATURE = 'ecdsa-with-SHA1';
+var CIPHER = 'aes-256-gcm';
+
+function digestV1(message) {
+    var hasher = crypto.createHash(DIGEST);
     hasher.update(message);
     return hasher.digest('hex');
 }
 
-function generate() {
-    var algorithm = 'secp521r1';
-    var curve = crypto.createECDH(algorithm);
+function generateV1() {
+    var curve = crypto.createECDH(CURVE);
     curve.generateKeys();
     return {
         privateKey: curve.getPrivateKey('hex'),
@@ -459,9 +463,8 @@ function generate() {
     };
 }
 
-function create(privateKey) {
-    var algorithm = 'secp521r1';
-    var curve = crypto.createECDH(algorithm);
+function recreateV1(privateKey) {
+    var curve = crypto.createECDH(CURVE);
     curve.setPrivateKey(privateKey, 'hex');
     return {
         privateKey: curve.getPrivateKey('hex'),
@@ -469,37 +472,34 @@ function create(privateKey) {
     };
 }
 
-function sign(privateKey, message) {
-    var algorithm = 'secp521r1';
-    var curve = crypto.createECDH(algorithm);
+function signV1(privateKey, message) {
+    var curve = crypto.createECDH(CURVE);
     curve.setPrivateKey(privateKey, 'hex');
-    var pem = ec_pem(curve, algorithm);
-    var signer = crypto.createSign('ecdsa-with-SHA1');
+    var pem = ec_pem(curve, CURVE);
+    var signer = crypto.createSign(SIGNATURE);
     signer.update(message);
     return signer.sign(pem.encodePrivateKey(), 'base64');
 }
 
-function verify(publicKey, message, signature) {
-    var algorithm = 'secp521r1';
-    var curve = crypto.createECDH(algorithm);
+function verifyV1(publicKey, message, signature) {
+    var curve = crypto.createECDH(CURVE);
     curve.setPublicKey(publicKey, 'hex');
-    var pem = ec_pem(curve, algorithm);
-    var verifier = crypto.createVerify('ecdsa-with-SHA1');
+    var pem = ec_pem(curve, CURVE);
+    var verifier = crypto.createVerify(SIGNATURE);
     verifier.update(message);
     return verifier.verify(pem.encodePublicKey(), signature, 'base64');
 }
 
-function encrypt(publicKey, plaintext) {
+function encryptV1(publicKey, plaintext) {
     // generate and encrypt a 32-byte symmetric key
-    var algorithm = 'secp521r1';
-    var curve = crypto.createECDH(algorithm);
+    var curve = crypto.createECDH(CURVE);
     curve.generateKeys();
     var seed = curve.getPublicKey('hex');  // use the new public key as the seed
     var key = curve.computeSecret(publicKey, 'hex').slice(0, 32);  // take only first 32 bytes
 
     // encrypt the message using the symmetric key
     var iv = crypto.randomBytes(12);
-    var cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+    var cipher = crypto.createCipheriv(CIPHER, key, iv);
     var ciphertext = cipher.update(plaintext, 'utf8', 'base64');
     ciphertext += cipher.final('base64');
     var tag = cipher.getAuthTag();
@@ -511,11 +511,10 @@ function encrypt(publicKey, plaintext) {
     };
 }
 
-function decrypt(privateKey, message) {
+function decryptV1(privateKey, message) {
     // decrypt the 32-byte symmetric key
     var seed = message.seed;
-    var algorithm = 'secp521r1';
-    var curve = crypto.createECDH(algorithm);
+    var curve = crypto.createECDH(CURVE);
     curve.setPrivateKey(privateKey, 'hex');
     var key = curve.computeSecret(seed, 'hex').slice(0, 32);  // take only first 32 bytes
 
@@ -523,7 +522,7 @@ function decrypt(privateKey, message) {
     var iv = message.iv;
     var tag = message.tag;
     var ciphertext = message.ciphertext;
-    var decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    var decipher = crypto.createDecipheriv(CIPHER, key, iv);
     decipher.setAuthTag(tag);
     var plaintext = decipher.update(ciphertext, 'base64', 'utf8');
     plaintext += decipher.final('utf8');
