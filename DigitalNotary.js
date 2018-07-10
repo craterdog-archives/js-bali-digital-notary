@@ -10,7 +10,6 @@
 'use strict';
 var crypto = require('crypto');
 var ec_pem = require('ec-pem');
-var forge = require('node-forge');
 var language = require('bali-language/BaliLanguage');
 var NodeTypes = require('bali-language/syntax/NodeTypes');
 var random = require('bali-utilities/RandomUtilities');
@@ -441,6 +440,9 @@ DocumentCitation.prototype.documentMatches = function(document) {
     }
 };
 
+
+// PRIVATE FUNCTIONS
+
 function digest(message) {
     var hasher = crypto.createHash('sha512');
     hasher.update(message);
@@ -488,12 +490,12 @@ function verify(publicKey, message, signature) {
 }
 
 function encrypt(publicKey, plaintext) {
-    // generate and encrypt a 16-byte symmetric key
-    var kdf1 = new forge.kem.kdf1(forge.md.sha1.create());
-    var kem = forge.kem.rsa.create(kdf1);
-    var result = kem.encrypt(publicKey, 16);
-    var key = result.key;
-    var seed = result.encapsulation;
+    // generate and encrypt a 32-byte symmetric key
+    var algorithm = 'secp521r1';
+    var curve = crypto.createECDH(algorithm);
+    curve.generateKeys();
+    var seed = curve.getPublicKey('hex');  // use the new public key as the seed
+    var key = curve.computeSecret(publicKey, 'hex').slice(0, 32);  // take only first 32 bytes
 
     // encrypt the message using the symmetric key
     var iv = crypto.randomBytes(12);
@@ -510,15 +512,16 @@ function encrypt(publicKey, plaintext) {
 }
 
 function decrypt(privateKey, message) {
-    // decrypt the 16-byte symmetric key
-    var kdf1 = new forge.kem.kdf1(forge.md.sha1.create());
-    var kem = forge.kem.rsa.create(kdf1);
-    var key = kem.decrypt(privateKey, seed, 16);
+    // decrypt the 32-byte symmetric key
+    var seed = message.seed;
+    var algorithm = 'secp521r1';
+    var curve = crypto.createECDH(algorithm);
+    curve.setPrivateKey(privateKey, 'hex');
+    var key = curve.computeSecret(seed, 'hex').slice(0, 32);  // take only first 32 bytes
 
     // decrypt the message using the symmetric key
     var iv = message.iv;
     var tag = message.tag;
-    var seed = message.seed;
     var ciphertext = message.ciphertext;
     var decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
     decipher.setAuthTag(tag);

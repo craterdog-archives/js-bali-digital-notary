@@ -43,7 +43,6 @@ describe('Bali Digital Notary™', function() {
 
     });
 
-    /*
     describe('Test Encryption and Decryption', function() {
 
         it('should encrypt and decrypt a key properly', function() {
@@ -54,7 +53,6 @@ describe('Bali Digital Notary™', function() {
         });
 
     });
-    */
 
     describe('Test Key Regeneration', function() {
 
