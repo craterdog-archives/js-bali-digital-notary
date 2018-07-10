@@ -29,6 +29,8 @@
     "mocha": "^5.2.0"
   },
   "dependencies": {
-    "node-forge": "^0.7.5"
+    "ec-pem": "^0.18.0",
+    "node-forge": "^0.7.5",
+    "signal-protocol": "^0.1.3"
   }
 }

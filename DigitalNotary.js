@@ -8,6 +8,8 @@
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
 'use strict';
+var crypto = require('crypto');
+var ec_pem = require('ec-pem');
 var forge = require('node-forge');
 var language = require('bali-language/BaliLanguage');
 var NodeTypes = require('bali-language/syntax/NodeTypes');
@@ -20,11 +22,7 @@ var V1_KEY =
         '[\n' +
         '    $version: v1\n' +
         '    $tag: %tag\n' +
-        '    $n: %n\n' +
-        '    $e: %e\n' +
-        '    $d: %d\n' +
-        '    $p: %p\n' +
-        '    $q: %q\n' +
+        '    $key: %key\n' +
         ']';
 
 /**
@@ -64,18 +62,15 @@ function NotaryKey(documentOrVersion) {
     // construct the correct version of the notary key
     switch(version) {
         case 'v1':
+            var keypair;
             this.version = version;
             if (document) {
                 // extract the unique tag for this notary key
                 this.tag = language.getValueForKey(document, '$tag').toString();
 
                 // extract the notary key
-                var n = new forge.jsbn.BigInteger(language.getValueForKey(document, '$n').toString());
-                var e = new forge.jsbn.BigInteger(language.getValueForKey(document, '$e').toString());
-                var d = new forge.jsbn.BigInteger(language.getValueForKey(document, '$d').toString());
-                var p = new forge.jsbn.BigInteger(language.getValueForKey(document, '$p').toString());
-                var q = new forge.jsbn.BigInteger(language.getValueForKey(document, '$q').toString());
-                this.key = forge.pki.rsa.setPrivateKey(n, e, d, p, q);
+                this.key = language.getValueForKey(document, '$key').toString().slice(1, -1);
+                keypair = create(this.key);
 
             } else {
                 // generate a unique tag for this notary key
@@ -83,7 +78,7 @@ function NotaryKey(documentOrVersion) {
                 this.tag = '#' + codex.base32Encode(bytes);
 
                 // generate a new notary key
-                var keypair = forge.rsa.generateKeyPair({bits: 2048});
+                keypair = generate();
                 this.key = keypair.privateKey;
             }
 
@@ -92,8 +87,7 @@ function NotaryKey(documentOrVersion) {
 
             // create the certificate
             var source = V1_CERTIFICATE.replace(/%tag/, this.tag);
-            source = source.replace(/%n/, this.key.n.toString());
-            source = source.replace(/%e/, this.key.e.toString());
+            source = source.replace(/%key/, "'" + keypair.publicKey + "'");
             document = language.parseDocument(source);
             this.notarizeDocument(document);
 
@@ -119,13 +113,9 @@ exports.NotaryKey = NotaryKey;
 NotaryKey.prototype.toString = function() {
     switch(this.version) {
         case 'v1':
-            var document = V1_KEY.replace(/%tag/, this.tag);
-            document = document.replace(/%n/, this.key.n.toString());
-            document = document.replace(/%e/, this.key.e.toString());
-            document = document.replace(/%d/, this.key.d.toString());
-            document = document.replace(/%p/, this.key.p.toString());
-            document = document.replace(/%q/, this.key.q.toString());
-            return document;
+            var source = V1_KEY.replace(/%tag/, this.tag);
+            source = source.replace(/%key/, "'" + this.key + "'");
+            return source;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + this.version);
     }
@@ -147,16 +137,14 @@ NotaryKey.prototype.regenerateKey = function() {
             var tag = '#' + codex.base32Encode(bytes);
 
             // generate a new notary key
-            var keypair = forge.rsa.generateKeyPair({bits: 2048});
-            var key = keypair.privateKey;
+            var keypair = generate();
 
             // construct a temporary citation for the certificate
             var citation = 'bali:/' + tag.toString().slice(1);  // no hash yet...
 
             // create the certificate
             var source = V1_CERTIFICATE.replace(/%tag/, tag);
-            source = source.replace(/%n/, key.n.toString());
-            source = source.replace(/%e/, key.e.toString());
+            source = source.replace(/%key/, "'" + keypair.publicKey + "'");
             var document = language.parseDocument(source);
 
             // notarize it with the old key
@@ -164,7 +152,7 @@ NotaryKey.prototype.regenerateKey = function() {
 
             // notarize it with the new key
             this.tag = tag;
-            this.key = key;
+            this.key = keypair.privateKey;
             this.citation = citation;
             this.notarizeDocument(document);
 
@@ -197,18 +185,10 @@ NotaryKey.prototype.notarizeDocument = function(document) {
             // prepare the document source
             var citation = '<' + this.citation.toString() + '>';
             var source = document.toString();
-            source += '\n' + citation;  // NOTE: the citation must be included in the signed source!
+            source += citation;  // NOTE: the citation must be included in the signed source!
 
             // generate the notarization signature
-            var hasher = forge.sha512.create();
-            hasher.update(source);
-            var signer = forge.pss.create({
-                md: forge.sha512.create(),
-                mgf: forge.mgf1.create(forge.sha512.create()),
-                saltLength: 20
-            });
-            var bytes = this.key.sign(hasher, signer);
-            var signature = "'" + codex.base64Encode(bytes, '    ') + "'";
+            var signature = "'" + sign(this.key, source) + "'";
 
             // append the notary seal to the document
             language.addSeal(document, citation, signature);
@@ -225,34 +205,14 @@ NotaryKey.prototype.notarizeDocument = function(document) {
  * encrypted a random secret key that was used to encrypt the original message. The
  * decrypted message is returned from this method.
  * 
- * @param {Object} authenticatedMessage The authenticated encrypted message.
+ * @param {Object} message The authenticated encrypted message.
  * @returns {String} The decrypted message.
  */
-NotaryKey.prototype.decryptMessage = function(authenticatedMessage) {
+NotaryKey.prototype.decryptMessage = function(message) {
     switch(this.version) {
         case 'v1':
-            // decompose the authenticated encrypted message
-            var iv = authenticatedMessage.iv;
-            var tag = authenticatedMessage.tag;
-            var encryptedSeed = authenticatedMessage.encryptedSeed;
-            var encryptedMessage = authenticatedMessage.encryptedMessage;
-
-            // decrypt the 16-byte secret key
-            var kdf1 = new forge.kem.kdf1(forge.md.sha1.create());
-            var kem = forge.kem.rsa.create(kdf1);
-            var key = kem.decrypt(this.key, encryptedSeed, 16);
- 
-            // decrypt the message using the secret key
-            var message;
-            var decipher = forge.cipher.createDecipher('AES-GCM', key);
-            decipher.start({iv: iv, tag: tag});
-            decipher.update(forge.util.createBuffer(encryptedMessage));
-            var authenticated = decipher.finish();
-            // authenticated is false if there was a failure (eg: authentication tag didn't match)
-            if(authenticated) {
-               message = decipher.output.getBytes();
-            }
-            return message;
+            var plaintext = decrypt(this.key, message);
+            return plaintext;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + this.version);
     }
@@ -264,8 +224,7 @@ var V1_CERTIFICATE =
         '[\n' +
         '    $version: v1\n' +
         '    $tag: %tag\n' +
-        '    $n: %n\n' +
-        '    $e: %e\n' +
+        '    $key: %key\n' +
         ']';
 
 /**
@@ -290,9 +249,7 @@ function NotaryCertificate(document) {
             this.tag = language.getValueForKey(document, '$tag').toString();
 
             // extract the public key for this notary certificate
-            var n = new forge.jsbn.BigInteger(language.getValueForKey(document, '$n').toString());
-            var e = new forge.jsbn.BigInteger(language.getValueForKey(document, '$e').toString());
-            this.key = forge.pki.rsa.setPublicKey(n, e);
+            this.key = language.getValueForKey(document, '$key').toString().slice(1, -1);
             var sealList = language.getSeals(document);
             this.seals = [];
             for (var i = 0; i < sealList.length; i++) {
@@ -321,8 +278,7 @@ NotaryCertificate.prototype.toString = function() {
     switch(this.version) {
         case 'v1':
             var source = V1_CERTIFICATE.replace(/%tag/, this.tag);
-            source = source.replace(/%n/, this.key.n.toString());
-            source = source.replace(/%e/, this.key.e.toString());
+            source = source.replace(/%key/, "'" + this.key + "'");
             var document = language.parseDocument(source);
             for (var i = 0; i < this.seals.length; i++) {
                 var seal = this.seals[i];
@@ -357,25 +313,11 @@ NotaryCertificate.prototype.documentIsValid = function(document) {
             // calculate the hash of the document
             var citation = result.seal.children[0].toString();
             var source = result.document.toString();
-            source += '\n' + citation;  // NOTE: the citation must be included in the signed source!
-            var hasher = forge.sha512.create();
-            hasher.update(source);
-            var hash = hasher.digest().getBytes();
+            source += citation;  // NOTE: the citation must be included in the signed source!
 
             // verify the signature using this notary certificate
-            var signature = result.seal.children[1].toString();
-            var bytes = codex.base64Decode(signature.slice(1, -1));
-            var signer = forge.pss.create({
-                md: forge.sha512.create(),
-                mgf: forge.mgf1.create(forge.sha512.create()),
-                saltLength: 20
-            });
-            var isValid;
-            try {  // must do this in a try block due to a bug in forge.pss
-                 isValid = this.key.verify(hash, bytes, signer);
-            } catch (e) {
-                 isValid = false;
-            }
+            var signature = result.seal.children[1].toString().slice(1, -1);  // remove the "'"s
+            var isValid = verify(this.key, source, signature);
             return isValid;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + this.version);
@@ -396,29 +338,8 @@ NotaryCertificate.prototype.documentIsValid = function(document) {
 NotaryCertificate.prototype.encryptMessage = function(message) {
     switch(this.version) {
         case 'v1':
-            // generate and encrypt a 16-byte secret key
-            var kdf1 = new forge.kem.kdf1(forge.md.sha1.create());
-            var kem = forge.kem.rsa.create(kdf1);
-            var result = kem.encrypt(this.key, 16);
-            var key = result.key;
-            var encryptedSeed = result.encapsulation;
- 
-            // encrypt the message using the secret key
-            var iv = forge.random.getBytesSync(12);
-            var cipher = forge.cipher.createCipher('AES-GCM', key);
-            cipher.start({iv: iv});
-            cipher.update(forge.util.createBuffer(message));
-            cipher.finish();
-            var encryptedMessage = cipher.output.getBytes();
-            var tag = cipher.mode.tag.getBytes();
-
-            // return all components of the authenticated message
-            return {
-                iv: iv,
-                tag: tag,
-                encryptedSeed: encryptedSeed,
-                encryptedMessage: encryptedMessage
-            };
+            var ciphertext = encrypt(this.key, message);
+            return ciphertext;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + this.version);
     }
@@ -468,9 +389,7 @@ function DocumentCitation(reference, documentOrHash, version) {
             if (hash) {
                 this.hash = hash;
             } else {
-                var hasher = forge.sha512.create();
-                hasher.update(document.toString());
-                this.hash = codex.base32Encode(hasher.digest().getBytes()).replace(/\s/g, "");
+                this.hash = digest(document.toString());
             }
             break;
         default:
@@ -515,11 +434,95 @@ DocumentCitation.prototype.documentMatches = function(document) {
     }
     switch(this.version) {
         case 'v1':
-            var hasher = forge.sha512.create();
-            hasher.update(document.toString());
-            var hash = codex.base32Encode(hasher.digest().getBytes()).replace(/\s/g, "");
+            var hash = digest(document.toString());
             return this.hash === hash;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + this.version);
     }
 };
+
+function digest(message) {
+    var hasher = crypto.createHash('sha512');
+    hasher.update(message);
+    return hasher.digest('hex');
+}
+
+function generate() {
+    var algorithm = 'secp521r1';
+    var curve = crypto.createECDH(algorithm);
+    curve.generateKeys();
+    return {
+        privateKey: curve.getPrivateKey('hex'),
+        publicKey: curve.getPublicKey('hex')
+    };
+}
+
+function create(privateKey) {
+    var algorithm = 'secp521r1';
+    var curve = crypto.createECDH(algorithm);
+    curve.setPrivateKey(privateKey, 'hex');
+    return {
+        privateKey: curve.getPrivateKey('hex'),
+        publicKey: curve.getPublicKey('hex')
+    };
+}
+
+function sign(privateKey, message) {
+    var algorithm = 'secp521r1';
+    var curve = crypto.createECDH(algorithm);
+    curve.setPrivateKey(privateKey, 'hex');
+    var pem = ec_pem(curve, algorithm);
+    var signer = crypto.createSign('ecdsa-with-SHA1');
+    signer.update(message);
+    return signer.sign(pem.encodePrivateKey(), 'base64');
+}
+
+function verify(publicKey, message, signature) {
+    var algorithm = 'secp521r1';
+    var curve = crypto.createECDH(algorithm);
+    curve.setPublicKey(publicKey, 'hex');
+    var pem = ec_pem(curve, algorithm);
+    var verifier = crypto.createVerify('ecdsa-with-SHA1');
+    verifier.update(message);
+    return verifier.verify(pem.encodePublicKey(), signature, 'base64');
+}
+
+function encrypt(publicKey, plaintext) {
+    // generate and encrypt a 16-byte symmetric key
+    var kdf1 = new forge.kem.kdf1(forge.md.sha1.create());
+    var kem = forge.kem.rsa.create(kdf1);
+    var result = kem.encrypt(publicKey, 16);
+    var key = result.key;
+    var seed = result.encapsulation;
+
+    // encrypt the message using the symmetric key
+    var iv = crypto.randomBytes(12);
+    var cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+    var ciphertext = cipher.update(plaintext, 'utf8', 'base64');
+    ciphertext += cipher.final('base64');
+    var tag = cipher.getAuthTag();
+    return {
+        iv: iv,
+        tag: tag,
+        seed: seed,
+        ciphertext: ciphertext
+    };
+}
+
+function decrypt(privateKey, message) {
+    // decrypt the 16-byte symmetric key
+    var kdf1 = new forge.kem.kdf1(forge.md.sha1.create());
+    var kem = forge.kem.rsa.create(kdf1);
+    var key = kem.decrypt(privateKey, seed, 16);
+
+    // decrypt the message using the symmetric key
+    var iv = message.iv;
+    var tag = message.tag;
+    var seed = message.seed;
+    var ciphertext = message.ciphertext;
+    var decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(tag);
+    var plaintext = decipher.update(ciphertext, 'base64', 'utf8');
+    plaintext += decipher.final('utf8');
+    return plaintext;
+}
