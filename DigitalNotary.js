@@ -62,13 +62,16 @@ function NotaryKey(documentOrVersion) {
     switch(version) {
         case 'v1':
             var keypair;
+            var base32;
             this.version = version;
             if (document) {
                 // extract the unique tag for this notary key
                 this.tag = language.getValueForKey(document, '$tag').toString();
 
                 // extract the notary key
-                this.key = language.getValueForKey(document, '$key').toString().slice(1, -1);
+                base32 = language.getValueForKey(document, '$key').toString().slice(1, -1);  // remove the "'"s
+                var binary = codex.base32Decode(base32);
+                this.key = Buffer.from(binary, 'binary');
                 keypair = recreateV1(this.key);
 
             } else {
@@ -85,8 +88,9 @@ function NotaryKey(documentOrVersion) {
             this.citation = 'bali:/' + this.tag.toString().slice(1);  // no hash yet...
 
             // create the certificate
+            base32 = codex.base32Encode(keypair.publicKey.toString('binary'), '        ');
             var source = V1_CERTIFICATE.replace(/%tag/, this.tag);
-            source = source.replace(/%key/, "'" + keypair.publicKey + "'");
+            source = source.replace(/%key/, "'" + base32 + "\n    '");
             document = language.parseDocument(source);
             this.notarizeDocument(document);
 
@@ -112,8 +116,9 @@ exports.NotaryKey = NotaryKey;
 NotaryKey.prototype.toString = function() {
     switch(this.version) {
         case 'v1':
+            var base32 = codex.base32Encode(this.key.toString('binary'), '        ');
             var source = V1_KEY.replace(/%tag/, this.tag);
-            source = source.replace(/%key/, "'" + this.key + "'");
+            source = source.replace(/%key/, "'" + base32 + "\n    '");
             return source;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + this.version);
@@ -142,8 +147,9 @@ NotaryKey.prototype.regenerateKey = function() {
             var citation = 'bali:/' + tag.toString().slice(1);  // no hash yet...
 
             // create the certificate
+            var base32 = codex.base32Encode(keypair.publicKey.toString('binary'), '        ');
             var source = V1_CERTIFICATE.replace(/%tag/, tag);
-            source = source.replace(/%key/, "'" + keypair.publicKey + "'");
+            source = source.replace(/%key/, "'" + base32 + "\n    '");
             var document = language.parseDocument(source);
 
             // notarize it with the old key
@@ -187,7 +193,7 @@ NotaryKey.prototype.notarizeDocument = function(document) {
             source += citation;  // NOTE: the citation must be included in the signed source!
 
             // generate the notarization signature
-            var signature = "'" + signV1(this.key, source) + "'";
+            var signature = "'" + format(signV1(this.key, source)) + "'";
 
             // append the notary seal to the document
             language.addSeal(document, citation, signature);
@@ -248,7 +254,9 @@ function NotaryCertificate(document) {
             this.tag = language.getValueForKey(document, '$tag').toString();
 
             // extract the public key for this notary certificate
-            this.key = language.getValueForKey(document, '$key').toString().slice(1, -1);
+            var base32 = language.getValueForKey(document, '$key').toString().slice(1, -1);  // remove the "'"s
+            var binary = codex.base32Decode(base32);
+            this.key = Buffer.from(binary, 'binary');
             var sealList = language.getSeals(document);
             this.seals = [];
             for (var i = 0; i < sealList.length; i++) {
@@ -276,8 +284,9 @@ exports.NotaryCertificate = NotaryCertificate;
 NotaryCertificate.prototype.toString = function() {
     switch(this.version) {
         case 'v1':
+            var base32 = codex.base32Encode(this.key.toString('binary'), '        ');
             var source = V1_CERTIFICATE.replace(/%tag/, this.tag);
-            source = source.replace(/%key/, "'" + this.key + "'");
+            source = source.replace(/%key/, "'" + base32 + "\n    '");
             var document = language.parseDocument(source);
             for (var i = 0; i < this.seals.length; i++) {
                 var seal = this.seals[i];
@@ -451,30 +460,32 @@ var CIPHER = 'aes-256-gcm';
 function digestV1(message) {
     var hasher = crypto.createHash(DIGEST);
     hasher.update(message);
-    return hasher.digest('hex');
+    var binary = hasher.digest().toString('binary');
+    var digest = codex.base32Encode(binary).replace(/\s+/g, '');  // strip out any whitespace
+    return digest;
 }
 
 function generateV1() {
     var curve = crypto.createECDH(CURVE);
     curve.generateKeys();
     return {
-        privateKey: curve.getPrivateKey('hex'),
-        publicKey: curve.getPublicKey('hex')
+        privateKey: curve.getPrivateKey(),
+        publicKey: curve.getPublicKey()
     };
 }
 
 function recreateV1(privateKey) {
     var curve = crypto.createECDH(CURVE);
-    curve.setPrivateKey(privateKey, 'hex');
+    curve.setPrivateKey(privateKey);
     return {
-        privateKey: curve.getPrivateKey('hex'),
-        publicKey: curve.getPublicKey('hex')
+        privateKey: curve.getPrivateKey(),
+        publicKey: curve.getPublicKey()
     };
 }
 
 function signV1(privateKey, message) {
     var curve = crypto.createECDH(CURVE);
-    curve.setPrivateKey(privateKey, 'hex');
+    curve.setPrivateKey(privateKey);
     var pem = ec_pem(curve, CURVE);
     var signer = crypto.createSign(SIGNATURE);
     signer.update(message);
@@ -483,7 +494,7 @@ function signV1(privateKey, message) {
 
 function verifyV1(publicKey, message, signature) {
     var curve = crypto.createECDH(CURVE);
-    curve.setPublicKey(publicKey, 'hex');
+    curve.setPublicKey(publicKey);
     var pem = ec_pem(curve, CURVE);
     var verifier = crypto.createVerify(SIGNATURE);
     verifier.update(message);
@@ -494,8 +505,8 @@ function encryptV1(publicKey, plaintext) {
     // generate and encrypt a 32-byte symmetric key
     var curve = crypto.createECDH(CURVE);
     curve.generateKeys();
-    var seed = curve.getPublicKey('hex');  // use the new public key as the seed
-    var key = curve.computeSecret(publicKey, 'hex').slice(0, 32);  // take only first 32 bytes
+    var seed = curve.getPublicKey();  // use the new public key as the seed
+    var key = curve.computeSecret(publicKey).slice(0, 32);  // take only first 32 bytes
 
     // encrypt the message using the symmetric key
     var iv = crypto.randomBytes(12);
@@ -515,8 +526,8 @@ function decryptV1(privateKey, message) {
     // decrypt the 32-byte symmetric key
     var seed = message.seed;
     var curve = crypto.createECDH(CURVE);
-    curve.setPrivateKey(privateKey, 'hex');
-    var key = curve.computeSecret(seed, 'hex').slice(0, 32);  // take only first 32 bytes
+    curve.setPrivateKey(privateKey);
+    var key = curve.computeSecret(seed).slice(0, 32);  // take only first 32 bytes
 
     // decrypt the message using the symmetric key
     var iv = message.iv;
@@ -527,4 +538,16 @@ function decryptV1(privateKey, message) {
     var plaintext = decipher.update(ciphertext, 'base64', 'utf8');
     plaintext += decipher.final('utf8');
     return plaintext;
+}
+
+function format(base64) {
+    var result = '';
+    for (var i = 0; i < base64.length; i++) {
+        if (i % 80 === 0) {
+            result += '\n    ';
+        }
+        result += base64[i];
+    }
+    result += '\n';
+    return result;
 }
