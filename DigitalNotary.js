@@ -88,8 +88,8 @@ function NotaryKey(documentOrVersion) {
             this.citation = 'bali:/' + this.tag.toString().slice(1);  // no hash yet...
 
             // create the certificate
-            base32 = codex.base32Encode(keypair.publicKey.toString('binary'), '        ');
             var source = V1_CERTIFICATE.replace(/%tag/, this.tag);
+            base32 = codex.base32Encode(keypair.publicKey.toString('binary'), '        ');
             source = source.replace(/%key/, "'" + base32 + "\n    '");
             document = language.parseDocument(source);
             this.notarizeDocument(document);
@@ -116,8 +116,8 @@ exports.NotaryKey = NotaryKey;
 NotaryKey.prototype.toString = function() {
     switch(this.version) {
         case 'v1':
-            var base32 = codex.base32Encode(this.key.toString('binary'), '        ');
             var source = V1_KEY.replace(/%tag/, this.tag);
+            var base32 = codex.base32Encode(this.key.toString('binary'), '        ');
             source = source.replace(/%key/, "'" + base32 + "\n    '");
             return source;
         default:
@@ -147,8 +147,8 @@ NotaryKey.prototype.regenerateKey = function() {
             var citation = 'bali:/' + tag.toString().slice(1);  // no hash yet...
 
             // create the certificate
-            var base32 = codex.base32Encode(keypair.publicKey.toString('binary'), '        ');
             var source = V1_CERTIFICATE.replace(/%tag/, tag);
+            var base32 = codex.base32Encode(keypair.publicKey.toString('binary'), '        ');
             source = source.replace(/%key/, "'" + base32 + "\n    '");
             var document = language.parseDocument(source);
 
@@ -193,7 +193,7 @@ NotaryKey.prototype.notarizeDocument = function(document) {
             source += citation;  // NOTE: the citation must be included in the signed source!
 
             // generate the notarization signature
-            var signature = "'" + format(signV1(this.key, source)) + "'";
+            var signature = "'" + signV1(this.key, source) + "\n'";
 
             // append the notary seal to the document
             language.addSeal(document, citation, signature);
@@ -243,7 +243,7 @@ var V1_CERTIFICATE =
 function NotaryCertificate(document) {
     // validate the argument
     if (!document || document.constructor.name !== 'TreeNode' || document.type !== NodeTypes.DOCUMENT) {
-        throw new Error('NOTARY: The constructor only requires a Bali document: ' + document);
+        throw new Error('NOTARY: The constructor requires a Bali document: ' + document);
     }
     var version = language.getValueForKey(document, '$version').toString();
 
@@ -284,8 +284,8 @@ exports.NotaryCertificate = NotaryCertificate;
 NotaryCertificate.prototype.toString = function() {
     switch(this.version) {
         case 'v1':
-            var base32 = codex.base32Encode(this.key.toString('binary'), '        ');
             var source = V1_CERTIFICATE.replace(/%tag/, this.tag);
+            var base32 = codex.base32Encode(this.key.toString('binary'), '        ');
             source = source.replace(/%key/, "'" + base32 + "\n    '");
             var document = language.parseDocument(source);
             for (var i = 0; i < this.seals.length; i++) {
@@ -311,11 +311,11 @@ NotaryCertificate.prototype.toString = function() {
 NotaryCertificate.prototype.documentIsValid = function(document) {
     // validate the argument
     if (!document || document.constructor.name !== 'TreeNode' || document.type !== NodeTypes.DOCUMENT) {
-        throw new Error('NOTARY: The constructor only requires a Bali document: ' + document);
+        throw new Error('NOTARY: The constructor requires a Bali document: ' + document);
     }
     switch(this.version) {
         case 'v1':
-            // separate the document and its last seal
+            // separate the document from its last seal
             var result = language.removeSeal(document);
 
             // calculate the hash of the document
@@ -438,7 +438,7 @@ DocumentCitation.prototype.toString = function() {
 DocumentCitation.prototype.documentMatches = function(document) {
     // validate the argument
     if (!document || document.constructor.name !== 'TreeNode' || document.type !== NodeTypes.DOCUMENT) {
-        throw new Error('NOTARY: The constructor only requires a Bali document: ' + document);
+        throw new Error('NOTARY: The constructor requires a Bali document: ' + document);
     }
     switch(this.version) {
         case 'v1':
@@ -489,7 +489,9 @@ function signV1(privateKey, message) {
     var pem = ec_pem(curve, CURVE);
     var signer = crypto.createSign(SIGNATURE);
     signer.update(message);
-    return signer.sign(pem.encodePrivateKey(), 'base64');
+    var binary = signer.sign(pem.encodePrivateKey(), 'binary');
+    var signature = codex.base32Encode(binary, '    ');
+    return signature;
 }
 
 function verifyV1(publicKey, message, signature) {
@@ -498,7 +500,8 @@ function verifyV1(publicKey, message, signature) {
     var pem = ec_pem(curve, CURVE);
     var verifier = crypto.createVerify(SIGNATURE);
     verifier.update(message);
-    return verifier.verify(pem.encodePublicKey(), signature, 'base64');
+    var binary = codex.base32Decode(signature);
+    return verifier.verify(pem.encodePublicKey(), binary, 'binary');
 }
 
 function encryptV1(publicKey, plaintext) {
@@ -538,16 +541,4 @@ function decryptV1(privateKey, message) {
     var plaintext = decipher.update(ciphertext, 'base64', 'utf8');
     plaintext += decipher.final('utf8');
     return plaintext;
-}
-
-function format(base64) {
-    var result = '';
-    for (var i = 0; i < base64.length; i++) {
-        if (i % 80 === 0) {
-            result += '\n    ';
-        }
-        result += base64[i];
-    }
-    result += '\n';
-    return result;
 }

@@ -37,6 +37,7 @@ describe('Bali Digital Notary™', function() {
             var document = language.parseDocument(notaryKey.toString());
             expect(document).to.exist;  // jshint ignore:line
             notaryKey.notarizeDocument(document);
+            console.log('document: ' + document);
             var isValid = certificate.documentIsValid(document);
             expect(isValid).to.equal(true);
         });
