@@ -85,7 +85,7 @@ function NotaryKey(documentOrVersion) {
             }
 
             // construct a temporary citation for the certificate
-            this.citation = 'bali:/' + this.tag.toString().slice(1);  // no hash yet...
+            this.citation = 'bali:' + this.tag.toString().slice(1);  // no hash yet...
 
             // create the certificate
             var source = V1_CERTIFICATE.replace(/%tag/, this.tag);
@@ -144,7 +144,7 @@ NotaryKey.prototype.regenerateKey = function() {
             var keypair = generateV1();
 
             // construct a temporary citation for the certificate
-            var citation = 'bali:/' + tag.toString().slice(1);  // no hash yet...
+            var citation = 'bali:' + tag.toString().slice(1);  // no hash yet...
 
             // create the certificate
             var source = V1_CERTIFICATE.replace(/%tag/, tag);
