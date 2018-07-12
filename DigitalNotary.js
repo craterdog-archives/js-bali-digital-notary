@@ -315,16 +315,17 @@ NotaryCertificate.prototype.documentIsValid = function(document) {
     }
     switch(this.version) {
         case 'v1':
-            // separate the document from its last seal
-            var result = language.removeSeal(document);
+            // separate the document from its last seal components
+            var signature = language.getSignature(document).toString().slice(1, -1);  // remove the "'"s
+            var citation = language.getCitation(document);
+            document = language.getBody(document);
 
             // calculate the hash of the document
-            var citation = result.seal.children[0].toString();
-            var source = result.document.toString();
+            var source = document.toString();
             source += citation;  // NOTE: the citation must be included in the signed source!
 
             // verify the signature using this notary certificate
-            var signature = result.seal.children[1].toString().slice(1, -1);  // remove the "'"s
+            signature = signature.toString().slice(1, -1);  // remove the "'"s
             var isValid = verifyV1(this.key, source, signature);
             return isValid;
         default:
