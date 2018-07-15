@@ -34,10 +34,10 @@ describe('Bali Digital Notary™', function() {
     describe('Test Signing and Verification', function() {
 
         it('should digitally sign a document properly', function() {
-            var document = language.parseDocument(notaryKey.toString());
+            var component = language.parseComponent(notaryKey.toString());
+            var document = language.document(component);
             expect(document).to.exist;  // jshint ignore:line
             notaryKey.notarizeDocument(document);
-            console.log('document: ' + document);
             var isValid = certificate.documentIsValid(document);
             expect(isValid).to.equal(true);
         });
@@ -62,7 +62,8 @@ describe('Bali Digital Notary™', function() {
                     '[\n' +
                     '   $foo: "bar"\n' +
                     ']';
-            var document = language.parseDocument(source);
+            var component = language.parseComponent(source);
+            var document = language.document(component);
             notaryKey.notarizeDocument(document);
             var isValid = certificate.documentIsValid(document);
             expect(isValid).to.equal(true);
@@ -70,7 +71,8 @@ describe('Bali Digital Notary™', function() {
             var newCertificate = notaryKey.regenerateKey();
             expect(newCertificate).to.exist;  // jshint ignore:line
 
-            document = language.parseDocument(source);
+            component = language.parseComponent(source);
+            document = language.document(component);
             notaryKey.notarizeDocument(document);
             isValid = certificate.documentIsValid(document);
             expect(isValid).to.equal(false);
@@ -85,7 +87,8 @@ describe('Bali Digital Notary™', function() {
 
         it('should export and re-import a notary key properly', function() {
             var source1 = notaryKey.toString();
-            var document1 = language.parseDocument(source1);
+            var component = language.parseComponent(source1);
+            var document1 = language.document(component);
             var copy = new notary.NotaryKey(document1);
             var source2 = copy.toString();
             expect(source1).to.equal(source2);
