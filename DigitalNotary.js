@@ -329,8 +329,9 @@ NotaryCertificate.prototype.documentIsValid = function(document) {
     switch(this.protocol) {
         case 'v1':
             // separate the document from its last seal components
-            var signature = bali.getSignature(document).toString().slice(1, -1);  // remove the "'"s
-            var citation = bali.getCitation(document);
+            var seal = bali.getSeal(document);
+            var signature = bali.getSignature(seal);
+            var citation = bali.getCitation(seal);
             document = bali.getBody(document);
 
             // calculate the hash of the document
