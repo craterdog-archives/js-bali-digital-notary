@@ -12,7 +12,6 @@ var URL = require('url').URL;
 var crypto = require('crypto');
 var ec_pem = require('ec-pem');
 var bali = require('bali-language/BaliLanguage');
-var random = require('bali-utilities/RandomUtilities');
 var codex = require('bali-utilities/EncodingUtilities');
 
 
@@ -66,7 +65,6 @@ function NotaryKey(documentOrProtocol) {
     switch(protocol) {
         case 'v1':
             var keypair;
-            var base32;
             if (document) {
                 // extract the unique tag and version number for this notary key
                 this.tag = bali.getValueForKey(document, '$tag').toString();
@@ -74,15 +72,12 @@ function NotaryKey(documentOrProtocol) {
 
                 // extract the notary key
                 this.protocol = protocol;
-                base32 = bali.getValueForKey(document, '$privateKey').toString().slice(1, -1);  // remove the "'"s
-                var binary = codex.base32Decode(base32);
-                this.privateKey = Buffer.from(binary, 'binary');
+                this.privateKey = binaryToBuffer(bali.getValueForKey(document, '$privateKey').toString());
                 keypair = recreateV1(this.privateKey);
 
             } else {
                 // generate a unique tag and version number for this notary key
-                var bytes = random.generateRandomBytes(20);
-                this.tag = '#' + codex.base32Encode(bytes);
+                this.tag = bali.tag();
                 this.version = 'v1';  // the initial version of the notary key
 
                 // generate a new notary key
@@ -100,8 +95,7 @@ function NotaryKey(documentOrProtocol) {
             var source = V1_CERTIFICATE.replace(/%tag/, this.tag);
             source = source.replace(/%version/, this.version);
             source = source.replace(/%protocol/, this.protocol);
-            base32 = codex.base32Encode(keypair.publicKey.toString('binary'), '        ');
-            source = source.replace(/%publicKey/, "'" + base32 + "\n    '");
+            source = source.replace(/%publicKey/, bufferToBinary(keypair.publicKey));
             document = bali.parseDocument(source);
             this.notarizeDocument(document);
 
@@ -130,8 +124,7 @@ NotaryKey.prototype.toString = function() {
             var source = V1_KEY.replace(/%tag/, this.tag);
             source = source.replace(/%version/, this.version);
             source = source.replace(/%protocol/, this.protocol);
-            var base32 = codex.base32Encode(this.privateKey.toString('binary'), '        ');
-            source = source.replace(/%privateKey/, "'" + base32 + "\n    '");
+            source = source.replace(/%privateKey/, bufferToBinary(this.privateKey));
             return source;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + this.protocol);
@@ -150,8 +143,7 @@ NotaryKey.prototype.regenerateKey = function() {
     switch(this.protocol) {
         case 'v1':
             // generate a unique tag for this notary key
-            var bytes = random.generateRandomBytes(20);
-            var tag = '#' + codex.base32Encode(bytes);
+            var tag = bali.tag();
 
             // generate a new notary key
             var keypair = generateV1();
@@ -165,8 +157,7 @@ NotaryKey.prototype.regenerateKey = function() {
             var source = V1_CERTIFICATE.replace(/%tag/, tag);
             source = source.replace(/%version/, this.version);
             source = source.replace(/%protocol/, this.protocol);
-            var base32 = codex.base32Encode(keypair.publicKey.toString('binary'), '        ');
-            source = source.replace(/%publicKey/, "'" + base32 + "\n    '");
+            source = source.replace(/%publicKey/, bufferToBinary(keypair.publicKey));
             var document = bali.parseDocument(source);
 
             // notarize it with the old key
@@ -276,9 +267,7 @@ function NotaryCertificate(document) {
 
             // extract the protocol version and public key for this notary certificate
             this.protocol = protocol;
-            var base32 = bali.getValueForKey(document, '$publicKey').toString().slice(1, -1);  // remove the "'"s
-            var binary = codex.base32Decode(base32);
-            this.publicKey = Buffer.from(binary, 'binary');
+            this.publicKey = binaryToBuffer(bali.getValueForKey(document, '$publicKey').toString());
             var sealList = bali.getSeals(document);
             this.seals = [];
             for (var i = 0; i < sealList.length; i++) {
@@ -425,7 +414,7 @@ function DocumentCitation(reference, optionalDocument, optionalProtocol) {
             this.version = bali.getValueForKey(catalog, '$version').toString();
             var hash = bali.getValueForKey(catalog, '$hash');
             if (hash) {
-                this.hash = "'" + hash.toString() + "'";
+                this.hash = hash.toString();
             } else {
                 this.hash = "'" + digestV1(document.toString()) + "'";
             }
@@ -463,7 +452,7 @@ DocumentCitation.prototype.toString = function() {
  * This method determines whether or not the specified Bali document matches EXACTLY the
  * Bali document referenced by this citation.
  * 
- * @param {String} document The Bali document to be validated.
+ * @param {TreeNode} document The Bali document parse tree to be validated.
  * @returns {Boolean} Whether or not the Bali document is valid.
  */
 DocumentCitation.prototype.documentMatches = function(document) {
@@ -572,4 +561,17 @@ function decryptV1(privateKey, message) {
     var plaintext = decipher.update(ciphertext, 'base64', 'utf8');
     plaintext += decipher.final('utf8');
     return plaintext;
+}
+
+function binaryToBuffer(binary) {
+    var base32 = binary.slice(1, -1);  // remove the "'"s
+    binary = codex.base32Decode(base32);
+    var buffer = Buffer.from(binary, 'binary');
+    return buffer;
+}
+
+function bufferToBinary(buffer) {
+    var base32 = codex.base32Encode(buffer.toString('binary'), '        ');
+    var binary = "'" + base32 + "\n    '";
+    return binary;
 }
