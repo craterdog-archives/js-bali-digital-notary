@@ -332,7 +332,7 @@ NotaryCertificate.prototype.documentIsValid = function(document) {
             var seal = bali.getSeal(document);
             var signature = bali.getSignature(seal);
             var citation = bali.getCitation(seal);
-            document = bali.getBody(document);
+            document = bali.removeSeal(document);
 
             // calculate the hash of the document
             var source = document.toString();
