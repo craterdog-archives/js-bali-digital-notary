@@ -84,9 +84,13 @@ describe('Bali Digital Notary™', function() {
 
         it('should export and re-import a notary key properly', function() {
             var source1 = notaryKey.toString();
+            console.log('notaryKey1: ' + notaryKey);
+            console.log('certificate1: ' + notaryKey.certificate);
             var document1 = language.parseDocument(source1);
             var copy = new notary.NotaryKey(document1);
             var source2 = copy.toString();
+            console.log('notaryKey2: ' + copy);
+            console.log('certificate2: ' + copy.certificate);
             expect(source1).to.equal(source2);
         });
 
