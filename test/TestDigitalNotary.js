@@ -16,9 +16,10 @@ var expect = require('chai').expect;
 
 describe('Bali Digital Notary™', function() {
 
-    var notaryKey = new notary.NotaryKey();
-    var citation = notaryKey.citation;
-    var certificate = notaryKey.certificate;
+    var keypair = notary.NotaryKey.generateKeyPair();
+    var notaryKey = keypair.notaryKey;
+    var certificate = keypair.certificate;
+    var citation = notary.DocumentCitation.recreateCitation(notaryKey.citation);
 
     describe('Test Citations', function() {
 
@@ -84,13 +85,9 @@ describe('Bali Digital Notary™', function() {
 
         it('should export and re-import a notary key properly', function() {
             var source1 = notaryKey.toString();
-            console.log('notaryKey1: ' + notaryKey);
-            console.log('certificate1: ' + notaryKey.certificate);
             var document1 = language.parseDocument(source1);
-            var copy = new notary.NotaryKey(document1);
+            var copy = notary.NotaryKey.recreateNotaryKey(document1);
             var source2 = copy.toString();
-            console.log('notaryKey2: ' + copy);
-            console.log('certificate2: ' + copy.certificate);
             expect(source1).to.equal(source2);
         });
 
