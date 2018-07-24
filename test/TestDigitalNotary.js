@@ -19,7 +19,7 @@ describe('Bali Digital Notary™', function() {
     var keypair = notary.NotaryKey.generateKeyPair();
     var notaryKey = keypair.notaryKey;
     var certificate = keypair.certificate;
-    var citation = notary.DocumentCitation.recreateCitation(notaryKey.citation);
+    var citation = notaryKey.citation;
 
     describe('Test Citations', function() {
 
@@ -94,7 +94,7 @@ describe('Bali Digital Notary™', function() {
         it('should export and re-import a notary certificate properly', function() {
             var source1 = certificate.toString();
             var document1 = language.parseDocument(source1);
-            var copy = new notary.NotaryCertificate(document1);
+            var copy = notary.NotaryCertificate.recreateCertificate(document1);
             var source2 = copy.toString();
             expect(source1).to.equal(source2);
         });
