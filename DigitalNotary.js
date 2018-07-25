@@ -15,13 +15,6 @@ var bali = require('bali-language/BaliLanguage');
 var codex = require('bali-utilities/EncodingUtilities');
 
 
-function NotaryKey() {
-    return this;
-}
-NotaryKey.prototype.constructor = NotaryKey;
-exports.NotaryKey = NotaryKey;
-
-
 // source templates for a notary key
 var V1_KEY =
         '[\n' +
@@ -32,6 +25,13 @@ var V1_KEY =
         '    $publicKey: %publicKey\n' +
         '    $citation: %citation\n' +
         ']';
+
+function NotaryKey() {
+    return this;
+}
+NotaryKey.prototype.constructor = NotaryKey;
+exports.NotaryKey = NotaryKey;
+
 
 NotaryKey.generateKeyPair = function(optionalProtocol) {
     // validate the argument
@@ -62,7 +62,9 @@ NotaryKey.generateKeyPair = function(optionalProtocol) {
 
             // construct a temporary citation with no hash for the certificate
             var reference = V1_REFERENCE.replace(/%tag/, notaryKey.tag);
-            notaryKey.citation = reference.replace(/%version/, notaryKey.version);
+            reference = reference.replace(/%version/, notaryKey.version);
+            reference = reference.replace(/%protocol/, notaryKey.protocol);
+            notaryKey.citation = DocumentCitation.generateCitation(reference, null, protocol);
 
             // create the certificate document
             var source = V1_CERTIFICATE.replace(/%tag/, notaryKey.tag);
@@ -73,7 +75,7 @@ NotaryKey.generateKeyPair = function(optionalProtocol) {
             notaryKey.notarizeDocument(document);
 
             // now construct the full citation including the hash
-            notaryKey.citation = DocumentCitation.generateCitation(notaryKey.citation, document, protocol);
+            notaryKey.citation = DocumentCitation.generateCitation(reference, document, protocol);
 
             // generate the notarized certificate
             var certificate = NotaryCertificate.recreateCertificate(document);
@@ -92,7 +94,7 @@ NotaryKey.recreateNotaryKey = function(document) {
     // validate the argument
     var protocol;
     if (bali.isDocument(document)) {
-        protocol = bali.getValueForKey(document, '$protocol').toString();
+        protocol = bali.getStringForKey(document, '$protocol');
         if (!bali.isVersion(protocol)) {
             throw new Error('NOTARY: The constructor was passed a document with an invalid protocol version: ' + protocol);
         }
@@ -105,16 +107,16 @@ NotaryKey.recreateNotaryKey = function(document) {
     switch(protocol) {
         case 'v1':
             // extract the unique tag and version number for this notary key
-            notaryKey.tag = bali.getValueForKey(document, '$tag').toString();
-            notaryKey.version = bali.getValueForKey(document, '$version').toString();
+            notaryKey.tag = bali.getStringForKey(document, '$tag');
+            notaryKey.version = bali.getStringForKey(document, '$version');
 
             // extract the key pair
             notaryKey.protocol = protocol;
-            var binary = bali.getValueForKey(document, '$privateKey').toString();
+            var binary = bali.getStringForKey(document, '$privateKey');
             notaryKey.privateKey = binaryToBuffer(binary);
-            binary = bali.getValueForKey(document, '$publicKey').toString();
+            binary = bali.getStringForKey(document, '$publicKey');
             notaryKey.publicKey = binaryToBuffer(binary);
-            var reference = bali.getValueForKey(document, '$citation').toString();
+            var reference = bali.getStringForKey(document, '$citation');
             notaryKey.citation = DocumentCitation.recreateCitation(reference);
 
             return notaryKey;
@@ -162,7 +164,8 @@ NotaryKey.prototype.regenerateKey = function() {
 
             // construct a temporary citation for the certificate
             var reference = V1_REFERENCE.replace(/%tag/, this.tag);
-            var citation = reference.replace(/%version/, nextVersion);
+            reference = reference.replace(/%version/, nextVersion);
+            reference = reference.replace(/%protocol/, this.protocol);
 
             // create the certificate
             var source = V1_CERTIFICATE.replace(/%tag/, this.tag);
@@ -180,11 +183,11 @@ NotaryKey.prototype.regenerateKey = function() {
             this.publicKey = keypair.publicKey;
             this.privateKey = keypair.privateKey;
             this.previous = this.citation;
-            this.citation = citation;
+            this.citation = DocumentCitation.generateCitation(reference, null, this.protocol);
             this.notarizeDocument(document);
 
             // now construct the full citation including hash
-            this.citation = DocumentCitation.generateCitation(citation, document, this.protocol);
+            this.citation = DocumentCitation.generateCitation(reference, document, this.protocol);
 
             var certificate = NotaryCertificate.recreateCertificate(document);
             return certificate;
@@ -216,7 +219,7 @@ NotaryKey.prototype.notarizeDocument = function(document) {
             var signature = "'" + signV1(this.privateKey, source) + "\n'";
 
             // append the notary seal to the document
-            bali.addSeal(document, this.citation, signature);
+            bali.addSeal(document, this.citation.toString(), signature);
             break;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + this.protocol);
@@ -244,6 +247,15 @@ NotaryKey.prototype.decryptMessage = function(message) {
 };
 
 
+// source templates for a notary certificate
+var V1_CERTIFICATE =
+        '[\n' +
+        '    $tag: %tag\n' +
+        '    $version: %version\n' +
+        '    $protocol: %protocol\n' +
+        '    $publicKey: %publicKey\n' +
+        ']';
+
 function NotaryCertificate() {
     return this;
 }
@@ -256,7 +268,7 @@ NotaryCertificate.recreateCertificate = function(document) {
     if (!bali.isDocument(document)) {
         throw new Error('NOTARY: The constructor received an invalid document: ' + document);
     }
-    var protocol = bali.getValueForKey(document, '$protocol').toString();
+    var protocol = bali.getStringForKey(document, '$protocol');
     if (!bali.isVersion(protocol)) {
         throw new Error('NOTARY: The constructor received an invalid protocol version: ' + protocol);
     }
@@ -265,17 +277,18 @@ NotaryCertificate.recreateCertificate = function(document) {
     switch(protocol) {
         case 'v1':
             // extract the unique tag and version for this notary certificate
-            certificate.tag = bali.getValueForKey(document, '$tag').toString();
-            certificate.version = bali.getValueForKey(document, '$version').toString();
+            certificate.tag = bali.getStringForKey(document, '$tag');
+            certificate.version = bali.getStringForKey(document, '$version');
             certificate.protocol = protocol;
 
             // extract the public key for this notary certificate
-            var binary = bali.getValueForKey(document, '$publicKey').toString();
+            var binary = bali.getStringForKey(document, '$publicKey');
             certificate.publicKey = binaryToBuffer(binary);
 
             // extract the notary seals for this notary certificate
             var sealList = bali.getSeals(document);
             certificate.seals = [];
+            var reference;
             for (var i = 0; i < sealList.length; i++) {
                 var sealNode = sealList[i];
                 var seal = {};
@@ -284,7 +297,8 @@ NotaryCertificate.recreateCertificate = function(document) {
                 certificate.seals.push(seal);
             }
             if (certificate.version !== 'v1') {
-                certificate.previous = bali.getPreviousCitation(document).toString();
+                reference = bali.getPreviousCitation(document).toString();
+                certificate.previous = DocumentCitation.recreateCitation(reference);
             }
             return certificate;
         default:
@@ -292,15 +306,6 @@ NotaryCertificate.recreateCertificate = function(document) {
     }
 };
 
-
-// source templates for a notary certificate
-var V1_CERTIFICATE =
-        '[\n' +
-        '    $tag: %tag\n' +
-        '    $version: %version\n' +
-        '    $protocol: %protocol\n' +
-        '    $publicKey: %publicKey\n' +
-        ']';
 
 /**
  * This method exports the notary certificate definition as Bali document source.
@@ -387,6 +392,10 @@ NotaryCertificate.prototype.encryptMessage = function(message) {
 };
 
 
+// source templates for a document reference and citation
+var V1_REFERENCE = '<bali:[$tag:%tag,$version:%version,$protocol:%protocol]>';
+var V1_CITATION = '<bali:[$tag:%tag,$version:%version,$protocol:%protocol,$hash:%hash]>';
+
 function DocumentCitation() {
     return this;
 }
@@ -394,39 +403,36 @@ DocumentCitation.prototype.constructor = DocumentCitation;
 exports.DocumentCitation = DocumentCitation;
 
 
-// source templates for a document reference and citation
-var V1_REFERENCE = '<bali:[$tag:%tag,$version:%version]>';
-var V1_CITATION = '<bali:[$tag:%tag,$version:%version,$protocol:%protocol,$hash:%hash]>';
-
 DocumentCitation.generateCitation = function(reference, document, optionalProtocol) {
     // validate the arguments
-    var protocol;
     if (!bali.isReference(reference)) {
         throw new Error('NOTARY: The constructor received an invalid reference: ' + reference);
     }
     var url = new URL(reference.slice(1, -1).replace(/#/, '%23'));
     var catalog = bali.parseComponent(url.pathname.replace(/%23/, '#'));
-    if (bali.isDocument(document)) {
-        if (optionalProtocol) {
-            if (bali.isVersion(optionalProtocol)) {
-                protocol = optionalProtocol;
-            } else {
-                throw new Error('NOTARY: The constructor received an invalid protocol version: ' + optionalProtocol);
-            }
+    if (document && !bali.isDocument(document)) {
+        throw new Error('NOTARY: The constructor received an invalid document: ' + document);
+    }
+    var protocol;
+    if (optionalProtocol) {
+        if (bali.isVersion(optionalProtocol)) {
+            protocol = optionalProtocol;
         } else {
-            protocol = 'v1';  // NOTE: this default value CANNOT change later on!
+            throw new Error('NOTARY: The constructor received an invalid protocol version: ' + optionalProtocol);
         }
     } else {
-        throw new Error('NOTARY: The constructor received an invalid document: ' + document);
+        protocol = 'v1';  // NOTE: this default value CANNOT change later on!
     }
 
     var citation = new DocumentCitation();
     switch(protocol) {
         case 'v1':
-            citation.tag = bali.getValueForKey(catalog, '$tag').toString();
-            citation.version = bali.getValueForKey(catalog, '$version').toString();
+            citation.tag = bali.getStringForKey(catalog, '$tag');
+            citation.version = bali.getStringForKey(catalog, '$version');
             citation.protocol = protocol;
-            citation.hash = "'" + digestV1(document.toString()) + "'";
+            if (document) {
+                citation.hash = "'" + digestV1(document.toString()) + "'";
+            }
             return citation;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
@@ -438,11 +444,11 @@ DocumentCitation.recreateCitation = function(reference) {
     // validate the arguments
     var protocol;
     if (!bali.isReference(reference)) {
-        throw new Error('NOTARY: The constructor received an invalid referencet: ' + reference);
+        throw new Error('NOTARY: The constructor received an invalid reference: ' + reference);
     }
     var url = new URL(reference.slice(1, -1).replace(/#/, '%23'));
     var catalog = bali.parseComponent(url.pathname.replace(/%23/, '#'));
-    protocol = bali.getValueForKey(catalog, '$protocol').toString();
+    protocol = bali.getStringForKey(catalog, '$protocol');
     if (!bali.isVersion(protocol)) {
         throw new Error('NOTARY: The constructor received a reference with an invalid protocol version: ' + protocol);
     }
@@ -450,10 +456,10 @@ DocumentCitation.recreateCitation = function(reference) {
     var citation = new DocumentCitation();
     switch(protocol) {
         case 'v1':
-            citation.tag = bali.getValueForKey(catalog, '$tag').toString();
-            citation.version = bali.getValueForKey(catalog, '$version').toString();
+            citation.tag = bali.getStringForKey(catalog, '$tag');
+            citation.version = bali.getStringForKey(catalog, '$version');
             citation.protocol = protocol;
-            citation.hash = bali.getValueForKey(catalog, '$hash').toString();
+            citation.hash = bali.getStringForKey(catalog, '$hash');
             return citation;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
@@ -470,10 +476,11 @@ DocumentCitation.recreateCitation = function(reference) {
 DocumentCitation.prototype.toString = function() {
     switch(this.protocol) {
         case 'v1':
-            var string = V1_CITATION.replace(/%tag/, this.tag.toString());
+            var string = this.hash ? V1_CITATION : V1_REFERENCE;
+            string = string.replace(/%tag/, this.tag);
             string = string.replace(/%version/, this.version);
             string = string.replace(/%protocol/, this.protocol);
-            string = string.replace(/%hash/, this.hash);
+            if (this.hash) string = string.replace(/%hash/, this.hash);
             return string;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + this.protocol);
