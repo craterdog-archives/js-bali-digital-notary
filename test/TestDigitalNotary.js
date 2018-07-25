@@ -16,7 +16,7 @@ var expect = require('chai').expect;
 
 describe('Bali Digital Notary™', function() {
 
-    var keypair = notary.NotaryKey.generateKeyPair();
+    var keypair = notary.NotaryKey.generateKeyPair('v1');
     var notaryKey = keypair.notaryKey;
     var certificate = keypair.certificate;
     var citation = notaryKey.citation;
