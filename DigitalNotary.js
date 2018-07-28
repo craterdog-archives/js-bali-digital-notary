@@ -54,7 +54,7 @@ NotaryKey.generateKeyPair = function(protocol) {
             var reference = V1.REFERENCE.replace(/%tag/, notaryKey.tag);
             reference = reference.replace(/%version/, notaryKey.version);
             reference = reference.replace(/%protocol/, notaryKey.protocol);
-            notaryKey.citation = DocumentCitation.generateCitation(reference, null, protocol);
+            notaryKey.citation = SourceCitation.generateCitation(reference, null, protocol);
 
             // create the certificate document
             var source = V1.CERTIFICATE.replace(/%tag/, notaryKey.tag);
@@ -65,7 +65,8 @@ NotaryKey.generateKeyPair = function(protocol) {
             notaryKey.notarizeDocument(document);
 
             // now construct the full citation including the hash
-            notaryKey.citation = DocumentCitation.generateCitation(reference, document, protocol);
+            source = document.toString();
+            notaryKey.citation = SourceCitation.generateCitation(reference, source, protocol);
 
             // generate the notarized certificate
             var certificate = NotaryCertificate.recreateCertificate(document);
@@ -113,7 +114,7 @@ NotaryKey.recreateNotaryKey = function(document) {
             binary = bali.getStringForKey(document, '$publicKey');
             notaryKey.publicKey = binaryToBuffer(binary);
             var reference = bali.getStringForKey(document, '$citation');
-            notaryKey.citation = DocumentCitation.recreateCitation(reference);
+            notaryKey.citation = SourceCitation.recreateCitation(reference);
 
             return notaryKey;
         default:
@@ -179,11 +180,12 @@ NotaryKey.prototype.regenerateKey = function() {
             this.publicKey = keypair.publicKey;
             this.privateKey = keypair.privateKey;
             this.previous = this.citation;
-            this.citation = DocumentCitation.generateCitation(reference, null, this.protocol);
+            this.citation = SourceCitation.generateCitation(reference, null, this.protocol);
             this.notarizeDocument(document);
 
             // now construct the full citation including hash
-            this.citation = DocumentCitation.generateCitation(reference, document, this.protocol);
+            source = document.toString();
+            this.citation = SourceCitation.generateCitation(reference, source, this.protocol);
 
             var certificate = NotaryCertificate.recreateCertificate(document);
             return certificate;
@@ -266,6 +268,7 @@ NotaryCertificate.recreateCertificate = function(document) {
         throw new Error('NOTARY: The constructor received an invalid protocol version: ' + protocol);
     }
 
+    // recreate the notary certificate
     var certificate = new NotaryCertificate();
     switch(protocol) {
         case 'v1':
@@ -291,7 +294,7 @@ NotaryCertificate.recreateCertificate = function(document) {
             }
             if (certificate.version !== 'v1') {
                 reference = bali.getPreviousCitation(document).toString();
-                certificate.previous = DocumentCitation.recreateCitation(reference);
+                certificate.previous = SourceCitation.recreateCitation(reference);
             }
             return certificate;
         default:
@@ -315,8 +318,7 @@ NotaryCertificate.prototype.toString = function() {
             source = source.replace(/%publicKey/, "'" + base32 + "\n    '");
             for (var i = 0; i < this.seals.length; i++) {
                 var seal = this.seals[i];
-                source += '\n' + seal.citation;
-                source += ' ' + seal.signature;
+                source += seal.citation + ' ' + seal.signature + '\n';
             }
             if (this.previous) {
                 source = this.previous.toString() + '\n' + source;
@@ -385,47 +387,47 @@ NotaryCertificate.prototype.encryptMessage = function(message) {
 };
 
 
-function DocumentCitation() {
+function SourceCitation() {
     return this;
 }
-DocumentCitation.prototype.constructor = DocumentCitation;
-exports.DocumentCitation = DocumentCitation;
+SourceCitation.prototype.constructor = SourceCitation;
+exports.SourceCitation = SourceCitation;
 
 
 /**
- * This class function generates a new document citation for a specific document. If
- * no document is specified, the citation is for a self-notarized document like a
+ * This class function generates a new source citation for a specific source. If
+ * no source is specified, the citation is for a self-notarized document like a
  * notary certificate.
  * 
- * @param {Reference} reference A Bali reference to the document to be cited.
- * @param {Document} document The Bali document to be cited.
+ * @param {Reference} reference A Bali reference to the source to be cited.
+ * @param {String} source The source to be cited.
  * @param {Version} protocol The Bali version string for the protocol version to be
- * used to generate the document citation.
- * @returns {DocumentCitation} The resulting document citation.
+ * used to generate the source citation.
+ * @returns {SourceCitation} The resulting source citation.
  */
-DocumentCitation.generateCitation = function(reference, document, protocol) {
+SourceCitation.generateCitation = function(reference, source, protocol) {
     // validate the arguments
     if (!bali.isReference(reference)) {
         throw new Error('NOTARY: The constructor received an invalid reference: ' + reference);
     }
     var url = new URL(reference.slice(1, -1).replace(/#/, '%23'));
     var catalog = bali.parseComponent(url.pathname.replace(/%23/, '#'));
-    if (document && !bali.isDocument(document)) {
-        throw new Error('NOTARY: The constructor received an invalid document: ' + document);
+    if (source && source.constructor.name !== 'String') {
+        throw new Error('NOTARY: The constructor received an invalid source string: ' + source);
     }
     if (!bali.isVersion(protocol)) {
         throw new Error('NOTARY: The constructor received an invalid protocol version: ' + protocol);
     }
 
     // generate the citation
-    var citation = new DocumentCitation();
+    var citation = new SourceCitation();
     switch(protocol) {
         case 'v1':
             citation.tag = bali.getStringForKey(catalog, '$tag');
             citation.version = bali.getStringForKey(catalog, '$version');
             citation.protocol = protocol;
-            if (document) {
-                citation.hash = "'" + V1.digest(document.toString()) + "'";
+            if (source) {
+                citation.hash = "'" + V1.digest(source) + "'";
             }
             return citation;
         default:
@@ -435,12 +437,12 @@ DocumentCitation.generateCitation = function(reference, document, protocol) {
 
 
 /**
- * This class function recreates a document citation from a Bali reference.
+ * This class function recreates a source citation from a Bali reference.
  * 
- * @param {Reference} reference The Bali reference containing the document citation definition.
- * @returns {DocumentCitation} The recreated document citation.
+ * @param {Reference} reference The Bali reference containing the source citation definition.
+ * @returns {SourceCitation} The recreated source citation.
  */
-DocumentCitation.recreateCitation = function(reference) {
+SourceCitation.recreateCitation = function(reference) {
     // validate the arguments
     var protocol;
     if (!bali.isReference(reference)) {
@@ -454,7 +456,7 @@ DocumentCitation.recreateCitation = function(reference) {
     }
 
     // recreate the citation
-    var citation = new DocumentCitation();
+    var citation = new SourceCitation();
     switch(protocol) {
         case 'v1':
             citation.tag = bali.getStringForKey(catalog, '$tag');
@@ -469,12 +471,12 @@ DocumentCitation.recreateCitation = function(reference) {
 
 
 /**
- * This method exports the document citation as Bali document source.
+ * This method exports the source citation as a Bali source text string.
  * value.
  * 
- * @returns {String} A string version of the document citation.
+ * @returns {String} A string version of the source citation.
  */
-DocumentCitation.prototype.toString = function() {
+SourceCitation.prototype.toString = function() {
     switch(this.protocol) {
         case 'v1':
             var string = this.hash ? V1.CITATION : V1.REFERENCE;
@@ -490,20 +492,20 @@ DocumentCitation.prototype.toString = function() {
 
 
 /**
- * This method determines whether or not the specified Bali document matches EXACTLY the
- * Bali document referenced by this citation.
+ * This method determines whether or not the specified source matches EXACTLY the
+ * source referenced by this citation.
  * 
- * @param {Document} document The Bali document parse tree to be validated.
- * @returns {Boolean} Whether or not the Bali document is valid.
+ * @param {String} source The source to be checked.
+ * @returns {Boolean} Whether or not the source is valid.
  */
-DocumentCitation.prototype.documentMatches = function(document) {
+SourceCitation.prototype.sourceMatches = function(source) {
     // validate the argument
-    if (!bali.isDocument(document)) {
-        throw new Error('NOTARY: The constructor requires a Bali document: ' + document);
+    if (!source || source.constructor.name !== 'String') {
+        throw new Error('NOTARY: An invalid source string was passed a the argument: ' + source);
     }
     switch(this.protocol) {
         case 'v1':
-            var hash = V1.digest(document.toString());
+            var hash = V1.digest(source);
             return this.hash === "'" + hash + "'";
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + this.protocol);
@@ -550,7 +552,7 @@ var V1 = {
         '    $privateKey: %privateKey\n' +
         '    $publicKey: %publicKey\n' +
         '    $citation: %citation\n' +
-        ']',
+        ']\n',
 
     CERTIFICATE:
         '[\n' +
@@ -558,7 +560,7 @@ var V1 = {
         '    $version: %version\n' +
         '    $protocol: %protocol\n' +
         '    $publicKey: %publicKey\n' +
-        ']',
+        ']\n',
 
     REFERENCE: '<bali:[$tag:%tag,$version:%version,$protocol:%protocol]>',
 
