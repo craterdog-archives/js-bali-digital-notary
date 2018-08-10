@@ -24,7 +24,8 @@ describe('Bali Digital Notary™', function() {
     describe('Test Citations', function() {
 
         it('should validate the citation for the certificate', function() {
-            var isValid = citation.sourceMatches(certificate.toString());
+            var document = language.parseDocument(certificate.toString());
+            var isValid = citation.documentMatches(document);
             expect(isValid).to.equal(true);
         });
 

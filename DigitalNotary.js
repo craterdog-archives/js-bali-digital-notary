@@ -54,7 +54,7 @@ NotaryKey.generateKeyPair = function(protocol) {
             var reference = V1.REFERENCE.replace(/%tag/, notaryKey.tag);
             reference = reference.replace(/%version/, notaryKey.version);
             reference = reference.replace(/%protocol/, notaryKey.protocol);
-            notaryKey.citation = SourceCitation.generateCitation(reference, null, protocol);
+            notaryKey.citation = DocumentCitation.generateCitation(reference, null, protocol);
 
             // create the certificate document
             var source = V1.CERTIFICATE.replace(/%tag/, notaryKey.tag);
@@ -65,8 +65,7 @@ NotaryKey.generateKeyPair = function(protocol) {
             notaryKey.notarizeDocument(document);
 
             // now construct the full citation including the hash
-            source = document.toString();
-            notaryKey.citation = SourceCitation.generateCitation(reference, source, protocol);
+            notaryKey.citation = DocumentCitation.generateCitation(reference, document, protocol);
 
             // generate the notarized certificate
             var certificate = NotaryCertificate.recreateCertificate(document);
@@ -114,7 +113,7 @@ NotaryKey.recreateNotaryKey = function(document) {
             binary = bali.getStringForKey(document, '$publicKey');
             notaryKey.publicKey = binaryToBuffer(binary);
             var reference = bali.getStringForKey(document, '$citation');
-            notaryKey.citation = SourceCitation.recreateCitation(reference);
+            notaryKey.citation = DocumentCitation.recreateCitation(reference);
 
             return notaryKey;
         default:
@@ -180,12 +179,11 @@ NotaryKey.prototype.regenerateKey = function() {
             this.publicKey = keypair.publicKey;
             this.privateKey = keypair.privateKey;
             this.previous = this.citation;
-            this.citation = SourceCitation.generateCitation(reference, null, this.protocol);
+            this.citation = DocumentCitation.generateCitation(reference, null, this.protocol);
             this.notarizeDocument(document);
 
             // now construct the full citation including hash
-            source = document.toString();
-            this.citation = SourceCitation.generateCitation(reference, source, this.protocol);
+            this.citation = DocumentCitation.generateCitation(reference, document, this.protocol);
 
             var certificate = NotaryCertificate.recreateCertificate(document);
             return certificate;
@@ -294,7 +292,7 @@ NotaryCertificate.recreateCertificate = function(document) {
             }
             if (certificate.version !== 'v1') {
                 reference = bali.getPreviousCitation(document).toString();
-                certificate.previous = SourceCitation.recreateCitation(reference);
+                certificate.previous = DocumentCitation.recreateCitation(reference);
             }
             return certificate;
         default:
@@ -387,47 +385,47 @@ NotaryCertificate.prototype.encryptMessage = function(message) {
 };
 
 
-function SourceCitation() {
+function DocumentCitation() {
     return this;
 }
-SourceCitation.prototype.constructor = SourceCitation;
-exports.SourceCitation = SourceCitation;
+DocumentCitation.prototype.constructor = DocumentCitation;
+exports.DocumentCitation = DocumentCitation;
 
 
 /**
- * This class function generates a new source citation for a specific source. If
- * no source is specified, the citation is for a self-notarized document like a
+ * This class function generates a new document citation for a specific document. If
+ * no document is specified, the citation is for a self-notarized document like a
  * notary certificate.
  * 
- * @param {Reference} reference A Bali reference to the source to be cited.
- * @param {String} source The source to be cited.
+ * @param {Reference} reference A Bali reference to the document to be cited.
+ * @param {String} document The document to be cited.
  * @param {Version} protocol The Bali version string for the protocol version to be
- * used to generate the source citation.
- * @returns {SourceCitation} The resulting source citation.
+ * used to generate the document citation.
+ * @returns {DocumentCitation} The resulting document citation.
  */
-SourceCitation.generateCitation = function(reference, source, protocol) {
+DocumentCitation.generateCitation = function(reference, document, protocol) {
     // validate the arguments
     if (!bali.isReference(reference)) {
         throw new Error('NOTARY: The constructor received an invalid reference: ' + reference);
     }
     var url = new URL(reference.slice(1, -1).replace(/#/, '%23'));
     var catalog = bali.parseComponent(url.pathname.replace(/%23/, '#'));
-    if (source && source.constructor.name !== 'String') {
-        throw new Error('NOTARY: The constructor received an invalid source string: ' + source);
+    if (document && !bali.isDocument(document)) {
+        throw new Error('NOTARY: The constructor received an invalid document: ' + document);
     }
     if (!bali.isVersion(protocol)) {
         throw new Error('NOTARY: The constructor received an invalid protocol version: ' + protocol);
     }
 
     // generate the citation
-    var citation = new SourceCitation();
+    var citation = new DocumentCitation();
     switch(protocol) {
         case 'v1':
             citation.tag = bali.getStringForKey(catalog, '$tag');
             citation.version = bali.getStringForKey(catalog, '$version');
             citation.protocol = protocol;
-            if (source) {
-                citation.hash = "'" + V1.digest(source) + "'";
+            if (document) {
+                citation.hash = "'" + V1.digest(document.toString()) + "'";
             }
             return citation;
         default:
@@ -437,12 +435,12 @@ SourceCitation.generateCitation = function(reference, source, protocol) {
 
 
 /**
- * This class function recreates a source citation from a Bali reference.
+ * This class function recreates a document citation from a Bali reference.
  * 
- * @param {Reference} reference The Bali reference containing the source citation definition.
- * @returns {SourceCitation} The recreated source citation.
+ * @param {Reference} reference The Bali reference containing the document citation definition.
+ * @returns {DocumentCitation} The recreated document citation.
  */
-SourceCitation.recreateCitation = function(reference) {
+DocumentCitation.recreateCitation = function(reference) {
     // validate the arguments
     var protocol;
     if (!bali.isReference(reference)) {
@@ -456,7 +454,7 @@ SourceCitation.recreateCitation = function(reference) {
     }
 
     // recreate the citation
-    var citation = new SourceCitation();
+    var citation = new DocumentCitation();
     switch(protocol) {
         case 'v1':
             citation.tag = bali.getStringForKey(catalog, '$tag');
@@ -471,12 +469,12 @@ SourceCitation.recreateCitation = function(reference) {
 
 
 /**
- * This method exports the source citation as a Bali source text string.
+ * This method exports the document citation as a Bali source text string.
  * value.
  * 
- * @returns {String} A string version of the source citation.
+ * @returns {String} A string version of the document citation.
  */
-SourceCitation.prototype.toString = function() {
+DocumentCitation.prototype.toString = function() {
     switch(this.protocol) {
         case 'v1':
             var string = this.hash ? V1.CITATION : V1.REFERENCE;
@@ -492,20 +490,20 @@ SourceCitation.prototype.toString = function() {
 
 
 /**
- * This method determines whether or not the specified source matches EXACTLY the
- * source referenced by this citation.
+ * This method determines whether or not the specified document matches EXACTLY the
+ * document referenced by this citation.
  * 
- * @param {String} source The source to be checked.
- * @returns {Boolean} Whether or not the source is valid.
+ * @param {String} document The document to be checked.
+ * @returns {Boolean} Whether or not the document hash value matches.
  */
-SourceCitation.prototype.sourceMatches = function(source) {
+DocumentCitation.prototype.documentMatches = function(document) {
     // validate the argument
-    if (!source || source.constructor.name !== 'String') {
-        throw new Error('NOTARY: An invalid source string was passed a the argument: ' + source);
+    if (!document || !bali.isDocument(document)) {
+        throw new Error('NOTARY: An invalid document was passed as the argument: ' + document);
     }
     switch(this.protocol) {
         case 'v1':
-            var hash = V1.digest(source);
+            var hash = V1.digest(document.toString());
             return this.hash === "'" + hash + "'";
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + this.protocol);
@@ -614,31 +612,33 @@ var V1 = {
         // encrypt the message using the symmetric key
         var iv = crypto.randomBytes(12);
         var cipher = crypto.createCipheriv(V1.CIPHER, symmetricKey, iv);
-        var ciphertext = cipher.update(plaintext, 'utf8', 'base64');
-        ciphertext += cipher.final('base64');
+        var bytes = cipher.update(plaintext, 'utf8', 'base64');
+        bytes += cipher.final('base64');
         var tag = cipher.getAuthTag();
-        return {
+        var ciphertext = {
             iv: iv,
             tag: tag,
             seed: seed,
-            ciphertext: ciphertext
+            bytes: bytes,
+            version: 'v1'
         };
+        return ciphertext;
     },
 
-    decrypt: function(privateKey, message) {
+    decrypt: function(privateKey, ciphertext) {
         // decrypt the 32-byte symmetric key
-        var seed = message.seed;
+        var seed = ciphertext.seed;
         var curve = crypto.createECDH(V1.CURVE);
         curve.setPrivateKey(privateKey);
         var symmetricKey = curve.computeSecret(seed).slice(0, 32);  // take only first 32 bytes
 
-        // decrypt the message using the symmetric key
-        var iv = message.iv;
-        var tag = message.tag;
-        var ciphertext = message.ciphertext;
+        // decrypt the ciphertext using the symmetric key
+        var iv = ciphertext.iv;
+        var tag = ciphertext.tag;
+        var bytes = ciphertext.bytes;
         var decipher = crypto.createDecipheriv(V1.CIPHER, symmetricKey, iv);
         decipher.setAuthTag(tag);
-        var plaintext = decipher.update(ciphertext, 'base64', 'utf8');
+        var plaintext = decipher.update(bytes, 'base64', 'utf8');
         plaintext += decipher.final('utf8');
         return plaintext;
     }
