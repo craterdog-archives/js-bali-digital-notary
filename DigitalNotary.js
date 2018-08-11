@@ -41,20 +41,23 @@ NotaryKey.generateKeyPair = function(protocol) {
     switch(protocol) {
         case 'v1':
             // generate a unique tag and version number for this notary key
-            notaryKey.tag = bali.tag();
-            notaryKey.version = 'v1';  // the initial version of the notary key
+            var tag = bali.tag().toString();
+            var version = 'v1';  // the initial version of the notary key
 
             // generate a new notary key
-            notaryKey.protocol = protocol;
             var keypair = V1.generate();
-            notaryKey.publicKey = keypair.publicKey;
-            notaryKey.privateKey = keypair.privateKey;
+            var publicKey = keypair.publicKey;
+            var privateKey = keypair.privateKey;
+
+            // initialize the notary key
+            notaryKey.tag = tag;
+            notaryKey.version = version;
+            notaryKey.protocol = protocol;
+            notaryKey.publicKey = publicKey;
+            notaryKey.privateKey = privateKey;
 
             // construct a temporary citation with no hash for the certificate
-            var reference = V1.REFERENCE.replace(/%tag/, notaryKey.tag);
-            reference = reference.replace(/%version/, notaryKey.version);
-            reference = reference.replace(/%protocol/, notaryKey.protocol);
-            notaryKey.citation = DocumentCitation.generateCitation(reference, null, protocol);
+            notaryKey.citation = DocumentCitation.generateCitation(tag, version, protocol);
 
             // create the certificate document
             var source = V1.CERTIFICATE.replace(/%tag/, notaryKey.tag);
@@ -62,10 +65,9 @@ NotaryKey.generateKeyPair = function(protocol) {
             source = source.replace(/%protocol/, notaryKey.protocol);
             source = source.replace(/%publicKey/, bufferToBinary(notaryKey.publicKey));
             var document = bali.parseDocument(source);
-            notaryKey.notarizeDocument(document);
 
-            // now construct the full citation including the hash
-            notaryKey.citation = DocumentCitation.generateCitation(reference, document, protocol);
+            // notarize the certificate document
+            notaryKey.citation = notaryKey.notarizeDocument(tag, version, protocol, document);
 
             // generate the notarized certificate
             var certificate = NotaryCertificate.recreateCertificate(document);
@@ -153,38 +155,30 @@ NotaryKey.prototype.toString = function() {
 NotaryKey.prototype.regenerateKey = function() {
     switch(this.protocol) {
         case 'v1':
-            var nextVersion = getNextVersion(this.version);
-
             // generate a new notary key
             var keypair = V1.generate();
+            var publicKey = keypair.publicKey;
+            var privateKey = keypair.privateKey;
+            var nextVersion = getNextVersion(this.version);
 
-            // construct a temporary citation for the certificate
-            var reference = V1.REFERENCE.replace(/%tag/, this.tag);
-            reference = reference.replace(/%version/, nextVersion);
-            reference = reference.replace(/%protocol/, this.protocol);
-
-            // create the certificate
+            // create the new certificate
             var source = V1.CERTIFICATE.replace(/%tag/, this.tag);
             source = source.replace(/%version/, nextVersion);
             source = source.replace(/%protocol/, this.protocol);
-            source = source.replace(/%publicKey/, bufferToBinary(keypair.publicKey));
+            source = source.replace(/%publicKey/, bufferToBinary(publicKey));
             source = this.citation.toString() + '\n' + source;  // now it's a citation to the previous certificate
             var document = bali.parseDocument(source);
 
-            // notarize it with the old key
-            this.notarizeDocument(document);
+            // notarize the new certificate with the old key
+            this.notarizeDocument(this.tag, this.version, this.protocol, document);
 
-            // notarize it with the new key
+            // notarize the new certificate with the new key
             this.version = nextVersion;
-            this.publicKey = keypair.publicKey;
-            this.privateKey = keypair.privateKey;
-            this.previous = this.citation;
-            this.citation = DocumentCitation.generateCitation(reference, null, this.protocol);
-            this.notarizeDocument(document);
+            this.publicKey = publicKey;
+            this.privateKey = privateKey;
+            this.citation = this.notarizeDocument(this.tag, this.version, this.protocol, document);
 
-            // now construct the full citation including hash
-            this.citation = DocumentCitation.generateCitation(reference, document, this.protocol);
-
+            // return the new certifiate
             var certificate = NotaryCertificate.recreateCertificate(document);
             return certificate;
         default:
@@ -198,13 +192,19 @@ NotaryKey.prototype.regenerateKey = function() {
  * notary seal is appended to the document and can be validated using the
  * <code>documentIsValid()</code> method on the associated notary certificate.
  * 
- * @param {Document} document The Bali document to be notarized.
+ * @param {String} tag The unique tag for the document to be cited.
+ * @param {String} version The version number of the document to be cited.
+ * @param {String} protocol The Bali version string for the protocol version to be
+ * used to generate the document citation.
+ * @param {Document} document The document to be notarized.
+ * @returns {DocumentCitation} The resulting notarized document citation.
  */
-NotaryKey.prototype.notarizeDocument = function(document) {
+NotaryKey.prototype.notarizeDocument = function(tag, version, protocol, document) {
     // validate the argument
     if (!bali.isDocument(document)) {
         throw new Error('NOTARY: The constructor only requires a valid Bali document: ' + document);
     }
+    var citation;
     switch(this.protocol) {
         case 'v1':
             // prepare the document source
@@ -216,10 +216,12 @@ NotaryKey.prototype.notarizeDocument = function(document) {
 
             // append the notary seal to the document
             bali.addSeal(document, this.citation.toString(), signature);
+            citation = DocumentCitation.generateCitation(tag, version, protocol, document);
             break;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + this.protocol);
     }
+    return citation;
 };
 
 
@@ -397,32 +399,34 @@ exports.DocumentCitation = DocumentCitation;
  * no document is specified, the citation is for a self-notarized document like a
  * notary certificate.
  * 
- * @param {Reference} reference A Bali reference to the document to be cited.
- * @param {String} document The document to be cited.
- * @param {Version} protocol The Bali version string for the protocol version to be
+ * @param {String} tag The unique tag for the document to be cited.
+ * @param {String} version The version number of the document to be cited.
+ * @param {String} protocol The Bali version string for the protocol version to be
  * used to generate the document citation.
+ * @param {Document} document The document to be cited.
  * @returns {DocumentCitation} The resulting document citation.
  */
-DocumentCitation.generateCitation = function(reference, document, protocol) {
+DocumentCitation.generateCitation = function(tag, version, protocol, document) {
     // validate the arguments
-    if (!bali.isReference(reference)) {
-        throw new Error('NOTARY: The constructor received an invalid reference: ' + reference);
+    if (!bali.isTag(tag)) {
+        throw new Error('NOTARY: The constructor received an invalid tag: ' + tag);
     }
-    var url = new URL(reference.slice(1, -1).replace(/#/, '%23'));
-    var catalog = bali.parseComponent(url.pathname.replace(/%23/, '#'));
-    if (document && !bali.isDocument(document)) {
-        throw new Error('NOTARY: The constructor received an invalid document: ' + document);
+    if (!bali.isVersion(version)) {
+        throw new Error('NOTARY: The constructor received an invalid version: ' + version);
     }
     if (!bali.isVersion(protocol)) {
         throw new Error('NOTARY: The constructor received an invalid protocol version: ' + protocol);
+    }
+    if (document && !bali.isDocument(document)) {
+        throw new Error('NOTARY: The constructor received an invalid document: ' + document);
     }
 
     // generate the citation
     var citation = new DocumentCitation();
     switch(protocol) {
         case 'v1':
-            citation.tag = bali.getStringForKey(catalog, '$tag');
-            citation.version = bali.getStringForKey(catalog, '$version');
+            citation.tag = tag;
+            citation.version = version;
             citation.protocol = protocol;
             if (document) {
                 citation.hash = "'" + V1.digest(document.toString()) + "'";
