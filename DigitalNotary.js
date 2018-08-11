@@ -67,7 +67,7 @@ NotaryKey.generateKeyPair = function(protocol) {
             var document = bali.parseDocument(source);
 
             // notarize the certificate document
-            notaryKey.citation = notaryKey.notarizeDocument(tag, version, protocol, document);
+            notaryKey.citation = notaryKey.notarizeDocument(tag, version, document);
 
             // generate the notarized certificate
             var certificate = NotaryCertificate.recreateCertificate(document);
@@ -170,13 +170,13 @@ NotaryKey.prototype.regenerateKey = function() {
             var document = bali.parseDocument(source);
 
             // notarize the new certificate with the old key
-            this.notarizeDocument(this.tag, this.version, this.protocol, document);
+            this.notarizeDocument(this.tag, this.version, document);
 
             // notarize the new certificate with the new key
             this.version = nextVersion;
             this.publicKey = publicKey;
             this.privateKey = privateKey;
-            this.citation = this.notarizeDocument(this.tag, this.version, this.protocol, document);
+            this.citation = this.notarizeDocument(this.tag, this.version, document);
 
             // return the new certifiate
             var certificate = NotaryCertificate.recreateCertificate(document);
@@ -194,12 +194,11 @@ NotaryKey.prototype.regenerateKey = function() {
  * 
  * @param {String} tag The unique tag for the document to be cited.
  * @param {String} version The version number of the document to be cited.
- * @param {String} protocol The Bali version string for the protocol version to be
  * used to generate the document citation.
  * @param {Document} document The document to be notarized.
  * @returns {DocumentCitation} The resulting notarized document citation.
  */
-NotaryKey.prototype.notarizeDocument = function(tag, version, protocol, document) {
+NotaryKey.prototype.notarizeDocument = function(tag, version, document) {
     // validate the argument
     if (!bali.isDocument(document)) {
         throw new Error('NOTARY: The constructor only requires a valid Bali document: ' + document);
@@ -216,7 +215,7 @@ NotaryKey.prototype.notarizeDocument = function(tag, version, protocol, document
 
             // append the notary seal to the document
             bali.addSeal(document, this.citation.toString(), signature);
-            citation = DocumentCitation.generateCitation(tag, version, protocol, document);
+            citation = DocumentCitation.generateCitation(tag, version, this.protocol, document);
             break;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + this.protocol);
