@@ -180,6 +180,76 @@ exports.notarizeDocument = function(notaryKey, tag, version, document) {
 
 
 /**
+ * This function extracts the protocol attribute from a document citation.
+ * 
+ * @param {String} tag The unique tag for the cited document.
+ * @param {String} version The version string for the cited document.
+ * @param {String} hash The cryptographic hash of the cited document.
+ * @returns {String} The resulting citation.
+ */
+exports.citation = function(tag, version, hash) {
+    var citation = V1.CITATION_TEMPLATE;
+    citation = citation.replace(/%protocol/, V1.PROTOCOL);
+    citation = citation.replace(/%tag/, tag);
+    citation = citation.replace(/%version/, version);
+    citation = citation.replace(/%hash/, hash);
+    return citation;
+};
+
+
+/**
+ * This function extracts the protocol attribute from a document citation.
+ * 
+ * @param {String} citation
+ * @returns {String} The value of the protocol attribute.
+ */
+exports.citationProtocol = function(citation) {
+    var catalog = bali.parseComponent(citation.slice(6, -1));
+    var protocol = bali.getStringForKey(catalog, '$protocol');
+    return protocol;
+};
+
+
+/**
+ * This function extracts the tag attribute from a document citation.
+ * 
+ * @param {String} citation
+ * @returns {String} The value of the tag attribute.
+ */
+exports.citationTag = function(citation) {
+    var catalog = bali.parseComponent(citation.slice(6, -1));
+    var tag = bali.getStringForKey(catalog, '$tag');
+    return tag;
+};
+
+
+/**
+ * This function extracts the version attribute from a document citation.
+ * 
+ * @param {String} citation
+ * @returns {String} The value of the version attribute.
+ */
+exports.citationVersion = function(citation) {
+    var catalog = bali.parseComponent(citation.slice(6, -1));
+    var version = bali.getStringForKey(catalog, '$version');
+    return version;
+};
+
+
+/**
+ * This function extracts the hash attribute from a document citation.
+ * 
+ * @param {String} citation
+ * @returns {String} The value of the hash attribute.
+ */
+exports.citationHash = function(citation) {
+    var catalog = bali.parseComponent(citation.slice(6, -1));
+    var hash = bali.getStringForKey(catalog, '$hash');
+    return hash;
+};
+
+
+/**
  * This function decrypts an authenticated encrypted message generated using the notary
  * certificate associated with this notary key. The notary certificate generated and
  * encrypted a random secret key that was used to encrypt the original message. The

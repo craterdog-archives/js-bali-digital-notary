@@ -28,6 +28,13 @@ describe('Bali Digital Notary™', function() {
     describe('Test Citations', function() {
 
         it('should validate the citation for the certificate', function() {
+            var protocol = notary.citationProtocol(citation);
+            expect(protocol).to.equal('v1');
+            var tag = notary.citationTag(citation);
+            var version = notary.citationVersion(citation);
+            var hash = notary.citationHash(citation);
+            var copy = notary.citation(tag, version, hash);
+            expect(citation).to.equal(copy);
             var isValid = notary.documentMatches(citation, certificate);
             expect(isValid).to.equal(true);
         });
