@@ -7,10 +7,10 @@
  * under the terms of The MIT License (MIT), as published by the Open   *
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
-var crypto = require('crypto');
-var ec_pem = require('ec-pem');
 var bali = require('bali-language/BaliLanguage');
 var codex = require('bali-utilities/EncodingUtilities');
+var crypto = require('crypto');
+var ec_pem = require('ec-pem');
 
 
 /**
@@ -64,7 +64,7 @@ exports.generateKeys = function(protocol) {
             var publicKey = notaryKey.publicKey;
 
             // create the certificate document
-            var source = V1.CERTIFICATE;
+            var source = V1.CERTIFICATE_TEMPLATE;
             source = source.replace(/%protocol/, protocol);
             source = source.replace(/%tag/, tag);
             source = source.replace(/%version/, version);
@@ -109,7 +109,7 @@ exports.regenerateKeys = function(notaryKey) {
             var publicKey = newKey.publicKey;
 
             // create the certificate document
-            var source = V1.CERTIFICATE;
+            var source = V1.CERTIFICATE_TEMPLATE;
             source = source.replace(/%protocol/, protocol);
             source = source.replace(/%tag/, tag);
             source = source.replace(/%version/, version);
@@ -139,7 +139,7 @@ exports.regenerateKeys = function(notaryKey) {
  * @param {String} tag The unique tag for the document to be notarized.
  * @param {String} version The version number of the document to be notarized.
  * @param {Document} document The document to be notarized.
- * @returns {DocumentCitation} A citation to the resulting notarized document.
+ * @returns {String} A citation to the resulting notarized document.
  */
 exports.notarizeDocument = function(notaryKey, tag, version, document) {
     // validate the arguments
@@ -170,11 +170,7 @@ exports.notarizeDocument = function(notaryKey, tag, version, document) {
             bali.addSeal(document, certificateCitation, signature);
 
             // generate a citation to the notarized document
-            var documentCitation = V1.CITATION;
-            documentCitation = documentCitation.replace(/%protocol/, protocol);
-            documentCitation = documentCitation.replace(/%tag/, tag);
-            documentCitation = documentCitation.replace(/%version/, version);
-            documentCitation = documentCitation.replace(/%hash/, "'" + V1.digest(document.toString()) + "'");
+            var documentCitation = V1.cite(tag, version, document.toString());
             break;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
@@ -344,7 +340,7 @@ var V1 = {
     SIGNATURE: 'ecdsa-with-SHA1',
     CIPHER: 'aes-256-gcm',
 
-    KEY:
+    KEY_TEMPLATE:
         '[\n' +
         '    $protocol: %protocol\n' +
         '    $tag: %tag\n' +
@@ -353,7 +349,7 @@ var V1 = {
         '    $citation: %citation\n' +
         ']\n',
 
-    CERTIFICATE:
+    CERTIFICATE_TEMPLATE:
         '[\n' +
         '    $protocol: %protocol\n' +
         '    $tag: %tag\n' +
@@ -361,9 +357,9 @@ var V1 = {
         '    $publicKey: %publicKey\n' +
         ']\n',
 
-    REFERENCE: '<bali:[$protocol:%protocol,$tag:%tag,$version:%version]>',
+    REFERENCE_TEMPLATE: '<bali:[$protocol:%protocol,$tag:%tag,$version:%version]>',
 
-    CITATION: '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$hash:%hash]>',
+    CITATION_TEMPLATE: '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$hash:%hash]>',
 
     keys: new Map(),
 
@@ -373,6 +369,17 @@ var V1 = {
         var binary = hasher.digest().toString('binary');
         var digest = codex.base32Encode(binary).replace(/\s+/g, '');  // strip out any whitespace
         return digest;
+    },
+
+    cite: function(tag, version, document) {
+        var citation = document ? V1.CITATION_TEMPLATE : V1.REFERENCE_TEMPLATE;
+        citation = citation.replace(/%protocol/, V1.PROTOCOL);
+        citation = citation.replace(/%tag/, tag);
+        citation = citation.replace(/%version/, version);
+        if (document) {
+            citation = citation.replace(/%hash/, "'" + V1.digest(document) + "'");
+        }
+        return citation;
     },
 
     generate: function(notaryKey) {
@@ -473,14 +480,11 @@ var V1 = {
         this.tag = tag;
         this.version = version;
         this.publicKey = publicKey;
-        var citation = V1.REFERENCE;
-        citation = citation.replace(/%protocol/, V1.PROTOCOL);
-        citation = citation.replace(/%tag/, tag);
-        citation = citation.replace(/%version/, version);
+        var citation = V1.cite(tag, version);
         this.citation = citation;
 
         this.toString = function() {
-            var source = V1.KEY;
+            var source = V1.KEY_TEMPLATE;
             source = source.replace(/%protocol/, this.protocol);
             source = source.replace(/%tag/, this.tag);
             source = source.replace(/%version/, this.version);
