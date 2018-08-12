@@ -37,9 +37,10 @@ exports.generateKeys = function(protocol) {
             var publicKey = notaryKey.publicKey;
 
             // create the certificate document
-            var source = V1.CERTIFICATE.replace(/%tag/, tag);
-            source = source.replace(/%version/, version);
+            var source = V1.CERTIFICATE;
             source = source.replace(/%protocol/, protocol);
+            source = source.replace(/%tag/, tag);
+            source = source.replace(/%version/, version);
             source = source.replace(/%publicKey/, bufferToBinary(publicKey));
             var certificate = bali.parseDocument(source);
 
@@ -81,9 +82,10 @@ exports.regenerateKeys = function(notaryKey) {
             var publicKey = newKey.publicKey;
 
             // create the certificate document
-            var source = V1.CERTIFICATE.replace(/%tag/, tag);
-            source = source.replace(/%version/, version);
+            var source = V1.CERTIFICATE;
             source = source.replace(/%protocol/, protocol);
+            source = source.replace(/%tag/, tag);
+            source = source.replace(/%version/, version);
             source = source.replace(/%publicKey/, bufferToBinary(publicKey));
             var certificate = bali.parseDocument(source);
 
@@ -142,9 +144,9 @@ exports.notarizeDocument = function(notaryKey, tag, version, document) {
 
             // generate a citation to the notarized document
             var documentCitation = V1.CITATION;
+            documentCitation = documentCitation.replace(/%protocol/, protocol);
             documentCitation = documentCitation.replace(/%tag/, tag);
             documentCitation = documentCitation.replace(/%version/, version);
-            documentCitation = documentCitation.replace(/%protocol/, protocol);
             documentCitation = documentCitation.replace(/%hash/, "'" + V1.digest(document.toString()) + "'");
             break;
         default:
@@ -317,24 +319,24 @@ var V1 = {
 
     KEY:
         '[\n' +
+        '    $protocol: %protocol\n' +
         '    $tag: %tag\n' +
         '    $version: %version\n' +
-        '    $protocol: %protocol\n' +
         '    $publicKey: %publicKey\n' +
         '    $citation: %citation\n' +
         ']\n',
 
     CERTIFICATE:
         '[\n' +
+        '    $protocol: %protocol\n' +
         '    $tag: %tag\n' +
         '    $version: %version\n' +
-        '    $protocol: %protocol\n' +
         '    $publicKey: %publicKey\n' +
         ']\n',
 
-    REFERENCE: '<bali:[$tag:%tag,$version:%version,$protocol:%protocol]>',
+    REFERENCE: '<bali:[$protocol:%protocol,$tag:%tag,$version:%version]>',
 
-    CITATION: '<bali:[$tag:%tag,$version:%version,$protocol:%protocol,$hash:%hash]>',
+    CITATION: '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$hash:%hash]>',
 
     keys: new Map(),
 
@@ -360,18 +362,15 @@ var V1 = {
         }
         var curve = crypto.createECDH(V1.CURVE);
         curve.generateKeys();
-        notaryKey = new NotaryKey();
-        notaryKey.tag = tag;
-        notaryKey.version = version;
-        notaryKey.protocol = V1.PROTOCOL;
-        notaryKey.publicKey = curve.getPublicKey();
-        var citation = V1.REFERENCE;
-        citation = citation.replace(/%tag/, tag);
-        citation = citation.replace(/%version/, version);
-        citation = citation.replace(/%protocol/, V1.PROTOCOL);
-        notaryKey.citation = citation;
+        var publicKey = curve.getPublicKey();
+        notaryKey = new V1.NotaryKey(tag, version, publicKey);
         var keyId = tag + version;
         V1.keys.set(keyId, curve.getPrivateKey());
+        return notaryKey;
+    },
+
+    recreate: function(tag, version, publicKey) {
+        var notaryKey = new V1.NotaryKey(tag, version, publicKey);
         return notaryKey;
     },
 
@@ -439,26 +438,29 @@ var V1 = {
         var plaintext = decipher.update(aem.ciphertext, 'base64', 'utf8');
         plaintext += decipher.final('utf8');
         return plaintext;
-    }
-};
+    },
 
+    NotaryKey: function(tag, version, publicKey) {
+        this.protocol = V1.PROTOCOL;
+        this.tag = tag;
+        this.version = version;
+        this.publicKey = publicKey;
+        var citation = V1.REFERENCE;
+        citation = citation.replace(/%protocol/, V1.PROTOCOL);
+        citation = citation.replace(/%tag/, tag);
+        citation = citation.replace(/%version/, version);
+        this.citation = citation;
 
-function NotaryKey() {
-    return this;
-}
-NotaryKey.prototype.constructor = NotaryKey;
-
-NotaryKey.prototype.toString = function() {
-    switch(this.protocol) {
-        case V1.PROTOCOL:
-            var source = V1.KEY.replace(/%tag/, this.tag);
-            source = source.replace(/%version/, this.version);
+        this.toString = function() {
+            var source = V1.KEY;
             source = source.replace(/%protocol/, this.protocol);
+            source = source.replace(/%tag/, this.tag);
+            source = source.replace(/%version/, this.version);
             source = source.replace(/%publicKey/, bufferToBinary(this.publicKey));
             source = source.replace(/%citation/, this.citation);
             return source;
-        default:
-            throw new Error('NOTARY: The specified protocol version is not supported: ' + this.protocol);
+        };
+
+        return this;
     }
 };
-
