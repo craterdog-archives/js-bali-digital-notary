@@ -14,7 +14,34 @@ var codex = require('bali-utilities/EncodingUtilities');
 
 
 /**
- * This class function generates a new notary key pair and returns the notary key
+ * This function returns the notary key that is defined in the specified Bali document.
+ * 
+ * @param {Document} document The Bali document containing the notary key definition.
+ * @returns {NotaryKey} The resulting notary key.
+ */
+exports.notaryKey = function(document) {
+    if (!bali.isDocument(document)) {
+        throw new Error('NOTARY: The function was passed an invalid Bali document: ' + document);
+    }
+
+    var protocol = bali.getStringForKey(document, '$protocol');
+    switch(protocol) {
+        case V1.PROTOCOL:
+            // extract the unique tag and version number for this notary key
+            var tag = bali.getStringForKey(document, '$tag');
+            var version = bali.getStringForKey(document, '$version');
+            var publicKey = binaryToBuffer(bali.getStringForKey(document, '$publicKey'));
+            var citation = bali.getStringForKey(document, '$citation');
+            var notaryKey = V1.recreate(tag, version, publicKey, citation);
+            return notaryKey;
+        default:
+            throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
+    }
+};
+
+
+/**
+ * This function generates a new notary key pair and returns the notary key
  * and its corresponding notary certificate in an object.
  * 
  * @param {String} protocol The Bali version string for the protocol to use to generate the
@@ -369,8 +396,9 @@ var V1 = {
         return notaryKey;
     },
 
-    recreate: function(tag, version, publicKey) {
+    recreate: function(tag, version, publicKey, citation) {
         var notaryKey = new V1.NotaryKey(tag, version, publicKey);
+        notaryKey.citation = citation;
         return notaryKey;
     },
 

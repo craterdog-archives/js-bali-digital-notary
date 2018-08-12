@@ -87,18 +87,16 @@ describe('Bali Digital Notary™', function() {
 
     });
 
-/*
     describe('Test Exporting and Importing', function() {
 
         it('should export and re-import a notary key properly', function() {
             var source1 = notaryKey.toString();
             var document1 = bali.parseDocument(source1);
-            var copy = notary.recreateNotaryKey(document1);
+            var copy = notary.notaryKey(document1);
             var source2 = copy.toString();
             expect(source1).to.equal(source2);
         });
 
     });
-*/
 
 });
