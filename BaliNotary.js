@@ -133,7 +133,7 @@ exports.regenerateKeys = function(notaryKey) {
 /**
  * This function digitally notarizes a Bali document using this notary key. The resulting
  * notary seal is appended to the document and can be validated using the
- * <code>documentIsValid()</code> method on the associated notary certificate.
+ * <code>documentIsValid()</code> function on the associated notary certificate.
  * 
  * @param {NotaryKey} notaryKey The notary key to be used to notarize the document.
  * @param {String} tag The unique tag for the document to be notarized.
@@ -253,7 +253,7 @@ exports.citationHash = function(citation) {
  * This function decrypts an authenticated encrypted message generated using the notary
  * certificate associated with this notary key. The notary certificate generated and
  * encrypted a random secret key that was used to encrypt the original message. The
- * decrypted message is returned from this method.
+ * decrypted message is returned from this function.
  * 
  * @param {NotaryKey} notaryKey The notary key to be used to decrypt the message.
  * @param {Object} aem The authenticated encrypted message.
@@ -277,7 +277,7 @@ exports.decryptMessage = function(notaryKey, aem) {
 
 /**
  * This function validates a Bali document that was notarized using the
- * <code>notarizeDocument</code> method on the associated notary key. This notary
+ * <code>notarizeDocument</code> function on the associated notary key. This notary
  * certificate is used to verify the notary seal that is appended to the Bali
  * document.
  * 
@@ -297,17 +297,18 @@ exports.documentIsValid = function(certificate, document) {
     var publicKey = binaryToBuffer(bali.getStringForKey(certificate, '$publicKey'));
     switch(protocol) {
         case V1.PROTOCOL:
-            // separate the document from its last seal components
+            // strip off the last seal from the document
             var seal = bali.getSeal(document);
             var signature = bali.getSignature(seal);
             var citation = bali.getCitation(seal);
-            document = bali.removeSeal(document);
+            var stripped = bali.removeSeal(document);
 
-            // calculate the hash of the document
-            var source = document.toString();
-            source += citation.toString();  // NOTE: the citation must be included in the signed source!
+            // calculate the hash of the stripped document + certificate citation
+            var source = stripped.toString();
+            // NOTE: the certificate citation must be included in the signed source!
+            source += citation.toString();
 
-            // verify the signature using this notary certificate
+            // verify the signature using the public key from the notary certificate
             signature = signature.toString().slice(1, -1);  // remove the "'"s
             var isValid = V1.verify(publicKey, source, signature);
             return isValid;
@@ -321,7 +322,7 @@ exports.documentIsValid = function(certificate, document) {
  * This function generates a random symmetric key and uses it to encrypt a message.  The
  * symmetric key is then encrypted by the notary certificate and an authenticated
  * encrypted message is returned. The resulting authenticated encrypted message can
- * be decrypted using the <code>decryptMessage</code> method on the corresponding
+ * be decrypted using the <code>decryptMessage</code> function on the corresponding
  * notary key.
  * 
  * @param {Document} certificate The Bali certificate to be used to encrypt the message.
