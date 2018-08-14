@@ -118,6 +118,7 @@ exports.regenerateKeys = function(notaryKey) {
 
             // notarize the new certificate with the old key and new key
             exports.notarizeDocument(notaryKey, tag, version, certificate);
+            V1.forget(notaryKey);
             newKey.citation = exports.notarizeDocument(newKey, tag, version, certificate);
 
             return {
@@ -362,9 +363,8 @@ exports.documentMatches = function(citation, document) {
     if (!bali.isDocument(document)) {
         throw new Error('NOTARY: The function was passed an invalid Bali document: ' + document);
     }
-    var catalog = bali.parseComponent(citation.slice(6, -1));
-    var protocol = bali.getStringForKey(catalog, '$protocol');
-    var hash = bali.getStringForKey(catalog, '$hash');
+    var protocol = exports.citationProtocol(citation);
+    var hash = exports.citationHash(citation);
     if (!bali.isVersion(protocol)) {
         throw new Error('NOTARY: The constructor received a reference with an invalid protocol version: ' + protocol);
     }
