@@ -181,12 +181,12 @@ exports.notarizeDocument = function(notaryKey, tag, version, document) {
 
 
 /**
- * This function extracts the protocol attribute from a document citation.
+ * This function reconstructs an existing document citation from its attributes.
  * 
  * @param {String} tag The unique tag for the cited document.
  * @param {String} version The version string for the cited document.
  * @param {String} hash The cryptographic hash of the cited document.
- * @returns {String} The resulting citation.
+ * @returns {String} The reconstructed document citation.
  */
 exports.citation = function(tag, version, hash) {
     var citation = V1.CITATION_TEMPLATE;
@@ -195,6 +195,48 @@ exports.citation = function(tag, version, hash) {
     citation = citation.replace(/%version/, version);
     citation = citation.replace(/%hash/, hash);
     return citation;
+};
+
+
+/**
+ * This function extracts the tag attribute from a document citation.
+ * 
+ * @param {type} citation The document citation.
+ * @returns {String} The unique tag for the cited document.
+ */
+exports.getTag = function(citation) {
+    var source = citation.toString().slice(6, -1);  // remove '<bali:' and '>' wrapper
+    var catalog = bali.parseComponent(source);
+    var tag = bali.getStringForKey(catalog, '$tag');
+    return tag;
+};
+
+
+/**
+ * This function extracts the version attribute from a document citation.
+ * 
+ * @param {type} citation The document citation.
+ * @returns {String} The version string for the cited document.
+ */
+exports.getVersion = function(citation) {
+    var source = citation.toString().slice(6, -1);  // remove '<bali:' and '>' wrapper
+    var catalog = bali.parseComponent(source);
+    var version = bali.getStringForKey(catalog, '$version');
+    return version;
+};
+
+
+/**
+ * This function extracts the hash attribute from a document citation.
+ * 
+ * @param {type} citation The document citation.
+ * @returns {String} The unique hash for the cited document.
+ */
+exports.getHash = function(citation) {
+    var source = citation.toString().slice(6, -1);  // remove '<bali:' and '>' wrapper
+    var catalog = bali.parseComponent(source);
+    var hash = bali.getStringForKey(catalog, '$hash');
+    return hash;
 };
 
 
