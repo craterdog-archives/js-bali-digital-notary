@@ -199,58 +199,6 @@ exports.citation = function(tag, version, hash) {
 
 
 /**
- * This function extracts the protocol attribute from a document citation.
- * 
- * @param {String} citation
- * @returns {String} The value of the protocol attribute.
- */
-exports.citationProtocol = function(citation) {
-    var catalog = bali.parseComponent(citation.slice(6, -1));
-    var protocol = bali.getStringForKey(catalog, '$protocol');
-    return protocol;
-};
-
-
-/**
- * This function extracts the tag attribute from a document citation.
- * 
- * @param {String} citation
- * @returns {String} The value of the tag attribute.
- */
-exports.citationTag = function(citation) {
-    var catalog = bali.parseComponent(citation.slice(6, -1));
-    var tag = bali.getStringForKey(catalog, '$tag');
-    return tag;
-};
-
-
-/**
- * This function extracts the version attribute from a document citation.
- * 
- * @param {String} citation
- * @returns {String} The value of the version attribute.
- */
-exports.citationVersion = function(citation) {
-    var catalog = bali.parseComponent(citation.slice(6, -1));
-    var version = bali.getStringForKey(catalog, '$version');
-    return version;
-};
-
-
-/**
- * This function extracts the hash attribute from a document citation.
- * 
- * @param {String} citation
- * @returns {String} The value of the hash attribute.
- */
-exports.citationHash = function(citation) {
-    var catalog = bali.parseComponent(citation.slice(6, -1));
-    var hash = bali.getStringForKey(catalog, '$hash');
-    return hash;
-};
-
-
-/**
  * This function decrypts an authenticated encrypted message generated using the notary
  * certificate associated with this notary key. The notary certificate generated and
  * encrypted a random secret key that was used to encrypt the original message. The
@@ -300,16 +248,16 @@ exports.documentIsValid = function(certificate, document) {
         case V1.PROTOCOL:
             // strip off the last seal from the document
             var seal = bali.getSeal(document);
-            var signature = bali.getSignature(seal);
-            var citation = bali.getCitation(seal);
             var stripped = bali.removeSeal(document);
 
             // calculate the hash of the stripped document + certificate citation
             var source = stripped.toString();
             // NOTE: the certificate citation must be included in the signed source!
-            source += citation.toString();
+            var citation = bali.getCitation(seal);
+            source += citation;
 
             // verify the signature using the public key from the notary certificate
+            var signature = bali.getSignature(seal);
             signature = signature.toString().slice(1, -1);  // remove the "'"s
             var isValid = V1.verify(publicKey, source, signature);
             return isValid;
@@ -363,8 +311,10 @@ exports.documentMatches = function(citation, document) {
     if (!bali.isDocument(document)) {
         throw new Error('NOTARY: The function was passed an invalid Bali document: ' + document);
     }
-    var protocol = exports.citationProtocol(citation);
-    var hash = exports.citationHash(citation);
+    var source = citation.toString().slice(6, -1);  // remove '<bali:' and '>' wrapper
+    var catalog = bali.parseComponent(source);
+    var protocol = bali.getStringForKey(catalog, '$protocol');
+    var hash = bali.getStringForKey(catalog, '$hash');
     if (!bali.isVersion(protocol)) {
         throw new Error('NOTARY: The constructor received a reference with an invalid protocol version: ' + protocol);
     }
