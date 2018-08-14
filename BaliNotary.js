@@ -454,7 +454,7 @@ var V1 = {
             version = 'v' + (Number(notaryKey.version.slice(1)) + 1);
         } else {
             // generate a new notary key
-            tag = bali.tag().toString();
+            tag = bali.tag();
             version = 'v1';
         }
         var curve = crypto.createECDH(V1.CURVE);
