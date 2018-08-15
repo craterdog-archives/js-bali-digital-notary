@@ -205,7 +205,7 @@ exports.citation = function(tag, version, hash) {
  * @returns {String} The unique tag for the cited document.
  */
 exports.getTag = function(citation) {
-    var source = citation.toString().slice(6, -1);  // remove '<bali:' and '>' wrapper
+    var source = citation.slice(6, -1);  // remove '<bali:' and '>' wrapper
     var catalog = bali.parseComponent(source);
     var tag = bali.getStringForKey(catalog, '$tag');
     return tag;
@@ -219,7 +219,7 @@ exports.getTag = function(citation) {
  * @returns {String} The version string for the cited document.
  */
 exports.getVersion = function(citation) {
-    var source = citation.toString().slice(6, -1);  // remove '<bali:' and '>' wrapper
+    var source = citation.slice(6, -1);  // remove '<bali:' and '>' wrapper
     var catalog = bali.parseComponent(source);
     var version = bali.getStringForKey(catalog, '$version');
     return version;
@@ -233,7 +233,7 @@ exports.getVersion = function(citation) {
  * @returns {String} The unique hash for the cited document.
  */
 exports.getHash = function(citation) {
-    var source = citation.toString().slice(6, -1);  // remove '<bali:' and '>' wrapper
+    var source = citation.slice(6, -1);  // remove '<bali:' and '>' wrapper
     var catalog = bali.parseComponent(source);
     var hash = bali.getStringForKey(catalog, '$hash');
     return hash;
@@ -300,7 +300,7 @@ exports.documentIsValid = function(certificate, document) {
 
             // verify the signature using the public key from the notary certificate
             var signature = bali.getSignature(seal);
-            signature = signature.toString().slice(1, -1);  // remove the "'"s
+            signature = signature.slice(1, -1);  // remove the "'"s
             var isValid = V1.verify(publicKey, source, signature);
             return isValid;
         default:
@@ -353,7 +353,7 @@ exports.documentMatches = function(citation, document) {
     if (!bali.isDocument(document)) {
         throw new Error('NOTARY: The function was passed an invalid Bali document: ' + document);
     }
-    var source = citation.toString().slice(6, -1);  // remove '<bali:' and '>' wrapper
+    var source = citation.slice(6, -1);  // remove '<bali:' and '>' wrapper
     var catalog = bali.parseComponent(source);
     var protocol = bali.getStringForKey(catalog, '$protocol');
     var hash = bali.getStringForKey(catalog, '$hash');
