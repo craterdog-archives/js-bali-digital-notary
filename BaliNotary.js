@@ -8,7 +8,7 @@
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
 var bali = require('bali-language/BaliLanguage');
-var codex = require('bali-utilities/EncodingUtilities');
+var codex = require('bali-language/utilities/EncodingUtilities');
 var crypto = require('crypto');
 var ec_pem = require('ec-pem');
 
@@ -172,11 +172,10 @@ exports.notarizeDocument = function(notaryKey, tag, version, document) {
 
             // generate a citation to the notarized document
             var documentCitation = V1.cite(tag, version, document.toString());
-            break;
+            return documentCitation;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
     }
-    return documentCitation;
 };
 
 
@@ -381,13 +380,12 @@ function isCitation(citation) {
 
 function binaryToBuffer(binary) {
     var base32 = binary.slice(1, -1);  // remove the "'"s
-    binary = codex.base32Decode(base32);
-    var buffer = Buffer.from(binary, 'binary');
+    buffer = codex.base32Decode(base32);
     return buffer;
 }
 
 function bufferToBinary(buffer) {
-    var base32 = codex.base32Encode(buffer.toString('binary'), '        ');
+    var base32 = codex.base32Encode(buffer, '        ');
     var binary = "'" + base32 + "\n    '";
     return binary;
 }
@@ -429,7 +427,7 @@ var V1 = {
     digest: function(message) {
         var hasher = crypto.createHash(V1.DIGEST);
         hasher.update(message);
-        var binary = hasher.digest().toString('binary');
+        var binary = hasher.digest();
         var digest = codex.base32Encode(binary).replace(/\s+/g, '');  // strip out any whitespace
         return digest;
     },
@@ -484,7 +482,7 @@ var V1 = {
         var pem = ec_pem(curve, V1.CURVE);
         var signer = crypto.createSign(V1.SIGNATURE);
         signer.update(message);
-        var binary = signer.sign(pem.encodePrivateKey(), 'binary');
+        var binary = signer.sign(pem.encodePrivateKey());
         var signature = codex.base32Encode(binary, '    ');
         return signature;
     },
@@ -496,7 +494,7 @@ var V1 = {
         var verifier = crypto.createVerify(V1.SIGNATURE);
         verifier.update(message);
         var binary = codex.base32Decode(signature);
-        return verifier.verify(pem.encodePublicKey(), binary, 'binary');
+        return verifier.verify(pem.encodePublicKey(), binary);
     },
 
     encrypt: function(publicKey, plaintext) {
