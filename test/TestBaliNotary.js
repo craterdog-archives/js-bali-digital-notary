@@ -9,7 +9,7 @@
  ************************************************************************/
 
 var notary = require('../BaliNotary');
-var bali = require('bali-language/BaliLanguage');
+var bali = require('bali-document-notation/BaliDocuments');
 var mocha = require('mocha');
 var expect = require('chai').expect;
 

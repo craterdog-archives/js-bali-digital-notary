@@ -7,8 +7,8 @@
  * under the terms of The MIT License (MIT), as published by the Open   *
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
-var bali = require('bali-language/BaliLanguage');
-var codex = require('bali-language/utilities/EncodingUtilities');
+var bali = require('bali-document-notation/BaliDocuments');
+var codex = require('bali-document-notation/utilities/EncodingUtilities');
 var crypto = require('crypto');
 var ec_pem = require('ec-pem');
 
