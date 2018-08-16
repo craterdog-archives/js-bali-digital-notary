@@ -24,6 +24,22 @@ describe('Bali Digital Notary™', function() {
             '    $foo: "bar"\n' +
             ']\n';
 
+    describe('Test Keys', function() {
+
+        it('should validate the notary key and certificate', function() {
+            expect(notaryKey.protocol).to.equal('v1');
+            expect(notaryKey.version).to.equal('v1');
+            expect(notaryKey.citation).contains(notaryKey.tag);
+            expect(notaryKey.citation).contains(notaryKey.version);
+
+            expect(notaryKey.protocol).to.equal(bali.getStringForKey(certificate, '$protocol'));
+            expect(notaryKey.tag).to.equal(bali.getStringForKey(certificate, '$tag'));
+            expect(notaryKey.version).to.equal(bali.getStringForKey(certificate, '$version'));
+            expect(notaryKey.toString()).contains(bali.getStringForKey(certificate, '$publicKey'));
+        });
+
+    });
+
     describe('Test Citations', function() {
 
         it('should validate the citation for the certificate', function() {
