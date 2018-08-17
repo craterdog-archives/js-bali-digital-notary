@@ -9,8 +9,7 @@
  ************************************************************************/
 var bali = require('bali-document-notation/BaliDocuments');
 var codex = require('bali-document-notation/utilities/EncodingUtilities');
-var crypto = require('crypto');
-var ec_pem = require('ec-pem');
+var V1 = require('./protocols/V1').V1;
 
 
 /**
@@ -30,7 +29,7 @@ exports.notaryKey = function(document) {
             // extract the unique tag and version number for this notary key
             var tag = bali.getStringForKey(document, '$tag');
             var version = bali.getStringForKey(document, '$version');
-            var publicKey = binaryToBuffer(bali.getStringForKey(document, '$publicKey'));
+            var publicKey = bali.getStringForKey(document, '$publicKey');
             var citation = bali.getStringForKey(document, '$citation');
             var notaryKey = V1.recreate(tag, version, publicKey, citation);
             return notaryKey;
@@ -64,11 +63,7 @@ exports.generateKeys = function(protocol) {
             var publicKey = notaryKey.publicKey;
 
             // create the certificate document
-            var source = V1.CERTIFICATE_TEMPLATE;
-            source = source.replace(/%protocol/, protocol);
-            source = source.replace(/%tag/, tag);
-            source = source.replace(/%version/, version);
-            source = source.replace(/%publicKey/, bufferToBinary(publicKey));
+            var source = V1.certificate(tag, version, publicKey);
             var certificate = bali.parseDocument(source);
 
             // notarize the certificate document
@@ -109,11 +104,7 @@ exports.regenerateKeys = function(notaryKey) {
             var publicKey = newKey.publicKey;
 
             // create the certificate document
-            var source = V1.CERTIFICATE_TEMPLATE;
-            source = source.replace(/%protocol/, protocol);
-            source = source.replace(/%tag/, tag);
-            source = source.replace(/%version/, version);
-            source = source.replace(/%publicKey/, bufferToBinary(publicKey));
+            var source = V1.certificate(tag, version, publicKey);
             var certificate = bali.parseDocument(source);
 
             // notarize the new certificate with the old key and new key
@@ -165,7 +156,7 @@ exports.notarizeDocument = function(notaryKey, tag, version, document) {
             source += certificateCitation;  // NOTE: the citation must be included in the signed source!
 
             // generate the notarization signature
-            var signature = "'" + V1.sign(notaryKey, source) + "\n'";
+            var signature = V1.sign(notaryKey, source);
 
             // append the notary seal to the document
             bali.addSeal(document, certificateCitation, signature);
@@ -188,11 +179,7 @@ exports.notarizeDocument = function(notaryKey, tag, version, document) {
  * @returns {String} The reconstructed document citation.
  */
 exports.citation = function(tag, version, hash) {
-    var citation = V1.CITATION_TEMPLATE;
-    citation = citation.replace(/%protocol/, V1.PROTOCOL);
-    citation = citation.replace(/%tag/, tag);
-    citation = citation.replace(/%version/, version);
-    citation = citation.replace(/%hash/, hash);
+    var citation = V1.citation(tag, version, hash);
     return citation;
 };
 
@@ -284,7 +271,7 @@ exports.documentIsValid = function(certificate, document) {
         throw new Error('NOTARY: The function was passed an invalid Bali document: ' + document);
     }
     var protocol = bali.getStringForKey(certificate, '$protocol');
-    var publicKey = binaryToBuffer(bali.getStringForKey(certificate, '$publicKey'));
+    var publicKey = bali.getStringForKey(certificate, '$publicKey');
     switch(protocol) {
         case V1.PROTOCOL:
             // strip off the last seal from the document
@@ -299,7 +286,6 @@ exports.documentIsValid = function(certificate, document) {
 
             // verify the signature using the public key from the notary certificate
             var signature = bali.getSignature(seal);
-            signature = signature.slice(1, -1);  // remove the "'"s
             var isValid = V1.verify(publicKey, source, signature);
             return isValid;
         default:
@@ -325,7 +311,7 @@ exports.encryptMessage = function(certificate, message) {
         throw new Error('NOTARY: The function was passed an invalid Bali certificate: ' + certificate);
     }
     var protocol = bali.getStringForKey(certificate, '$protocol');
-    var publicKey = binaryToBuffer(bali.getStringForKey(certificate, '$publicKey'));
+    var publicKey = bali.getStringForKey(certificate, '$publicKey');
     switch(protocol) {
         case V1.PROTOCOL:
             var aem = V1.encrypt(publicKey, message);
@@ -361,7 +347,7 @@ exports.documentMatches = function(citation, document) {
     }
     switch(protocol) {
         case V1.PROTOCOL:
-            return hash === "'" + V1.digest(document.toString()) + "'";
+            return hash === V1.digest(document.toString());
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
     }
@@ -377,183 +363,3 @@ function isNotaryKey(notaryKey) {
 function isCitation(citation) {
     return citation ? true : false;
 }
-
-function binaryToBuffer(binary) {
-    var base32 = binary.slice(1, -1);  // remove the "'"s
-    buffer = codex.base32Decode(base32);
-    return buffer;
-}
-
-function bufferToBinary(buffer) {
-    var base32 = codex.base32Encode(buffer, '        ');
-    var binary = "'" + base32 + "\n    '";
-    return binary;
-}
-
-
-// PROTOCOL CLASSES
-
-var V1 = {
-
-    PROTOCOL: 'v1',
-    CURVE: 'secp521r1',
-    DIGEST: 'sha512',
-    SIGNATURE: 'ecdsa-with-SHA1',
-    CIPHER: 'aes-256-gcm',
-
-    KEY_TEMPLATE:
-        '[\n' +
-        '    $protocol: %protocol\n' +
-        '    $tag: %tag\n' +
-        '    $version: %version\n' +
-        '    $publicKey: %publicKey\n' +
-        '    $citation: %citation\n' +
-        ']\n',
-
-    CERTIFICATE_TEMPLATE:
-        '[\n' +
-        '    $protocol: %protocol\n' +
-        '    $tag: %tag\n' +
-        '    $version: %version\n' +
-        '    $publicKey: %publicKey\n' +
-        ']\n',
-
-    REFERENCE_TEMPLATE: '<bali:[$protocol:%protocol,$tag:%tag,$version:%version]>',
-
-    CITATION_TEMPLATE: '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$hash:%hash]>',
-
-    keys: new Map(),
-
-    digest: function(message) {
-        var hasher = crypto.createHash(V1.DIGEST);
-        hasher.update(message);
-        var binary = hasher.digest();
-        var digest = codex.base32Encode(binary).replace(/\s+/g, '');  // strip out any whitespace
-        return digest;
-    },
-
-    cite: function(tag, version, document) {
-        var citation = document ? V1.CITATION_TEMPLATE : V1.REFERENCE_TEMPLATE;
-        citation = citation.replace(/%protocol/, V1.PROTOCOL);
-        citation = citation.replace(/%tag/, tag);
-        citation = citation.replace(/%version/, version);
-        if (document) {
-            citation = citation.replace(/%hash/, "'" + V1.digest(document) + "'");
-        }
-        return citation;
-    },
-
-    generate: function(notaryKey) {
-        var tag;
-        var version;
-        if (notaryKey) {
-            // regenerate existing notary key
-            tag = notaryKey.tag;
-            version = 'v' + (Number(notaryKey.version.slice(1)) + 1);
-        } else {
-            // generate a new notary key
-            tag = bali.tag();
-            version = 'v1';
-        }
-        var curve = crypto.createECDH(V1.CURVE);
-        curve.generateKeys();
-        var publicKey = curve.getPublicKey();
-        notaryKey = new V1.NotaryKey(tag, version, publicKey);
-        var keyId = tag + version;
-        V1.keys.set(keyId, curve.getPrivateKey());
-        return notaryKey;
-    },
-
-    recreate: function(tag, version, publicKey, citation) {
-        var notaryKey = new V1.NotaryKey(tag, version, publicKey);
-        notaryKey.citation = citation;
-        return notaryKey;
-    },
-
-    forget: function(notaryKey) {
-        var keyId = notaryKey.tag + notaryKey.version;
-        V1.keys.delete(keyId);
-    },
-
-    sign: function(notaryKey, message) {
-        var keyId = notaryKey.tag + notaryKey.version;
-        var curve = crypto.createECDH(V1.CURVE);
-        curve.setPrivateKey(V1.keys.get(keyId));
-        var pem = ec_pem(curve, V1.CURVE);
-        var signer = crypto.createSign(V1.SIGNATURE);
-        signer.update(message);
-        var binary = signer.sign(pem.encodePrivateKey());
-        var signature = codex.base32Encode(binary, '    ');
-        return signature;
-    },
-
-    verify: function(publicKey, message, signature) {
-        var curve = crypto.createECDH(V1.CURVE);
-        curve.setPublicKey(publicKey);
-        var pem = ec_pem(curve, V1.CURVE);
-        var verifier = crypto.createVerify(V1.SIGNATURE);
-        verifier.update(message);
-        var binary = codex.base32Decode(signature);
-        return verifier.verify(pem.encodePublicKey(), binary);
-    },
-
-    encrypt: function(publicKey, plaintext) {
-        // generate and encrypt a 32-byte symmetric key
-        var curve = crypto.createECDH(V1.CURVE);
-        curve.generateKeys();
-        var seed = curve.getPublicKey();  // use the new public key as the seed
-        var symmetricKey = curve.computeSecret(publicKey).slice(0, 32);  // take only first 32 bytes
-
-        // encrypt the message using the symmetric key
-        var iv = crypto.randomBytes(12);
-        var cipher = crypto.createCipheriv(V1.CIPHER, symmetricKey, iv);
-        var ciphertext = cipher.update(plaintext, 'utf8', 'base64');
-        ciphertext += cipher.final('base64');
-        var tag = cipher.getAuthTag();
-        var aem = {
-            version: V1.PROTOCOL,
-            iv: iv,
-            tag: tag,
-            seed: seed,
-            ciphertext: ciphertext
-        };
-        return aem;
-    },
-
-    decrypt: function(notaryKey, aem) {
-        var keyId = notaryKey.tag + notaryKey.version;
-        // decrypt the 32-byte symmetric key
-        var seed = aem.seed;
-        var curve = crypto.createECDH(V1.CURVE);
-        curve.setPrivateKey(V1.keys.get(keyId));
-        var symmetricKey = curve.computeSecret(seed).slice(0, 32);  // take only first 32 bytes
-
-        // decrypt the ciphertext using the symmetric key
-        var decipher = crypto.createDecipheriv(V1.CIPHER, symmetricKey, aem.iv);
-        decipher.setAuthTag(aem.tag);
-        var plaintext = decipher.update(aem.ciphertext, 'base64', 'utf8');
-        plaintext += decipher.final('utf8');
-        return plaintext;
-    },
-
-    NotaryKey: function(tag, version, publicKey) {
-        this.protocol = V1.PROTOCOL;
-        this.tag = tag;
-        this.version = version;
-        this.publicKey = publicKey;
-        var citation = V1.cite(tag, version);
-        this.citation = citation;
-
-        this.toString = function() {
-            var source = V1.KEY_TEMPLATE;
-            source = source.replace(/%protocol/, this.protocol);
-            source = source.replace(/%tag/, this.tag);
-            source = source.replace(/%version/, this.version);
-            source = source.replace(/%publicKey/, bufferToBinary(this.publicKey));
-            source = source.replace(/%citation/, this.citation);
-            return source;
-        };
-
-        return this;
-    }
-};

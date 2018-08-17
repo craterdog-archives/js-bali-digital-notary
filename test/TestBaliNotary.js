@@ -10,6 +10,7 @@
 
 var notary = require('../BaliNotary');
 var bali = require('bali-document-notation/BaliDocuments');
+var codex = require('bali-document-notation/utilities/EncodingUtilities');
 var mocha = require('mocha');
 var expect = require('chai').expect;
 
@@ -61,7 +62,7 @@ describe('Bali Digital Notary™', function() {
     describe('Test Signing and Verification', function() {
 
         it('should digitally sign a document properly', function() {
-            var tag = bali.tag();
+            var tag = codex.randomTag();
             var version = 'v2.3.4';
             var document = bali.parseDocument(source);
             var documentCitation = notary.notarizeDocument(notaryKey, tag, version, document);
@@ -87,7 +88,7 @@ describe('Bali Digital Notary™', function() {
     describe('Test Key Regeneration', function() {
 
         it('should regenerate a notary key properly', function() {
-            var tag = bali.tag();
+            var tag = codex.randomTag();
             var version = 'v2.3.4';
             var document = bali.parseDocument(source);
             notary.notarizeDocument(notaryKey, tag, version, document);
