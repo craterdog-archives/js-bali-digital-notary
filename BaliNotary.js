@@ -8,7 +8,8 @@
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
 var bali = require('bali-document-notation/BaliDocuments');
-var V1 = require('./protocols/V1').V1;
+var V1Private = require('./protocols/V1Private').V1Private;
+var V1Public = require('./protocols/V1Public').V1Public;
 
 
 /**
@@ -19,8 +20,8 @@ var V1 = require('./protocols/V1').V1;
  * @returns {Object} The resulting citation and notary certificate.
  */
 exports.generateKeys = function() {
-    var source = V1.generate();
-    var citation = V1.citation;
+    var source = V1Private.generate();
+    var citation = V1Private.citation;
     var certificate = bali.parseDocument(source);
     return {
         citation: citation,
@@ -38,8 +39,8 @@ exports.generateKeys = function() {
  * @returns {Object} The resulting citation and notary certificate.
  */
 exports.regenerateKeys = function() {
-    var source = V1.regenerate();
-    var citation = V1.citation;
+    var source = V1Private.regenerate();
+    var citation = V1Private.citation;
     var certificate = bali.parseDocument(source);
     return {
         citation: citation,
@@ -69,18 +70,18 @@ exports.notarizeDocument = function(tag, version, document) {
     if (!bali.isDocument(document)) {
         throw new Error('NOTARY: The function was passed an invalid Bali document: ' + document);
     }
-    var certificateCitation = V1.citation;
+    var certificateCitation = V1Private.citation;
     var source = document.toString();
     source += certificateCitation + '\n';  // NOTE: the citation must be included in the signed source!
 
     // generate the notarization signature
-    var signature = V1.sign(source);
+    var signature = V1Private.sign(source);
 
     // append the notary seal to the document
     bali.addSeal(document, certificateCitation, signature);
 
     // generate a citation to the notarized document
-    var documentCitation = V1.cite(tag, version, document.toString());
+    var documentCitation = V1Public.cite(tag, version, document.toString());
     return documentCitation;
 };
 
@@ -137,8 +138,8 @@ exports.getHash = function(citation) {
 exports.decryptMessage = function(aem) {
     var protocol = aem.protocol;
     switch(protocol) {
-        case V1.PROTOCOL:
-            var message = V1.decrypt(aem);
+        case V1Public.PROTOCOL:
+            var message = V1Private.decrypt(aem);
             return message;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
@@ -167,7 +168,7 @@ exports.documentIsValid = function(certificate, document) {
     var protocol = bali.getStringForKey(certificate, '$protocol');
     var publicKey = bali.getStringForKey(certificate, '$publicKey');
     switch(protocol) {
-        case V1.PROTOCOL:
+        case V1Public.PROTOCOL:
             // strip off the last seal from the document
             var seal = bali.getSeal(document);
             var stripped = bali.removeSeal(document);
@@ -180,7 +181,7 @@ exports.documentIsValid = function(certificate, document) {
 
             // verify the signature using the public key from the notary certificate
             var signature = bali.getSignature(seal);
-            var isValid = V1.verify(publicKey, source, signature);
+            var isValid = V1Public.verify(publicKey, source, signature);
             return isValid;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
@@ -207,8 +208,8 @@ exports.encryptMessage = function(certificate, message) {
     var protocol = bali.getStringForKey(certificate, '$protocol');
     var publicKey = bali.getStringForKey(certificate, '$publicKey');
     switch(protocol) {
-        case V1.PROTOCOL:
-            var aem = V1.encrypt(publicKey, message);
+        case V1Public.PROTOCOL:
+            var aem = V1Public.encrypt(publicKey, message);
             return aem;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
@@ -240,8 +241,8 @@ exports.documentMatches = function(citation, document) {
         throw new Error('NOTARY: The constructor received a reference with an invalid protocol version: ' + protocol);
     }
     switch(protocol) {
-        case V1.PROTOCOL:
-            var h = V1.digest(document.toString());
+        case V1Public.PROTOCOL:
+            var h = V1Public.digest(document.toString());
             return hash === h;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
