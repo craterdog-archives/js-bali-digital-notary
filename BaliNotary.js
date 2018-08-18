@@ -235,7 +235,7 @@ function citation(reference) {
         version: bali.getStringForKey(catalog, '$version'),
         digest: bali.getStringForKey(catalog, '$digest'),
         toString: function() {
-            var source = V1.AEM_TEMPLATE;
+            var source = V1.CITATION_TEMPLATE;
             source = source.replace(/%protocol/, protocol);
             source = source.replace(/%tag/, tag);
             source = source.replace(/%version/, version);
