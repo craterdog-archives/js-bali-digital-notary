@@ -8,136 +8,58 @@
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
 var bali = require('bali-document-notation/BaliDocuments');
-var codex = require('bali-document-notation/utilities/EncodingUtilities');
 var V1 = require('./protocols/V1').V1;
 
 
 /**
- * This function returns the notary key that is defined in the specified Bali document.
+ * This function generates a new notary key pair and returns the corresponding
+ * notary certificate using the latest version of the protocol.
  * 
- * @param {Document} document The Bali document containing the notary key definition.
- * @returns {NotaryKey} The resulting notary key.
+ * generate the keypair.
+ * @returns {Object} The resulting citation and notary certificate.
  */
-exports.notaryKey = function(document) {
-    if (!bali.isDocument(document)) {
-        throw new Error('NOTARY: The function was passed an invalid Bali document: ' + document);
-    }
-
-    var protocol = bali.getStringForKey(document, '$protocol');
-    switch(protocol) {
-        case V1.PROTOCOL:
-            // extract the unique tag and version number for this notary key
-            var tag = bali.getStringForKey(document, '$tag');
-            var version = bali.getStringForKey(document, '$version');
-            var publicKey = bali.getStringForKey(document, '$publicKey');
-            var citation = bali.getStringForKey(document, '$citation');
-            var notaryKey = V1.recreate(tag, version, publicKey, citation);
-            return notaryKey;
-        default:
-            throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
-    }
+exports.generateKeys = function() {
+    var source = V1.generate();
+    var citation = V1.citation;
+    var certificate = bali.parseDocument(source);
+    return {
+        citation: citation,
+        certificate: certificate
+    };
 };
 
 
 /**
- * This function generates a new notary key pair and returns the notary key
- * and its corresponding notary certificate in an object.
+ * This function regenerates a notary key and associated notary certificate using the
+ * latest version of the protocol. It uses the old notary key to notarize the new notary
+ * certificate first to prove its place in the notary certificate chain.
  * 
- * @param {String} protocol The Bali version string for the protocol to use to generate the
- * keypair.
- * @returns {Object} The resulting notary key and certificate.
+ * generate the keypair.
+ * @returns {Object} The resulting citation and notary certificate.
  */
-exports.generateKeys = function(protocol) {
-    // validate the argument
-    if (!bali.isVersion(protocol)) {
-        throw new Error('NOTARY: The function was passed an invalid protocol: ' + protocol);
-    }
-
-    // generate the correct protocol version of the notary key pair
-    switch(protocol) {
-        case V1.PROTOCOL:
-            // generate a new notary key
-            var notaryKey = V1.generate();
-            var tag = notaryKey.tag;
-            var version = notaryKey.version;
-            var publicKey = notaryKey.publicKey;
-
-            // create the certificate document
-            var source = V1.certificate(tag, version, publicKey);
-            var certificate = bali.parseDocument(source);
-
-            // notarize the certificate document
-            notaryKey.citation = exports.notarizeDocument(notaryKey, tag, version, certificate);
-
-            return {
-                notaryKey: notaryKey,
-                certificate: certificate
-            };
-        default:
-            throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
-    }
+exports.regenerateKeys = function() {
+    var source = V1.regenerate();
+    var citation = V1.citation;
+    var certificate = bali.parseDocument(source);
+    return {
+        citation: citation,
+        certificate: certificate
+    };
 };
 
 
 /**
- * This function regenerates a notary key and associated notary certificate. It
- * uses the old notary key to notarize the new notary certificate to prove its
- * place in the notary certificate chain.
+ * This function digitally notarizes a Bali document with this notary key using the
+ * latest protocol. The resulting notary seal is appended to the document and can be
+ * validated using the <code>documentIsValid()</code> function on the associated
+ * notary certificate.
  * 
- * @param {NotaryKey} notaryKey The existing notary key to be regenerated.
- * @returns {NotaryCertificate} The new notary certificate.
- */
-exports.regenerateKeys = function(notaryKey) {
-    // validate the argument
-    if (!isNotaryKey(notaryKey)) {
-        throw new Error('NOTARY: The function was passed an invalid notary key: ' + notaryKey);
-    }
-
-    // generate the correct protocol version of the notary key pair
-    var protocol = notaryKey.protocol;
-    switch(protocol) {
-        case V1.PROTOCOL:
-            // generate a new notary key
-            var newKey = V1.generate(notaryKey);
-            var tag = newKey.tag;
-            var version = newKey.version;
-            var publicKey = newKey.publicKey;
-
-            // create the certificate document
-            var source = V1.certificate(tag, version, publicKey);
-            var certificate = bali.parseDocument(source);
-
-            // notarize the new certificate with the old key and new key
-            exports.notarizeDocument(notaryKey, tag, version, certificate);
-            V1.forget(notaryKey);
-            newKey.citation = exports.notarizeDocument(newKey, tag, version, certificate);
-
-            return {
-                notaryKey: newKey,
-                certificate: certificate
-            };
-        default:
-            throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
-    }
-};
-
-
-/**
- * This function digitally notarizes a Bali document using this notary key. The resulting
- * notary seal is appended to the document and can be validated using the
- * <code>documentIsValid()</code> function on the associated notary certificate.
- * 
- * @param {NotaryKey} notaryKey The notary key to be used to notarize the document.
  * @param {String} tag The unique tag for the document to be notarized.
  * @param {String} version The version number of the document to be notarized.
  * @param {Document} document The document to be notarized.
  * @returns {String} A citation to the resulting notarized document.
  */
-exports.notarizeDocument = function(notaryKey, tag, version, document) {
-    // validate the arguments
-    if (!isNotaryKey(notaryKey)) {
-        throw new Error('NOTARY: The function was passed an invalid notary key: ' + notaryKey);
-    }
+exports.notarizeDocument = function(tag, version, document) {
     if (!bali.isTag(tag)) {
         throw new Error('NOTARY: The function was passed an invalid Bali tag: ' + tag);
     }
@@ -147,40 +69,19 @@ exports.notarizeDocument = function(notaryKey, tag, version, document) {
     if (!bali.isDocument(document)) {
         throw new Error('NOTARY: The function was passed an invalid Bali document: ' + document);
     }
-    var protocol = notaryKey.protocol;
-    var certificateCitation = notaryKey.citation;
-    switch(protocol) {
-        case V1.PROTOCOL:
-            // prepare the document source
-            var source = document.toString();
-            source += certificateCitation;  // NOTE: the citation must be included in the signed source!
+    var certificateCitation = V1.citation;
+    var source = document.toString();
+    source += certificateCitation + '\n';  // NOTE: the citation must be included in the signed source!
 
-            // generate the notarization signature
-            var signature = V1.sign(notaryKey, source);
+    // generate the notarization signature
+    var signature = V1.sign(source);
 
-            // append the notary seal to the document
-            bali.addSeal(document, certificateCitation, signature);
+    // append the notary seal to the document
+    bali.addSeal(document, certificateCitation, signature);
 
-            // generate a citation to the notarized document
-            var documentCitation = V1.cite(tag, version, document.toString());
-            return documentCitation;
-        default:
-            throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
-    }
-};
-
-
-/**
- * This function reconstructs an existing document citation from its attributes.
- * 
- * @param {String} tag The unique tag for the cited document.
- * @param {String} version The version string for the cited document.
- * @param {String} hash The cryptographic hash of the cited document.
- * @returns {String} The reconstructed document citation.
- */
-exports.citation = function(tag, version, hash) {
-    var citation = V1.citation(tag, version, hash);
-    return citation;
+    // generate a citation to the notarized document
+    var documentCitation = V1.cite(tag, version, document.toString());
+    return documentCitation;
 };
 
 
@@ -227,24 +128,17 @@ exports.getHash = function(citation) {
 
 
 /**
- * This function decrypts an authenticated encrypted message generated using the notary
- * certificate associated with this notary key. The notary certificate generated and
- * encrypted a random secret key that was used to encrypt the original message. The
- * decrypted message is returned from this function.
+ * This function decrypts an authenticated encrypted message with the notary key using
+ * the version of the protocol specified in the message.
  * 
- * @param {NotaryKey} notaryKey The notary key to be used to decrypt the message.
  * @param {Object} aem The authenticated encrypted message.
  * @returns {String} The decrypted message.
  */
-exports.decryptMessage = function(notaryKey, aem) {
-    // validate the arguments
-    if (!isNotaryKey(notaryKey)) {
-        throw new Error('NOTARY: The function was passed an invalid notary key: ' + notaryKey);
-    }
-    var protocol = notaryKey.protocol;
+exports.decryptMessage = function(aem) {
+    var protocol = aem.protocol;
     switch(protocol) {
         case V1.PROTOCOL:
-            var message = V1.decrypt(notaryKey, aem);
+            var message = V1.decrypt(aem);
             return message;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
@@ -282,7 +176,7 @@ exports.documentIsValid = function(certificate, document) {
             var source = stripped.toString();
             // NOTE: the certificate citation must be included in the signed source!
             var citation = bali.getCitation(seal);
-            source += citation;
+            source += citation + '\n';
 
             // verify the signature using the public key from the notary certificate
             var signature = bali.getSignature(seal);
@@ -347,7 +241,8 @@ exports.documentMatches = function(citation, document) {
     }
     switch(protocol) {
         case V1.PROTOCOL:
-            return hash === V1.digest(document.toString());
+            var h = V1.digest(document.toString());
+            return hash === h;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
     }
@@ -355,10 +250,6 @@ exports.documentMatches = function(citation, document) {
 
 
 // PRIVATE FUNCTIONS
-
-function isNotaryKey(notaryKey) {
-    return notaryKey ? true : false;
-}
 
 function isCitation(citation) {
     return citation ? true : false;

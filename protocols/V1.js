@@ -20,15 +20,6 @@ var V1 = {
     SIGNATURE: 'ecdsa-with-SHA1',
     CIPHER: 'aes-256-gcm',
 
-    KEY_TEMPLATE:
-        '[\n' +
-        '    $protocol: %protocol\n' +
-        '    $tag: %tag\n' +
-        '    $version: %version\n' +
-        '    $publicKey: %publicKey\n' +
-        '    $citation: %citation\n' +
-        ']\n',
-
     CERTIFICATE_TEMPLATE:
         '[\n' +
         '    $protocol: %protocol\n' +
@@ -51,24 +42,6 @@ var V1 = {
         return encodedDigest;
     },
 
-    citation: function(tag, version, hash) {
-        var citation = V1.CITATION_TEMPLATE;
-        citation = citation.replace(/%protocol/, V1.PROTOCOL);
-        citation = citation.replace(/%tag/, tag);
-        citation = citation.replace(/%version/, version);
-        citation = citation.replace(/%hash/, hash);
-        return citation;
-    },
-
-    certificate: function(tag, version, publicKey) {
-        var certificate = V1.CERTIFICATE_TEMPLATE;
-        certificate = certificate.replace(/%protocol/, V1.PROTOCOL);
-        certificate = certificate.replace(/%tag/, tag);
-        certificate = certificate.replace(/%version/, version);
-        certificate = certificate.replace(/%publicKey/, publicKey);
-        return certificate;
-    },
-
     cite: function(tag, version, document) {
         var citation = document ? V1.CITATION_TEMPLATE : V1.REFERENCE_TEMPLATE;
         citation = citation.replace(/%protocol/, V1.PROTOCOL);
@@ -80,43 +53,48 @@ var V1 = {
         return citation;
     },
 
-    generate: function(notaryKey) {
-        var tag;
-        var version;
-        if (notaryKey) {
-            // regenerate existing notary key
-            tag = notaryKey.tag;
-            version = 'v' + (Number(notaryKey.version.slice(1)) + 1);
-        } else {
-            // generate a new notary key
-            tag = codex.randomTag();
-            version = 'v1';
-        }
+    generate: function() {
+        V1.tag = codex.randomTag();
+        V1.version = 'v1';
         var curve = crypto.createECDH(V1.CURVE);
         curve.generateKeys();
-        var publicKey = bufferToEncoded(curve.getPublicKey());
-        notaryKey = new V1.NotaryKey(tag, version, publicKey);
-        // NOTE: cannot create the citation yet without the notarized certificate
-        var keyId = tag + version;
-        V1.keys.set(keyId, curve.getPrivateKey());
-        return notaryKey;
+        V1.privateKey = curve.getPrivateKey();
+        V1.publicKey = curve.getPublicKey();
+        var publicKey = bufferToEncoded(V1.publicKey, '    ');
+        // sign with new key
+        var certificate = certify(V1.tag, V1.version, publicKey);
+        V1.citation = V1.cite(V1.tag, V1.version, certificate);
+        return certificate;
     },
 
-    recreate: function(tag, version, publicKey, citation) {
-        var notaryKey = new V1.NotaryKey(tag, version, publicKey);
-        notaryKey.citation = citation;
-        return notaryKey;
-    },
-
-    forget: function(notaryKey) {
-        var keyId = notaryKey.tag + notaryKey.version;
-        V1.keys.delete(keyId);
-    },
-
-    sign: function(notaryKey, message) {
-        var keyId = notaryKey.tag + notaryKey.version;
+    regenerate: function() {
+        var nextVersion = 'v' + (Number(V1.version.slice(1)) + 1);
         var curve = crypto.createECDH(V1.CURVE);
-        curve.setPrivateKey(V1.keys.get(keyId));
+        curve.generateKeys();
+        var newPublicKey = bufferToEncoded(curve.getPublicKey(), '    ');
+        // sign with old key
+        var certificate = certify(V1.tag, nextVersion, newPublicKey);
+        // sign with new key
+        V1.version = nextVersion;
+        V1.privateKey = curve.getPrivateKey();
+        V1.publicKey = curve.getPublicKey();
+        certificate += V1.cite(V1.tag, nextVersion, certificate);
+        certificate += ' ' + V1.sign(certificate) + '\n';
+        V1.citation = V1.cite(V1.tag, nextVersion, certificate);
+        return certificate;
+    },
+
+    forget: function() {
+        V1.tag = undefined;
+        V1.version = undefined;
+        V1.privateKey = undefined;
+        V1.publicKey = undefined;
+        V1.citation = undefined;
+    },
+
+    sign: function(message) {
+        var curve = crypto.createECDH(V1.CURVE);
+        curve.setPrivateKey(V1.privateKey);
         var pem = ec_pem(curve, V1.CURVE);
         var signer = crypto.createSign(V1.SIGNATURE);
         signer.update(message);
@@ -151,7 +129,7 @@ var V1 = {
         ciphertext += cipher.final('base64');
         var tag = cipher.getAuthTag();
         var aem = {
-            version: V1.PROTOCOL,
+            protocol: V1.PROTOCOL,
             iv: iv,
             tag: tag,
             seed: seed,
@@ -160,12 +138,11 @@ var V1 = {
         return aem;
     },
 
-    decrypt: function(notaryKey, aem) {
-        var keyId = notaryKey.tag + notaryKey.version;
+    decrypt: function(aem) {
         // decrypt the 32-byte symmetric key
         var seed = aem.seed;
         var curve = crypto.createECDH(V1.CURVE);
-        curve.setPrivateKey(V1.keys.get(keyId));
+        curve.setPrivateKey(V1.privateKey);
         var symmetricKey = curve.computeSecret(seed).slice(0, 32);  // take only first 32 bytes
 
         // decrypt the ciphertext using the symmetric key
@@ -174,27 +151,6 @@ var V1 = {
         var plaintext = decipher.update(aem.ciphertext, 'base64', 'utf8');
         plaintext += decipher.final('utf8');
         return plaintext;
-    },
-
-    NotaryKey: function(tag, version, publicKey) {
-        this.protocol = V1.PROTOCOL;
-        this.tag = tag;
-        this.version = version;
-        this.publicKey = publicKey;
-        var citation = V1.cite(tag, version);
-        this.citation = citation;
-
-        this.toString = function() {
-            var source = V1.KEY_TEMPLATE;
-            source = source.replace(/%protocol/, this.protocol);
-            source = source.replace(/%tag/, this.tag);
-            source = source.replace(/%version/, this.version);
-            source = source.replace(/%publicKey/, this.publicKey);
-            source = source.replace(/%citation/, this.citation);
-            return source;
-        };
-
-        return this;
     }
 };
 exports.V1 = V1;
@@ -206,8 +162,20 @@ function encodedToBuffer(encoded) {
     return buffer;
 }
 
-function bufferToEncoded(buffer) {
-    var base32 = codex.base32Encode(buffer, '        ');
-    var encoded = "'" + base32 + "\n    '";  // add in the "'"s
+function bufferToEncoded(buffer, padding) {
+    if (!padding) padding = '';
+    var base32 = codex.base32Encode(buffer, padding + '    ');
+    var encoded = "'" + base32 + "\n" + padding + "'";  // add in the "'"s
     return encoded;
+}
+
+function certify(tag, version, publicKey) {
+    var certificate = V1.CERTIFICATE_TEMPLATE;
+    certificate = certificate.replace(/%protocol/, V1.PROTOCOL);
+    certificate = certificate.replace(/%tag/, tag);
+    certificate = certificate.replace(/%version/, version);
+    certificate = certificate.replace(/%publicKey/, publicKey);
+    certificate += V1.cite(tag, version);  // no document, self-signed
+    certificate += ' ' + V1.sign(certificate) + '\n';
+    return certificate;
 }

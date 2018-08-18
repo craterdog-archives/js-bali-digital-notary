@@ -16,43 +16,23 @@ var expect = require('chai').expect;
 
 describe('Bali Digital Notary™', function() {
 
-    var keys = notary.generateKeys('v1');
-    var notaryKey = keys.notaryKey;
-    var certificate = keys.certificate;
-    var citation = notaryKey.citation;
+    var results = notary.generateKeys();
+    var citation = results.citation;
+    var certificate = results.certificate;
     var source =
             '[\n' +
             '    $foo: "bar"\n' +
             ']\n';
 
-    describe('Test Keys', function() {
-
-        it('should validate the notary key and certificate', function() {
-            expect(notaryKey.protocol).to.equal('v1');
-            expect(notaryKey.version).to.equal('v1');
-            expect(notaryKey.citation).contains(notaryKey.tag);
-            expect(notaryKey.citation).contains(notaryKey.version);
-
-            expect(notaryKey.protocol).to.equal(bali.getStringForKey(certificate, '$protocol'));
-            expect(notaryKey.tag).to.equal(bali.getStringForKey(certificate, '$tag'));
-            expect(notaryKey.version).to.equal(bali.getStringForKey(certificate, '$version'));
-            expect(notaryKey.toString()).contains(bali.getStringForKey(certificate, '$publicKey'));
-        });
-
-    });
-
     describe('Test Citations', function() {
 
         it('should validate the citation for the certificate', function() {
-            var source = citation.toString().slice(6, -1);  // remove '<bali:' and '>' wrapper
-            var catalog = bali.parseComponent(source);
-            var protocol = bali.getStringForKey(catalog, '$protocol');
+            var protocol = bali.getStringForKey(certificate, '$protocol');
+            var tag = bali.getStringForKey(certificate, '$tag');
+            var version = bali.getStringForKey(certificate, '$version');
             expect(protocol).to.equal('v1');
-            var tag = bali.getStringForKey(catalog, '$tag');
-            var version = bali.getStringForKey(catalog, '$version');
-            var hash = bali.getStringForKey(catalog, '$hash');
-            var copy = notary.citation(tag, version, hash);
-            expect(citation).to.equal(copy);
+            expect(tag).to.equal(notary.getTag(citation));
+            expect(version).to.equal(notary.getVersion(citation));
             var isValid = notary.documentMatches(citation, certificate);
             expect(isValid).to.equal(true);
         });
@@ -65,7 +45,7 @@ describe('Bali Digital Notary™', function() {
             var tag = codex.randomTag();
             var version = 'v2.3.4';
             var document = bali.parseDocument(source);
-            var documentCitation = notary.notarizeDocument(notaryKey, tag, version, document);
+            var documentCitation = notary.notarizeDocument(tag, version, document);
             var isValid = notary.documentIsValid(certificate, document);
             expect(isValid).to.equal(true);
             var matches = notary.documentMatches(documentCitation, document);
@@ -79,7 +59,7 @@ describe('Bali Digital Notary™', function() {
         it('should encrypt and decrypt a message properly', function() {
             var message = 'This is a test...';
             var encrypted = notary.encryptMessage(certificate, message);
-            var decrypted = notary.decryptMessage(notaryKey, encrypted);
+            var decrypted = notary.decryptMessage(encrypted);
             expect(decrypted).to.equal(message);
         });
 
@@ -91,15 +71,14 @@ describe('Bali Digital Notary™', function() {
             var tag = codex.randomTag();
             var version = 'v2.3.4';
             var document = bali.parseDocument(source);
-            notary.notarizeDocument(notaryKey, tag, version, document);
+            notary.notarizeDocument(tag, version, document);
 
-            var newKeys = notary.regenerateKeys(notaryKey);
-            expect(newKeys).to.exist;  // jshint ignore:line
-            var newNotaryKey = newKeys.notaryKey;
-            var newCertificate = newKeys.certificate;
+            var results = notary.regenerateKeys();
+            expect(results).to.exist;  // jshint ignore:line
+            var newCertificate = results.certificate;
 
             document = bali.parseDocument(source);
-            var newDocumentCitation = notary.notarizeDocument(newNotaryKey, tag, version, document);
+            var newDocumentCitation = notary.notarizeDocument(tag, version, document);
             isValid = notary.documentIsValid(certificate, document);
             expect(isValid).to.equal(false);
 
@@ -108,18 +87,6 @@ describe('Bali Digital Notary™', function() {
 
             var matches = notary.documentMatches(newDocumentCitation, document);
             expect(matches).to.equal(true);
-        });
-
-    });
-
-    describe('Test Exporting and Importing', function() {
-
-        it('should export and re-import a notary key properly', function() {
-            var source1 = notaryKey.toString();
-            var document1 = bali.parseDocument(source1);
-            var copy = notary.notaryKey(document1);
-            var source2 = copy.toString();
-            expect(source1).to.equal(source2);
         });
 
     });
