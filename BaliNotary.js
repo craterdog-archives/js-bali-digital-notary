@@ -8,8 +8,9 @@
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
 var bali = require('bali-document-notation/BaliDocuments');
-var V1Private = require('./protocols/V1Private').V1Private;
+var V1 = require('./protocols/V1').V1;
 var V1Public = require('./protocols/V1Public').V1Public;
+var V1Private = require('./protocols/V1Private').V1Private;
 
 
 /**
@@ -81,27 +82,31 @@ exports.notarizeDocument = function(tag, version, document) {
 
     // generate a citation to the notarized document
     source = document.toString();  // get updated source
-    reference = V1Public.cite(tag, version, source);
+    reference = V1.cite(tag, version, source);
     return citation(reference);
 };
 
 
 /**
- * This function decrypts an authenticated encrypted message with the notary key using
- * the version of the protocol specified in the message.
+ * This function determines whether or not the specified document matches EXACTLY the
+ * document referenced by this citation.
  * 
- * @param {Object} aem The authenticated encrypted message.
- * @returns {String} The decrypted message.
+ * @param {String} citation A citation to the document to be checked.
+ * @param {Document} document The document to be checked.
+ * @returns {Boolean} Whether or not the document digest value matches.
  */
-exports.decryptMessage = function(aem) {
-    if (!isAEM(aem)) {
-        throw new Error('NOTARY: The function was passed an invalid authenticated encrypted message: ' + aem);
+exports.documentMatches = function(citation, document) {
+    if (!isCitation(citation)) {
+        throw new Error('NOTARY: The function was passed an invalid document citation: ' + citation);
     }
-    var protocol = aem.protocol;
+    if (!bali.isDocument(document)) {
+        throw new Error('NOTARY: The function was passed an invalid Bali document: ' + document);
+    }
+    var protocol = citation.protocol;
     switch(protocol) {
-        case V1Public.PROTOCOL:
-            var message = V1Private.decrypt(aem);
-            return message;
+        case V1.PROTOCOL:
+            var digest = V1.digest(document.toString());
+            return citation.digest === digest;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
     }
@@ -131,7 +136,7 @@ exports.documentIsValid = function(certificate, document) {
     var protocol = bali.getStringForKey(certificate, '$protocol');
     var publicKey = bali.getStringForKey(certificate, '$publicKey');
     switch(protocol) {
-        case V1Public.PROTOCOL:
+        case V1.PROTOCOL:
             // strip off the last seal from the document
             var seal = bali.getSeal(document);
             var stripped = bali.removeSeal(document);
@@ -170,7 +175,7 @@ exports.encryptMessage = function(certificate, message) {
     var protocol = bali.getStringForKey(certificate, '$protocol');
     var publicKey = bali.getStringForKey(certificate, '$publicKey');
     switch(protocol) {
-        case V1Public.PROTOCOL:
+        case V1.PROTOCOL:
             var aem = V1Public.encrypt(publicKey, message);
             return aem;
         default:
@@ -180,25 +185,21 @@ exports.encryptMessage = function(certificate, message) {
 
 
 /**
- * This function determines whether or not the specified document matches EXACTLY the
- * document referenced by this citation.
+ * This function decrypts an authenticated encrypted message with the notary key using
+ * the version of the protocol specified in the message.
  * 
- * @param {String} citation A citation to the document to be checked.
- * @param {Document} document The document to be checked.
- * @returns {Boolean} Whether or not the document digest value matches.
+ * @param {Object} aem The authenticated encrypted message.
+ * @returns {String} The decrypted message.
  */
-exports.documentMatches = function(citation, document) {
-    if (!isCitation(citation)) {
-        throw new Error('NOTARY: The function was passed an invalid document citation: ' + citation);
+exports.decryptMessage = function(aem) {
+    if (!isAEM(aem)) {
+        throw new Error('NOTARY: The function was passed an invalid authenticated encrypted message: ' + aem);
     }
-    if (!bali.isDocument(document)) {
-        throw new Error('NOTARY: The function was passed an invalid Bali document: ' + document);
-    }
-    var protocol = citation.protocol;
+    var protocol = aem.protocol;
     switch(protocol) {
-        case V1Public.PROTOCOL:
-            var digest = V1Public.digest(document.toString());
-            return citation.digest === digest;
+        case V1.PROTOCOL:
+            var message = V1Private.decrypt(aem);
+            return message;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
     }
@@ -232,7 +233,15 @@ function citation(reference) {
         protocol: bali.getStringForKey(catalog, '$protocol'),
         tag: bali.getStringForKey(catalog, '$tag'),
         version: bali.getStringForKey(catalog, '$version'),
-        digest: bali.getStringForKey(catalog, '$digest')
+        digest: bali.getStringForKey(catalog, '$digest'),
+        toString: function() {
+            var source = V1.AEM_TEMPLATE;
+            source = source.replace(/%protocol/, protocol);
+            source = source.replace(/%tag/, tag);
+            source = source.replace(/%version/, version);
+            source = source.replace(/%digest/, digest);
+            return source;
+        }
     };
     return citation;
 }
