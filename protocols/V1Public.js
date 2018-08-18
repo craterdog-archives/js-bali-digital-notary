@@ -22,7 +22,7 @@ var V1Public = {
 
     REFERENCE_TEMPLATE: '<bali:[$protocol:%protocol,$tag:%tag,$version:%version]>',
 
-    CITATION_TEMPLATE: '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$hash:%hash]>',
+    CITATION_TEMPLATE: '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$digest:%digest]>',
 
     AEM_TEMPLATE:
         '[\n' +
@@ -42,14 +42,14 @@ var V1Public = {
     },
 
     cite: function(tag, version, document) {
-        var citation = document ? V1Public.CITATION_TEMPLATE : V1Public.REFERENCE_TEMPLATE;
-        citation = citation.replace(/%protocol/, V1Public.PROTOCOL);
-        citation = citation.replace(/%tag/, tag);
-        citation = citation.replace(/%version/, version);
+        var reference = document ? V1Public.CITATION_TEMPLATE : V1Public.REFERENCE_TEMPLATE;
+        reference = reference.replace(/%protocol/, V1Public.PROTOCOL);
+        reference = reference.replace(/%tag/, tag);
+        reference = reference.replace(/%version/, version);
         if (document) {
-            citation = citation.replace(/%hash/, V1Public.digest(document));
+            reference = reference.replace(/%digest/, V1Public.digest(document));
         }
-        return citation;
+        return reference;
     },
 
     verify: function(encodedKey, message, encodedSignature) {
@@ -82,7 +82,16 @@ var V1Public = {
             iv: iv,
             tag: tag,
             seed: seed,
-            ciphertext: ciphertext
+            ciphertext: ciphertext,
+            toString: function() {
+                var source = V1Public.AEM_TEMPLATE;
+                source = source.replace(/%protocol/, protocol);
+                source = source.replace(/%iv/, iv);
+                source = source.replace(/%tag/, tag);
+                source = source.replace(/%seed/, seed);
+                source = source.replace(/%ciphertext/, ciphertext);
+                return source;
+            }
         };
         return aem;
     }

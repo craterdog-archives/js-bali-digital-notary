@@ -22,7 +22,7 @@ var V1Private = {
 
     REFERENCE_TEMPLATE: '<bali:[$protocol:%protocol,$tag:%tag,$version:%version]>',
 
-    CITATION_TEMPLATE: '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$hash:%hash]>',
+    CITATION_TEMPLATE: '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$digest:%digest]>',
 
     CERTIFICATE_TEMPLATE:
         '[\n' +
@@ -42,7 +42,7 @@ var V1Private = {
         var publicKey = bufferToEncoded(V1Private.publicKey, '    ');
         // sign with new key
         var certificate = certify(V1Private.tag, V1Private.version, publicKey);
-        V1Private.citation = cite(V1Private.tag, V1Private.version, certificate);
+        V1Private.reference = cite(V1Private.tag, V1Private.version, certificate);
         return certificate;
     },
 
@@ -59,7 +59,7 @@ var V1Private = {
         V1Private.publicKey = curve.getPublicKey();
         certificate += cite(V1Private.tag, nextVersion, certificate);
         certificate += ' ' + V1Private.sign(certificate) + '\n';
-        V1Private.citation = cite(V1Private.tag, nextVersion, certificate);
+        V1Private.reference = cite(V1Private.tag, nextVersion, certificate);
         return certificate;
     },
 
@@ -68,15 +68,15 @@ var V1Private = {
         V1Private.version = undefined;
         V1Private.privateKey = undefined;
         V1Private.publicKey = undefined;
-        V1Private.citation = undefined;
+        V1Private.reference = undefined;
     },
 
-    sign: function(message) {
+    sign: function(document) {
         var curve = crypto.createECDH(V1Private.CURVE);
         curve.setPrivateKey(V1Private.privateKey);
         var pem = ec_pem(curve, V1Private.CURVE);
         var signer = crypto.createSign(V1Private.SIGNATURE);
-        signer.update(message);
+        signer.update(document);
         var signature = signer.sign(pem.encodePrivateKey());
         var encodedSignature = bufferToEncoded(signature);
         return encodedSignature;
@@ -108,18 +108,18 @@ function bufferToEncoded(buffer, padding) {
 }
 
 function cite(tag, version, document) {
-    var citation = document ? V1Private.CITATION_TEMPLATE : V1Private.REFERENCE_TEMPLATE;
-    citation = citation.replace(/%protocol/, V1Private.PROTOCOL);
-    citation = citation.replace(/%tag/, tag);
-    citation = citation.replace(/%version/, version);
+    var reference = document ? V1Private.CITATION_TEMPLATE : V1Private.REFERENCE_TEMPLATE;
+    reference = reference.replace(/%protocol/, V1Private.PROTOCOL);
+    reference = reference.replace(/%tag/, tag);
+    reference = reference.replace(/%version/, version);
     if (document) {
         var hasher = crypto.createHash(V1Private.DIGEST);
         hasher.update(document);
         var digest = hasher.digest();
         var encodedDigest = "'" + codex.base32Encode(digest).replace(/\s+/g, '') + "'";
-        citation = citation.replace(/%hash/, encodedDigest);
+        reference = reference.replace(/%digest/, encodedDigest);
     }
-    return citation;
+    return reference;
 }
 
 function certify(tag, version, publicKey) {

@@ -31,8 +31,8 @@ describe('Bali Digital Notary™', function() {
             var tag = bali.getStringForKey(certificate, '$tag');
             var version = bali.getStringForKey(certificate, '$version');
             expect(protocol).to.equal('v1');
-            expect(tag).to.equal(notary.getTag(citation));
-            expect(version).to.equal(notary.getVersion(citation));
+            expect(tag).to.equal(citation.tag);
+            expect(version).to.equal(citation.version);
             var isValid = notary.documentMatches(citation, certificate);
             expect(isValid).to.equal(true);
         });
