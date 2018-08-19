@@ -22,7 +22,13 @@ module.exports = function(grunt) {
 
     // grunt-contrib-clean plugin configuration (clean up files)
     clean: {
-      build: ['dist/*']
+      build: [
+        'dist/*',
+        process.env.HOME + '/.bali/'
+      ],
+      options: {
+        force: true
+      }
     },
 
     // grunt-mocha-test plugin configuration (unit testing)

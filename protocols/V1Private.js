@@ -8,10 +8,25 @@
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
 var V1 = require('./V1').V1;
+var bali = require('bali-document-notation/BaliDocuments');
 var crypto = require('crypto');
 var ec_pem = require('ec-pem');
+var config = require('os').homedir() + '/.bali/';
+var fs = require('fs');
+
+///////////////////////////////////////////////////////////////////////////////////////
+// This module should be used for LOCAL TESTING ONLY.  It is NOT SECURE and provides //
+// no guarantees on protecting access to the private key.  YOU HAVE BEEN WARNED!!!   //
+///////////////////////////////////////////////////////////////////////////////////////
 
 
+/**
+ * This function returns the TEST software security module managing the private key
+ * for the specified tag.
+ * 
+ * @param {String} tag The unique tag for the hardware security module.
+ * @returns {Object} A proxy to the hardware security module managing the private key.
+ */
 exports.getNotaryKey = function(tag) {
     
     var NOTARY_TEMPLATE =
@@ -24,14 +39,43 @@ exports.getNotaryKey = function(tag) {
         '    $privateKey: %privateKey\n' +
         ']\n';
 
+    // create the config directory if necessary
+    if (!fs.existsSync(config)) fs.mkdirSync(config, 448);  // drwx------ permissions
+    var keyFile = config + tag + '.bali';
+
+    // read in the notary key attributes
+    var protocol;
+    var version;
+    var reference;
+    var publicKey;
+    var privateKey;
+    try {
+        if (fs.existsSync(keyFile)) {
+            // read in the notary key information
+            source = fs.readFileSync(keyFile).toString();
+            var document = bali.parseDocument(source);
+            protocol = bali.getStringForKey(document, '$protocol');
+            if (V1.PROTOCOL !== protocol) {
+                throw new Error('NOTARY: The protocol for the test private key is not supported: ' + protocol);
+            }
+            version = bali.getStringForKey(document, '$version');
+            reference = bali.getStringForKey(document, '$reference');
+            publicKey = V1.encodedToBuffer(bali.getStringForKey(document, '$publicKey'));
+            privateKey = V1.encodedToBuffer(bali.getStringForKey(document, '$privateKey'));
+        }
+    } catch (e) {
+        throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
+    }
+
+    // return the notary key
     return {
 
-        protocol: V1.PROTOCOL,
+        protocol: protocol,
         tag: tag,
-        version: undefined,
-        reference: undefined,
-        publicKey: undefined,
-        privateKey: undefined,
+        version: version,
+        reference: reference,
+        publicKey: publicKey,
+        privateKey: privateKey,
 
         toString: function() {
             var source = NOTARY_TEMPLATE;
@@ -45,16 +89,21 @@ exports.getNotaryKey = function(tag) {
         },
 
         generate: function() {
-            //this.tag = codex.randomTag();
+            this.protocol = V1.PROTOCOL;
             this.version = 'v1';
             var curve = crypto.createECDH(V1.CURVE);
             curve.generateKeys();
             this.privateKey = curve.getPrivateKey();
             this.publicKey = curve.getPublicKey();
-            var publicKey = V1.bufferToEncoded(this.publicKey, '    ');
             // sign with new key
-            var certificate = this.certify(this.tag, this.version, publicKey);
+            var certificate = this.certify(this.tag, this.version, this.publicKey);
             this.reference = V1.cite(this.tag, this.version, certificate);
+            var keyFile = config + this.tag + '.bali';
+            try {
+                fs.writeFileSync(keyFile, this.toString(), {mode: 384});  // -rw------- permissions
+            } catch (e) {
+                throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
+            }
             return certificate;
         },
 
@@ -62,7 +111,7 @@ exports.getNotaryKey = function(tag) {
             var nextVersion = 'v' + (Number(this.version.slice(1)) + 1);
             var curve = crypto.createECDH(V1.CURVE);
             curve.generateKeys();
-            var newPublicKey = V1.bufferToEncoded(curve.getPublicKey(), '    ');
+            var newPublicKey = curve.getPublicKey();
             // sign with old key
             var certificate = this.certify(this.tag, nextVersion, newPublicKey);
             // sign with new key
@@ -72,11 +121,26 @@ exports.getNotaryKey = function(tag) {
             certificate += V1.cite(this.tag, nextVersion, certificate);
             certificate += ' ' + this.sign(certificate) + '\n';
             this.reference = V1.cite(this.tag, nextVersion, certificate);
+            var keyFile = config + this.tag + '.bali';
+            try {
+                fs.writeFileSync(keyFile, this.toString(), {mode: 384});  // -rw------- permissions
+            } catch (e) {
+                throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
+            }
             return certificate;
         },
 
         forget: function() {
             this.privateKey = undefined;
+            var keyFile = config + this.tag + '.bali';
+            fs.unlinkFileSync(keyFile, this.toString(), {mode: 384});  // -rw------- permissions
+            try {
+                if (fs.existsSync(keyFile)) {
+                    fs.unlinkSync(keyFile);
+                }
+            } catch (e) {
+                throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
+            }
         },
 
         sign: function(document) {
@@ -95,7 +159,7 @@ exports.getNotaryKey = function(tag) {
             certificate = certificate.replace(/%protocol/, V1.PROTOCOL);
             certificate = certificate.replace(/%tag/, tag);
             certificate = certificate.replace(/%version/, version);
-            certificate = certificate.replace(/%publicKey/, publicKey);
+            certificate = certificate.replace(/%publicKey/, V1.bufferToEncoded(publicKey, '    '));
             certificate += V1.cite(tag, version);  // no document, self-signed
             certificate += ' ' + this.sign(certificate) + '\n';
             return certificate;

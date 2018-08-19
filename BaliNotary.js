@@ -10,22 +10,25 @@
 var bali = require('bali-document-notation/BaliDocuments');
 var V1 = require('./protocols/V1').V1;
 var V1Public = require('./protocols/V1Public').V1Public;
-var V1Private = require('./protocols/V1Private');
+var V1Proxy = require('./protocols/V1Proxy');  // proxy to a hardware security module
+var V1Test = require('./protocols/V1Private');   // local test software secutity module
 
 
-exports.loadNotary = function(tag) {
-    var notary = new BaliNotary(tag);
+// CONSTRUCTORS
+
+exports.loadNotary = function(tag, testing) {
+    var notary = new BaliNotary(tag, testing);
     return notary;
 };
-
-
-function BaliNotary(tag) {
+function BaliNotary(tag, testing) {
     this.tag = tag;
-    this.notaryKey = V1Private.getNotaryKey(tag);
+    this.notaryKey = (testing ? V1Test : V1Proxy).getNotaryKey(tag);
     return this;
 }
 BaliNotary.prototype.constructor = BaliNotary;
 
+
+// PUBLIC INTERFACE
 
 /**
  * This function generates a new notary key pair and returns the corresponding
