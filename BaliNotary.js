@@ -8,17 +8,9 @@
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
 var bali = require('bali-document-notation/BaliDocuments');
-var codex = require('bali-document-notation/utilities/EncodingUtilities');
 var V1 = require('./protocols/V1').V1;
 var V1Public = require('./protocols/V1Public').V1Public;
 var V1Private = require('./protocols/V1Private');
-
-
-exports.newNotary = function() {
-    var tag = codex.randomTag();
-    var notary = new BaliNotary(tag);
-    return notary;
-};
 
 
 exports.loadNotary = function(tag) {
