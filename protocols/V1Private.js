@@ -41,7 +41,7 @@ exports.getNotaryKey = function(tag) {
 
     // create the config directory if necessary
     if (!fs.existsSync(config)) fs.mkdirSync(config, 448);  // drwx------ permissions
-    var keyFile = config + tag + '.bali';
+    var keyFile = config + tag + '.test';
 
     // read in the notary key attributes
     var protocol;
@@ -98,7 +98,7 @@ exports.getNotaryKey = function(tag) {
             // sign with new key
             var certificate = this.certify(this.tag, this.version, this.publicKey);
             this.reference = V1.cite(this.tag, this.version, certificate);
-            var keyFile = config + this.tag + '.bali';
+            var keyFile = config + this.tag + '.test';
             try {
                 fs.writeFileSync(keyFile, this.toString(), {mode: 384});  // -rw------- permissions
             } catch (e) {
@@ -121,7 +121,7 @@ exports.getNotaryKey = function(tag) {
             certificate += V1.cite(this.tag, nextVersion, certificate);
             certificate += ' ' + this.sign(certificate) + '\n';
             this.reference = V1.cite(this.tag, nextVersion, certificate);
-            var keyFile = config + this.tag + '.bali';
+            var keyFile = config + this.tag + '.test';
             try {
                 fs.writeFileSync(keyFile, this.toString(), {mode: 384});  // -rw------- permissions
             } catch (e) {
@@ -132,7 +132,7 @@ exports.getNotaryKey = function(tag) {
 
         forget: function() {
             this.privateKey = undefined;
-            var keyFile = config + this.tag + '.bali';
+            var keyFile = config + this.tag + '.test';
             fs.unlinkFileSync(keyFile, this.toString(), {mode: 384});  // -rw------- permissions
             try {
                 if (fs.existsSync(keyFile)) {
