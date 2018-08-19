@@ -41,7 +41,7 @@ exports.getNotaryKey = function(tag) {
 
     // create the config directory if necessary
     if (!fs.existsSync(config)) fs.mkdirSync(config, 448);  // drwx------ permissions
-    var keyFile = config + tag + '.test';
+    var filename = config + tag + '.test';
 
     // read in the notary key attributes
     var protocol;
@@ -50,9 +50,9 @@ exports.getNotaryKey = function(tag) {
     var publicKey;
     var privateKey;
     try {
-        if (fs.existsSync(keyFile)) {
+        if (fs.existsSync(filename)) {
             // read in the notary key information
-            source = fs.readFileSync(keyFile).toString();
+            source = fs.readFileSync(filename).toString();
             var document = bali.parseDocument(source);
             protocol = bali.getStringForKey(document, '$protocol');
             if (V1.PROTOCOL !== protocol) {
@@ -76,6 +76,7 @@ exports.getNotaryKey = function(tag) {
         reference: reference,
         publicKey: publicKey,
         privateKey: privateKey,
+        filename: filename,
 
         toString: function() {
             var source = NOTARY_TEMPLATE;
@@ -98,9 +99,8 @@ exports.getNotaryKey = function(tag) {
             // sign with new key
             var certificate = this.certify(this.tag, this.version, this.publicKey);
             this.reference = V1.cite(this.tag, this.version, certificate);
-            var keyFile = config + this.tag + '.test';
             try {
-                fs.writeFileSync(keyFile, this.toString(), {mode: 384});  // -rw------- permissions
+                fs.writeFileSync(this.filename, this.toString(), {mode: 384});  // -rw------- permissions
             } catch (e) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
             }
@@ -121,9 +121,8 @@ exports.getNotaryKey = function(tag) {
             certificate += V1.cite(this.tag, nextVersion, certificate);
             certificate += ' ' + this.sign(certificate) + '\n';
             this.reference = V1.cite(this.tag, nextVersion, certificate);
-            var keyFile = config + this.tag + '.test';
             try {
-                fs.writeFileSync(keyFile, this.toString(), {mode: 384});  // -rw------- permissions
+                fs.writeFileSync(this.filename, this.toString(), {mode: 384});  // -rw------- permissions
             } catch (e) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
             }
@@ -132,11 +131,9 @@ exports.getNotaryKey = function(tag) {
 
         forget: function() {
             this.privateKey = undefined;
-            var keyFile = config + this.tag + '.test';
-            fs.unlinkFileSync(keyFile, this.toString(), {mode: 384});  // -rw------- permissions
             try {
-                if (fs.existsSync(keyFile)) {
-                    fs.unlinkSync(keyFile);
+                if (fs.existsSync(this.filename)) {
+                    fs.unlinkSync(this.filename);
                 }
             } catch (e) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
