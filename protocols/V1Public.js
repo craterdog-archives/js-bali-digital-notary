@@ -12,7 +12,7 @@ var crypto = require('crypto');
 var ec_pem = require('ec-pem');
 
 
-var V1Public = {
+exports.V1Public = {
 
     verify: function(encodedKey, message, encodedSignature) {
         var signature = V1.encodedToBuffer(encodedSignature);
@@ -36,27 +36,29 @@ var V1Public = {
         // encrypt the message using the symmetric key
         var iv = crypto.randomBytes(12);
         var cipher = crypto.createCipheriv(V1.CIPHER, symmetricKey, iv);
-        var ciphertext = cipher.update(plaintext, 'utf8', 'base64');
-        ciphertext += cipher.final('base64');
-        var tag = cipher.getAuthTag();
+        var ciphertext = cipher.update(plaintext, 'utf8');
+        ciphertext = Buffer.concat([ciphertext, cipher.final()]);
+        var auth = cipher.getAuthTag();
+
+        // construct the authenticated encrypted message
         var aem = {
             protocol: V1.PROTOCOL,
             iv: iv,
-            tag: tag,
+            auth: auth,
             seed: seed,
             ciphertext: ciphertext,
             toString: function() {
                 var source = V1.AEM_TEMPLATE;
-                source = source.replace(/%protocol/, protocol);
-                source = source.replace(/%iv/, iv);
-                source = source.replace(/%tag/, tag);
-                source = source.replace(/%seed/, seed);
-                source = source.replace(/%ciphertext/, ciphertext);
+                source = source.replace(/%protocol/, this.protocol);
+                source = source.replace(/%iv/, V1.bufferToEncoded(this.iv, '    '));
+                source = source.replace(/%auth/, V1.bufferToEncoded(this.auth, '    '));
+                source = source.replace(/%seed/, V1.bufferToEncoded(this.seed, '    '));
+                source = source.replace(/%ciphertext/, V1.bufferToEncoded(this.ciphertext, '    '));
                 return source;
             }
         };
+
         return aem;
     }
 
 };
-exports.V1Public = V1Public;

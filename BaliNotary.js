@@ -8,9 +8,31 @@
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
 var bali = require('bali-document-notation/BaliDocuments');
+var codex = require('bali-document-notation/utilities/EncodingUtilities');
 var V1 = require('./protocols/V1').V1;
 var V1Public = require('./protocols/V1Public').V1Public;
-var V1Private = require('./protocols/V1Private').V1Private;
+var V1Private = require('./protocols/V1Private');
+
+
+exports.newNotary = function() {
+    var tag = codex.randomTag();
+    var notary = new BaliNotary(tag);
+    return notary;
+};
+
+
+exports.loadNotary = function(tag) {
+    var notary = new BaliNotary(tag);
+    return notary;
+};
+
+
+function BaliNotary(tag) {
+    this.tag = tag;
+    this.notaryKey = V1Private.getNotaryKey(tag);
+    return this;
+}
+BaliNotary.prototype.constructor = BaliNotary;
 
 
 /**
@@ -20,10 +42,10 @@ var V1Private = require('./protocols/V1Private').V1Private;
  * generate the keypair.
  * @returns {Object} The resulting citation and notary certificate.
  */
-exports.generateKeys = function() {
-    var source = V1Private.generate();
+BaliNotary.prototype.generateKeys = function() {
+    var source = this.notaryKey.generate();
     return {
-        citation: citation(V1Private.reference),
+        citation: citation(this.notaryKey.reference),
         certificate: bali.parseDocument(source)
     };
 };
@@ -37,10 +59,10 @@ exports.generateKeys = function() {
  * generate the keypair.
  * @returns {Object} The resulting citation and notary certificate.
  */
-exports.regenerateKeys = function() {
-    var source = V1Private.regenerate();
+BaliNotary.prototype.regenerateKeys = function() {
+    var source = this.notaryKey.regenerate();
     return {
-        citation: citation(V1Private.reference),
+        citation: citation(this.notaryKey.reference),
         certificate: bali.parseDocument(source)
     };
 };
@@ -57,7 +79,7 @@ exports.regenerateKeys = function() {
  * @param {Document} document The document to be notarized.
  * @returns {Object} A citation to the resulting notarized document.
  */
-exports.notarizeDocument = function(tag, version, document) {
+BaliNotary.prototype.notarizeDocument = function(tag, version, document) {
     // validate the arguments
     if (!bali.isTag(tag)) {
         throw new Error('NOTARY: The function was passed an invalid Bali tag: ' + tag);
@@ -70,12 +92,12 @@ exports.notarizeDocument = function(tag, version, document) {
     }
 
     // prepare the document source for signing
-    var reference = V1Private.reference;
+    var reference = this.notaryKey.reference;
     var source = document.toString();
     source += reference + '\n';  // NOTE: the reference must be included in the signed source!
 
     // generate the notarization signature
-    var signature = V1Private.sign(source);
+    var signature = this.notaryKey.sign(source);
 
     // append the notary seal to the document (modifies it in place)
     bali.addSeal(document, reference, signature);
@@ -95,7 +117,7 @@ exports.notarizeDocument = function(tag, version, document) {
  * @param {Document} document The document to be checked.
  * @returns {Boolean} Whether or not the document digest value matches.
  */
-exports.documentMatches = function(citation, document) {
+BaliNotary.prototype.documentMatches = function(citation, document) {
     if (!isCitation(citation)) {
         throw new Error('NOTARY: The function was passed an invalid document citation: ' + citation);
     }
@@ -123,7 +145,7 @@ exports.documentMatches = function(citation, document) {
  * @param {Document} document The Bali document that was notarized.
  * @returns {Boolean} Whether or not the notary seal on the document is valid.
  */
-exports.documentIsValid = function(certificate, document) {
+BaliNotary.prototype.documentIsValid = function(certificate, document) {
     // validate the arguments
     if (!bali.isDocument(certificate)) {
         throw new Error('NOTARY: The function was passed an invalid Bali certificate: ' + certificate);
@@ -168,7 +190,7 @@ exports.documentIsValid = function(certificate, document) {
  * @param {String} message The message to be encrypted.
  * @returns {Object} The resulting authenticated encrypted message.
  */
-exports.encryptMessage = function(certificate, message) {
+BaliNotary.prototype.encryptMessage = function(certificate, message) {
     if (!bali.isDocument(certificate)) {
         throw new Error('NOTARY: The function was passed an invalid Bali certificate: ' + certificate);
     }
@@ -191,14 +213,14 @@ exports.encryptMessage = function(certificate, message) {
  * @param {Object} aem The authenticated encrypted message.
  * @returns {String} The decrypted message.
  */
-exports.decryptMessage = function(aem) {
+BaliNotary.prototype.decryptMessage = function(aem) {
     if (!isAEM(aem)) {
         throw new Error('NOTARY: The function was passed an invalid authenticated encrypted message: ' + aem);
     }
     var protocol = aem.protocol;
     switch(protocol) {
         case V1.PROTOCOL:
-            var message = V1Private.decrypt(aem);
+            var message = this.notaryKey.decrypt(aem);
             return message;
         default:
             throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
@@ -213,7 +235,7 @@ function isAEM(aem) {
             aem.constructor.name === 'Object' &&
             aem.protocol &&
             aem.iv &&
-            aem.tag &&
+            aem.auth &&
             aem.seed &&
             aem.ciphertext;
 }
@@ -236,10 +258,10 @@ function citation(reference) {
         digest: bali.getStringForKey(catalog, '$digest'),
         toString: function() {
             var source = V1.CITATION_TEMPLATE;
-            source = source.replace(/%protocol/, protocol);
-            source = source.replace(/%tag/, tag);
-            source = source.replace(/%version/, version);
-            source = source.replace(/%digest/, digest);
+            source = source.replace(/%protocol/, this.protocol);
+            source = source.replace(/%tag/, this.tag);
+            source = source.replace(/%version/, this.version);
+            source = source.replace(/%digest/, this.digest);
             return source;
         }
     };

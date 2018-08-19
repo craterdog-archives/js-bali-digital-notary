@@ -41,7 +41,7 @@ var V1 = {
         '[\n' +
         '    $protocol: %protocol\n' +
         '    $iv: %iv\n' +
-        '    $tag: %tag\n' +
+        '    $auth: %auth\n' +
         '    $seed: %seed\n' +
         '    $ciphertext: %ciphertext\n' +
         ']\n',

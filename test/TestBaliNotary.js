@@ -8,7 +8,7 @@
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
 
-var notary = require('../BaliNotary');
+var notary = require('../BaliNotary').newNotary();
 var bali = require('bali-document-notation/BaliDocuments');
 var codex = require('bali-document-notation/utilities/EncodingUtilities');
 var mocha = require('mocha');
