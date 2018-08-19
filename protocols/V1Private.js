@@ -90,14 +90,17 @@ exports.getNotaryKey = function(tag) {
             privateKey = curve.getPrivateKey();
             publicKey = curve.getPublicKey();
             // sign with new key
-            var certificate = this.certify(tag, version, publicKey);
-            reference = V1.cite(tag, version, certificate);
+            var source = certify(this, tag, version, publicKey);
+            reference = V1.cite(tag, version, source);
             try {
                 fs.writeFileSync(filename, this.toString(), {mode: 384});  // -rw------- permissions
             } catch (e) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
             }
-            return certificate;
+            return {
+                reference: reference,
+                source: source
+            };
         },
 
         regenerate: function() {
@@ -106,23 +109,29 @@ exports.getNotaryKey = function(tag) {
             curve.generateKeys();
             var newPublicKey = curve.getPublicKey();
             // sign with old key
-            var certificate = this.certify(tag, nextVersion, newPublicKey);
+            var source = certify(this, tag, nextVersion, newPublicKey);
             // sign with new key
             version = nextVersion;
             privateKey = curve.getPrivateKey();
             publicKey = curve.getPublicKey();
-            certificate += V1.cite(tag, nextVersion, certificate);
-            certificate += ' ' + this.sign(certificate) + '\n';
-            reference = V1.cite(tag, nextVersion, certificate);
+            source += V1.cite(tag, nextVersion, source);
+            source += ' ' + this.sign(source) + '\n';
+            reference = V1.cite(tag, nextVersion, source);
             try {
                 fs.writeFileSync(filename, this.toString(), {mode: 384});  // -rw------- permissions
             } catch (e) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
             }
-            return certificate;
+            return {
+                reference: reference,
+                source: source
+            };
         },
 
         forget: function() {
+            version = undefined;
+            reference = undefined;
+            publicKey = undefined;
             privateKey = undefined;
             try {
                 if (fs.existsSync(filename)) {
@@ -148,17 +157,6 @@ exports.getNotaryKey = function(tag) {
             return encodedSignature;
         },
 
-        certify: function(tag, version, publicKey) {
-            var certificate = V1.CERTIFICATE_TEMPLATE;
-            certificate = certificate.replace(/%protocol/, V1.PROTOCOL);
-            certificate = certificate.replace(/%tag/, tag);
-            certificate = certificate.replace(/%version/, version);
-            certificate = certificate.replace(/%publicKey/, V1.bufferToEncoded(publicKey, '    '));
-            certificate += V1.cite(tag, version);  // no document, self-signed
-            certificate += ' ' + this.sign(certificate) + '\n';
-            return certificate;
-        },
-
         decrypt: function(aem) {
             // decrypt the 32-byte symmetric key
             var seed = aem.seed;
@@ -175,3 +173,17 @@ exports.getNotaryKey = function(tag) {
         }
     };
 };
+
+
+// PRIVATE FUNCTIONS
+
+function certify(notary, tag, version, publicKey) {
+    var source = V1.CERTIFICATE_TEMPLATE;
+    source = source.replace(/%protocol/, V1.PROTOCOL);
+    source = source.replace(/%tag/, tag);
+    source = source.replace(/%version/, version);
+    source = source.replace(/%publicKey/, V1.bufferToEncoded(publicKey, '    '));
+    source += V1.cite(tag, version);  // no document, self-signed
+    source += ' ' + notary.sign(source) + '\n';
+    return source;
+}

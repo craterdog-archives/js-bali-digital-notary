@@ -18,6 +18,7 @@ var expect = require('chai').expect;
 describe('Bali Digital Notary™', function() {
 
     var results = notary.generateKeys();
+    var reference = results.reference;
     var citation = results.citation;
     var certificate = results.certificate;
     var source =
@@ -26,6 +27,13 @@ describe('Bali Digital Notary™', function() {
             ']\n';
 
     describe('Test Citations', function() {
+
+        it('should validate the reference for the citation', function() {
+            var source = reference.slice(6, -1);  // remove '<bali:' and '>'
+            var document = bali.parseDocument(source);
+            document.body.children[0].children[0].isSimple = false;  // remove the commas
+            expect(document.toString()).to.equal(citation.toString());
+        });
 
         it('should validate the citation for the certificate', function() {
             var protocol = bali.getStringForKey(certificate, '$protocol');
