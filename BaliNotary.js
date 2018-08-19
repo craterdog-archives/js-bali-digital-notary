@@ -199,6 +199,14 @@ function citation(reference) {
             source = source.replace(/%version/, this.version);
             source = source.replace(/%digest/, this.digest);
             return source;
+        },
+        toReference: function() {
+            var source = V1.REFERENCE_TEMPLATE;
+            source = source.replace(/%protocol/, this.protocol);
+            source = source.replace(/%tag/, this.tag);
+            source = source.replace(/%version/, this.version);
+            source = source.replace(/%digest/, this.digest);
+            return source;
         }
     };
     return citation;

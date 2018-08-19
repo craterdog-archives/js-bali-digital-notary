@@ -29,10 +29,7 @@ describe('Bali Digital Notary™', function() {
     describe('Test Citations', function() {
 
         it('should validate the reference for the citation', function() {
-            var source = reference.slice(6, -1);  // remove '<bali:' and '>'
-            var document = bali.parseDocument(source);
-            document.body.children[0].children[0].isSimple = false;  // remove the commas
-            expect(document.toString()).to.equal(citation.toString());
+            expect(citation.toReference()).to.equal(reference);
         });
 
         it('should validate the citation for the certificate', function() {
