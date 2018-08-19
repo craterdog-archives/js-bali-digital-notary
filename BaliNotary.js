@@ -7,6 +7,7 @@
  * under the terms of The MIT License (MIT), as published by the Open   *
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
+var BaliCitation = require('./BaliCitation');
 var bali = require('bali-document-notation/BaliDocuments');
 var V1 = require('./protocols/V1').V1;
 var V1Public = require('./protocols/V1Public').V1Public;
@@ -33,7 +34,7 @@ exports.loadNotary = function(tag, testing) {
             certificate = bali.parseDocument(certificate.source);
             return {
                 reference: reference,
-                citation: citation(reference),
+                citation: BaliCitation.fromReference(reference),
                 certificate: certificate
             };
         },
@@ -44,7 +45,7 @@ exports.loadNotary = function(tag, testing) {
             certificate = bali.parseDocument(certificate.source);
             return {
                 reference: reference,
-                citation: citation(reference),
+                citation: BaliCitation.fromReference(reference),
                 certificate: certificate
             };
         },
@@ -77,7 +78,9 @@ exports.loadNotary = function(tag, testing) {
             // generate a citation to the notarized document
             source = document.toString();  // get updated source
             reference = V1.cite(tag, version, source);
-            return citation(reference);
+            var citation = BaliCitation.fromReference(reference);
+
+            return citation;
         },
         
         documentMatches: function(citation, document) {
@@ -178,36 +181,8 @@ function isAEM(aem) {
 
 function isCitation(citation) {
     return citation &&
-            citation.constructor.name === 'Object' &&
+            citation.constructor.name === 'BaliCitation' &&
             citation.protocol &&
             citation.tag &&
             citation.version;
-}
-
-function citation(reference) {
-    var source = reference.slice(6, -1);  // remove '<bali:' and '>' wrapper
-    var catalog = bali.parseComponent(source);
-    var citation = {
-        protocol: bali.getStringForKey(catalog, '$protocol'),
-        tag: bali.getStringForKey(catalog, '$tag'),
-        version: bali.getStringForKey(catalog, '$version'),
-        digest: bali.getStringForKey(catalog, '$digest'),
-        toString: function() {
-            var source = V1.CITATION_TEMPLATE;
-            source = source.replace(/%protocol/, this.protocol);
-            source = source.replace(/%tag/, this.tag);
-            source = source.replace(/%version/, this.version);
-            source = source.replace(/%digest/, this.digest);
-            return source;
-        },
-        toReference: function() {
-            var source = V1.REFERENCE_TEMPLATE;
-            source = source.replace(/%protocol/, this.protocol);
-            source = source.replace(/%tag/, this.tag);
-            source = source.replace(/%version/, this.version);
-            source = source.replace(/%digest/, this.digest);
-            return source;
-        }
-    };
-    return citation;
 }
