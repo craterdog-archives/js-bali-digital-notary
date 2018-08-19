@@ -39,17 +39,18 @@ exports.getNotaryKey = function(tag) {
         '    $privateKey: %privateKey\n' +
         ']\n';
 
-    // create the config directory if necessary
-    if (!fs.existsSync(config)) fs.mkdirSync(config, 448);  // drwx------ permissions
-    var filename = config + tag + '.test';
-
     // read in the notary key attributes
     var protocol;
     var version;
     var reference;
     var publicKey;
     var privateKey;
+    var filename = config + tag + '.test';
     try {
+        // create the configuration directory if necessary
+        if (!fs.existsSync(config)) fs.mkdirSync(config, 448);  // drwx------ permissions
+
+        // check for an existing configuration file
         if (fs.existsSync(filename)) {
             // read in the notary key information
             source = fs.readFileSync(filename).toString();
