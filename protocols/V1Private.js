@@ -71,37 +71,29 @@ exports.getNotaryKey = function(tag) {
     // return the notary key
     return {
 
-        protocol: protocol,
-        tag: tag,
-        version: version,
-        reference: reference,
-        publicKey: publicKey,
-        privateKey: privateKey,
-        filename: filename,
-
         toString: function() {
             var source = NOTARY_TEMPLATE;
-            source = source.replace(/%protocol/, this.protocol);
-            source = source.replace(/%tag/, this.tag);
-            source = source.replace(/%version/, this.version);
-            source = source.replace(/%reference/, this.reference);
-            source = source.replace(/%publicKey/, V1.bufferToEncoded(this.publicKey, '    '));
-            source = source.replace(/%privateKey/, V1.bufferToEncoded(this.privateKey, '    '));
+            source = source.replace(/%protocol/, protocol);
+            source = source.replace(/%tag/, tag);
+            source = source.replace(/%version/, version);
+            source = source.replace(/%reference/, reference);
+            source = source.replace(/%publicKey/, V1.bufferToEncoded(publicKey, '    '));
+            source = source.replace(/%privateKey/, V1.bufferToEncoded(privateKey, '    '));
             return source;
         },
 
         generate: function() {
-            this.protocol = V1.PROTOCOL;
-            this.version = 'v1';
+            protocol = V1.PROTOCOL;
+            version = 'v1';
             var curve = crypto.createECDH(V1.CURVE);
             curve.generateKeys();
-            this.privateKey = curve.getPrivateKey();
-            this.publicKey = curve.getPublicKey();
+            privateKey = curve.getPrivateKey();
+            publicKey = curve.getPublicKey();
             // sign with new key
-            var certificate = this.certify(this.tag, this.version, this.publicKey);
-            this.reference = V1.cite(this.tag, this.version, certificate);
+            var certificate = this.certify(tag, version, publicKey);
+            reference = V1.cite(tag, version, certificate);
             try {
-                fs.writeFileSync(this.filename, this.toString(), {mode: 384});  // -rw------- permissions
+                fs.writeFileSync(filename, this.toString(), {mode: 384});  // -rw------- permissions
             } catch (e) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
             }
@@ -109,21 +101,21 @@ exports.getNotaryKey = function(tag) {
         },
 
         regenerate: function() {
-            var nextVersion = 'v' + (Number(this.version.slice(1)) + 1);
+            var nextVersion = 'v' + (Number(version.slice(1)) + 1);
             var curve = crypto.createECDH(V1.CURVE);
             curve.generateKeys();
             var newPublicKey = curve.getPublicKey();
             // sign with old key
-            var certificate = this.certify(this.tag, nextVersion, newPublicKey);
+            var certificate = this.certify(tag, nextVersion, newPublicKey);
             // sign with new key
-            this.version = nextVersion;
-            this.privateKey = curve.getPrivateKey();
-            this.publicKey = curve.getPublicKey();
-            certificate += V1.cite(this.tag, nextVersion, certificate);
+            version = nextVersion;
+            privateKey = curve.getPrivateKey();
+            publicKey = curve.getPublicKey();
+            certificate += V1.cite(tag, nextVersion, certificate);
             certificate += ' ' + this.sign(certificate) + '\n';
-            this.reference = V1.cite(this.tag, nextVersion, certificate);
+            reference = V1.cite(tag, nextVersion, certificate);
             try {
-                fs.writeFileSync(this.filename, this.toString(), {mode: 384});  // -rw------- permissions
+                fs.writeFileSync(filename, this.toString(), {mode: 384});  // -rw------- permissions
             } catch (e) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
             }
@@ -131,19 +123,23 @@ exports.getNotaryKey = function(tag) {
         },
 
         forget: function() {
-            this.privateKey = undefined;
+            privateKey = undefined;
             try {
-                if (fs.existsSync(this.filename)) {
-                    fs.unlinkSync(this.filename);
+                if (fs.existsSync(filename)) {
+                    fs.unlinkSync(filename);
                 }
             } catch (e) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
             }
         },
 
+        reference: function() {
+            return reference;
+        },
+
         sign: function(document) {
             var curve = crypto.createECDH(V1.CURVE);
-            curve.setPrivateKey(this.privateKey);
+            curve.setPrivateKey(privateKey);
             var pem = ec_pem(curve, V1.CURVE);
             var signer = crypto.createSign(V1.SIGNATURE);
             signer.update(document);
@@ -167,7 +163,7 @@ exports.getNotaryKey = function(tag) {
             // decrypt the 32-byte symmetric key
             var seed = aem.seed;
             var curve = crypto.createECDH(V1.CURVE);
-            curve.setPrivateKey(this.privateKey);
+            curve.setPrivateKey(privateKey);
             var symmetricKey = curve.computeSecret(seed).slice(0, 32);  // take only first 32 bytes
 
             // decrypt the ciphertext using the symmetric key

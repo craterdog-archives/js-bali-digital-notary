@@ -38,6 +38,10 @@ exports.getNotaryKey = function(tag) {
             throw new Error('NOTARY: The following method has not yet been implemented: ' + 'forget()');
         },
 
+        reference: function() {
+            throw new Error('NOTARY: The following method has not yet been implemented: ' + 'reference()');
+        },
+
         sign: function(document) {
             throw new Error('NOTARY: The following method has not yet been implemented: ' + 'sign()');
         },

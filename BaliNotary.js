@@ -40,7 +40,7 @@ BaliNotary.prototype.constructor = BaliNotary;
 BaliNotary.prototype.generateKeys = function() {
     var source = this.notaryKey.generate();
     return {
-        citation: citation(this.notaryKey.reference),
+        citation: citation(this.notaryKey.reference()),
         certificate: bali.parseDocument(source)
     };
 };
@@ -57,7 +57,7 @@ BaliNotary.prototype.generateKeys = function() {
 BaliNotary.prototype.regenerateKeys = function() {
     var source = this.notaryKey.regenerate();
     return {
-        citation: citation(this.notaryKey.reference),
+        citation: citation(this.notaryKey.reference()),
         certificate: bali.parseDocument(source)
     };
 };
@@ -87,7 +87,7 @@ BaliNotary.prototype.notarizeDocument = function(tag, version, document) {
     }
 
     // prepare the document source for signing
-    var reference = this.notaryKey.reference;
+    var reference = this.notaryKey.reference();
     var source = document.toString();
     source += reference + '\n';  // NOTE: the reference must be included in the signed source!
 
