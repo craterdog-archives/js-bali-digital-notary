@@ -11,7 +11,7 @@
 var bali = require('bali-document-notation/BaliDocuments');
 var codex = require('bali-document-notation/utilities/EncodingUtilities');
 var account = codex.randomTag();
-var notary = require('../BaliNotary').loadNotary(account, 'testing');
+var notary = require('../BaliNotary').loadNotary(account, 'test/config/');
 var mocha = require('mocha');
 var expect = require('chai').expect;
 

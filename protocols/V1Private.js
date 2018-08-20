@@ -25,9 +25,10 @@ var fs = require('fs');
  * for the specified tag.
  * 
  * @param {String} tag The unique tag for the hardware security module.
+ * @param {String} testDirectory An optional directory to use for local testing.
  * @returns {Object} A proxy to the hardware security module managing the private key.
  */
-exports.getNotaryKey = function(tag) {
+exports.getNotaryKey = function(tag, testDirectory) {
     
     var NOTARY_TEMPLATE =
         '[\n' +
@@ -45,7 +46,8 @@ exports.getNotaryKey = function(tag) {
     var reference;
     var publicKey;
     var privateKey;
-    var filename = config + tag + '.test';
+    if (testDirectory) config = testDirectory;
+    var filename = config + tag + '.bali';
     try {
         // create the configuration directory if necessary
         if (!fs.existsSync(config)) fs.mkdirSync(config, 448);  // drwx------ permissions

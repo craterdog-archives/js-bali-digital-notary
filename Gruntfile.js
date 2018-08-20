@@ -24,10 +24,10 @@ module.exports = function(grunt) {
     clean: {
       build: [
         'dist/*',
-        process.env.HOME + '/.bali/'
+        'test/config/'
       ],
       options: {
-        force: true
+        force: false
       }
     },
 

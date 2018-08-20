@@ -19,13 +19,17 @@ var V1Test = require('./protocols/V1Private');   // local test software secutity
  * This function returns the Bali Notary™ for the specified account tag.
  * 
  * @param {String} tag The unique tag for the account.
- * @param {String} testing Any string signifying that this notary is only being used for
- * local testing and is not a secure implementation.
+ * @param {String} testDirectory An optional directory to use for local testing.
  * @returns {Object} The Bali Notary™ for the specified account.
  */
-exports.loadNotary = function(tag, testing) {
+exports.loadNotary = function(tag, testDirectory) {
 
-    var notaryKey = (testing ? V1Test : V1Proxy).getNotaryKey(tag);
+    var notaryKey;
+    if (testDirectory) {
+        notaryKey = V1Test.getNotaryKey(tag, testDirectory);
+    } else {
+        notaryKey = V1Proxy.getNotaryKey(tag);
+    }
 
     return {
         generateKeys: function() {

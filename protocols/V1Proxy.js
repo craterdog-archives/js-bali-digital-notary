@@ -46,10 +46,6 @@ exports.getNotaryKey = function(tag) {
             throw new Error('NOTARY: The following method has not yet been implemented: ' + 'sign()');
         },
 
-        certify: function(tag, version, publicKey) {
-            throw new Error('NOTARY: The following method has not yet been implemented: ' + 'certify()');
-        },
-
         decrypt: function(aem) {
             throw new Error('NOTARY: The following method has not yet been implemented: ' + 'decrypt()');
         }
