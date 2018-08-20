@@ -179,13 +179,13 @@ exports.getNotaryKey = function(tag, testDirectory) {
 
 // PRIVATE FUNCTIONS
 
-function certify(notary, tag, version, publicKey) {
+function certify(notaryKey, tag, version, publicKey) {
     var source = V1.CERTIFICATE_TEMPLATE;
     source = source.replace(/%protocol/, V1.PROTOCOL);
     source = source.replace(/%tag/, tag);
     source = source.replace(/%version/, version);
     source = source.replace(/%publicKey/, V1.bufferToEncoded(publicKey, '    '));
     source += V1.cite(tag, version);  // no document, self-signed
-    source += ' ' + notary.sign(source) + '\n';
+    source += ' ' + notaryKey.sign(source) + '\n';
     return source;
 }

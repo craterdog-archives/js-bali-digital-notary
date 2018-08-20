@@ -69,7 +69,7 @@ exports.loadNotary = function(tag, testDirectory) {
             // prepare the document source for signing
             var reference = notaryKey.reference();
             var source = document.toString();
-            source += reference + '\n';  // NOTE: the reference must be included in the signed source!
+            source += reference;  // NOTE: the reference must be included in the signed source!
         
             // generate the notarization signature
             var signature = notaryKey.sign(source);
@@ -112,7 +112,6 @@ exports.loadNotary = function(tag, testDirectory) {
         
             // check to see if the document's seal is valid
             var protocol = bali.getStringForKey(certificate, '$protocol');
-            var publicKey = bali.getStringForKey(certificate, '$publicKey');
             switch(protocol) {
                 case V1.PROTOCOL:
                     // strip off the last seal from the document
@@ -123,9 +122,10 @@ exports.loadNotary = function(tag, testDirectory) {
                     var source = stripped.toString();
                     // NOTE: the certificate reference must be included in the signed source!
                     var reference = bali.getReference(seal);
-                    source += reference + '\n';
+                    source += reference;
         
                     // verify the signature using the public key from the notary certificate
+                    var publicKey = bali.getStringForKey(certificate, '$publicKey');
                     var signature = bali.getSignature(seal);
                     var isValid = V1Public.verify(publicKey, source, signature);
                     return isValid;
