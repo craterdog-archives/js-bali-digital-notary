@@ -33,7 +33,6 @@ exports.loadNotary = function(tag, testing) {
             var reference = certificate.reference;
             certificate = bali.parseDocument(certificate.source);
             return {
-                reference: reference,
                 citation: BaliCitation.fromReference(reference),
                 certificate: certificate
             };
@@ -44,7 +43,6 @@ exports.loadNotary = function(tag, testing) {
             var reference = certificate.reference;
             certificate = bali.parseDocument(certificate.source);
             return {
-                reference: reference,
                 citation: BaliCitation.fromReference(reference),
                 certificate: certificate
             };

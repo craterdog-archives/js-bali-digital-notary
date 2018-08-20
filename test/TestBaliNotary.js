@@ -18,7 +18,6 @@ var expect = require('chai').expect;
 describe('Bali Digital Notary™', function() {
 
     var results = notary.generateKeys();
-    var reference = results.reference;
     var citation = results.citation;
     var certificate = results.certificate;
     var source =
@@ -27,10 +26,6 @@ describe('Bali Digital Notary™', function() {
             ']\n';
 
     describe('Test Citations', function() {
-
-        it('should validate the reference for the citation', function() {
-            expect(citation.toReference()).to.equal(reference);
-        });
 
         it('should validate the citation for the certificate', function() {
             var protocol = bali.getStringForKey(certificate, '$protocol');
