@@ -7,15 +7,26 @@
  * under the terms of The MIT License (MIT), as published by the Open   *
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
+'use strict';
+
+/*
+ * This module defines a library of constants and functions that needed by the version
+ * one (V1) security protocol implementation for the Bali Cloud Environment™.
+ */
 var codex = require('bali-document-notation/utilities/EncodingUtilities');
 var crypto = require('crypto');
 
+
+// ALGORITHMS AND PROTOCOLS
 
 exports.PROTOCOL = 'v1';
 exports.CURVE = 'secp521r1';
 exports.DIGEST = 'sha512';
 exports.SIGNATURE = 'ecdsa-with-SHA1';
 exports.CIPHER = 'aes-256-gcm';
+
+
+// TEMPLATES
 
 exports.REFERENCE_TEMPLATE = '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$digest:%digest]>';
 
@@ -43,6 +54,9 @@ exports.AEM_TEMPLATE =
     '    $seed: %seed\n' +
     '    $ciphertext: %ciphertext\n' +
     ']\n';
+
+
+// FUNCTIONS
 
 exports.digest = function(message) {
     var hasher = crypto.createHash(exports.DIGEST);
@@ -74,6 +88,6 @@ exports.bufferToEncoded = function(buffer, padding) {
 
 exports.encodedToBuffer = function(encoded) {
     var base32 = encoded.slice(1, -1);  // remove the "'"s
-    buffer = codex.base32Decode(base32);
+    var buffer = codex.base32Decode(base32);
     return buffer;
 };

@@ -14,6 +14,7 @@
 // no guarantees on protecting access to the private key.  YOU HAVE BEEN WARNED!!!   //
 ///////////////////////////////////////////////////////////////////////////////////////
 
+
 /*
  * This module uses the singleton pattern to provide an object that simulates a hardware
  * security module (HSM) for all cryptographic operations involving the private key. It
