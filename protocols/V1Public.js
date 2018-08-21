@@ -7,58 +7,61 @@
  * under the terms of The MIT License (MIT), as published by the Open   *
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
-var V1 = require('./V1').V1;
+'use strict';
+
+/*
+ * This module defines a library of cryptographic functions that involve the use of a
+ * public key. The public key is associated with a private key that is maintained
+ * within a hardware security module (HSM).
+ */
+var V1 = require('./V1');
 var crypto = require('crypto');
 var ec_pem = require('ec-pem');
 
 
-exports.V1Public = {
+exports.verify = function(encodedKey, message, encodedSignature) {
+    var signature = V1.encodedToBuffer(encodedSignature);
+    var publicKey = V1.encodedToBuffer(encodedKey);
+    var curve = crypto.createECDH(V1.CURVE);
+    curve.setPublicKey(publicKey);
+    var pem = ec_pem(curve, V1.CURVE);
+    var verifier = crypto.createVerify(V1.SIGNATURE);
+    verifier.update(message);
+    return verifier.verify(pem.encodePublicKey(), signature);
+};
 
-    verify: function(encodedKey, message, encodedSignature) {
-        var signature = V1.encodedToBuffer(encodedSignature);
-        var publicKey = V1.encodedToBuffer(encodedKey);
-        var curve = crypto.createECDH(V1.CURVE);
-        curve.setPublicKey(publicKey);
-        var pem = ec_pem(curve, V1.CURVE);
-        var verifier = crypto.createVerify(V1.SIGNATURE);
-        verifier.update(message);
-        return verifier.verify(pem.encodePublicKey(), signature);
-    },
+exports.encrypt = function(encodedKey, plaintext) {
+    var publicKey = V1.encodedToBuffer(encodedKey);
+    // generate and encrypt a 32-byte symmetric key
+    var curve = crypto.createECDH(V1.CURVE);
+    curve.generateKeys();
+    var seed = curve.getPublicKey();  // use the new public key as the seed
+    var symmetricKey = curve.computeSecret(publicKey).slice(0, 32);  // take only first 32 bytes
 
-    encrypt: function(encodedKey, plaintext) {
-        var publicKey = V1.encodedToBuffer(encodedKey);
-        // generate and encrypt a 32-byte symmetric key
-        var curve = crypto.createECDH(V1.CURVE);
-        curve.generateKeys();
-        var seed = curve.getPublicKey();  // use the new public key as the seed
-        var symmetricKey = curve.computeSecret(publicKey).slice(0, 32);  // take only first 32 bytes
+    // encrypt the message using the symmetric key
+    var iv = crypto.randomBytes(12);
+    var cipher = crypto.createCipheriv(V1.CIPHER, symmetricKey, iv);
+    var ciphertext = cipher.update(plaintext, 'utf8');
+    ciphertext = Buffer.concat([ciphertext, cipher.final()]);
+    var auth = cipher.getAuthTag();
 
-        // encrypt the message using the symmetric key
-        var iv = crypto.randomBytes(12);
-        var cipher = crypto.createCipheriv(V1.CIPHER, symmetricKey, iv);
-        var ciphertext = cipher.update(plaintext, 'utf8');
-        ciphertext = Buffer.concat([ciphertext, cipher.final()]);
-        var auth = cipher.getAuthTag();
+    // construct the authenticated encrypted message
+    var aem = {
+        protocol: V1.PROTOCOL,
+        iv: iv,
+        auth: auth,
+        seed: seed,
+        ciphertext: ciphertext,
+        toString: function() {
+            var source = V1.AEM_TEMPLATE;
+            source = source.replace(/%protocol/, this.protocol);
+            source = source.replace(/%iv/, V1.bufferToEncoded(this.iv, '    '));
+            source = source.replace(/%auth/, V1.bufferToEncoded(this.auth, '    '));
+            source = source.replace(/%seed/, V1.bufferToEncoded(this.seed, '    '));
+            source = source.replace(/%ciphertext/, V1.bufferToEncoded(this.ciphertext, '    '));
+            return source;
+        }
+    };
 
-        // construct the authenticated encrypted message
-        var aem = {
-            protocol: V1.PROTOCOL,
-            iv: iv,
-            auth: auth,
-            seed: seed,
-            ciphertext: ciphertext,
-            toString: function() {
-                var source = V1.AEM_TEMPLATE;
-                source = source.replace(/%protocol/, this.protocol);
-                source = source.replace(/%iv/, V1.bufferToEncoded(this.iv, '    '));
-                source = source.replace(/%auth/, V1.bufferToEncoded(this.auth, '    '));
-                source = source.replace(/%seed/, V1.bufferToEncoded(this.seed, '    '));
-                source = source.replace(/%ciphertext/, V1.bufferToEncoded(this.ciphertext, '    '));
-                return source;
-            }
-        };
-
-        return aem;
-    }
-
+    return aem;
 };

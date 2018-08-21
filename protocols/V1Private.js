@@ -7,28 +7,36 @@
  * under the terms of The MIT License (MIT), as published by the Open   *
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
-var V1 = require('./V1').V1;
-var bali = require('bali-document-notation/BaliDocuments');
-var crypto = require('crypto');
-var ec_pem = require('ec-pem');
-var config = require('os').homedir() + '/.bali/';
-var fs = require('fs');
+'use strict';
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // This module should be used for LOCAL TESTING ONLY.  It is NOT SECURE and provides //
 // no guarantees on protecting access to the private key.  YOU HAVE BEEN WARNED!!!   //
 ///////////////////////////////////////////////////////////////////////////////////////
 
+/*
+ * This module uses the singleton pattern to provide an object that simulates a hardware
+ * security module (HSM) for all cryptographic operations involving the private key. It
+ * implements these operations as a software security module to allow testing without an
+ * actual HSM.
+ */
+var V1 = require('./V1');
+var bali = require('bali-document-notation/BaliDocuments');
+var crypto = require('crypto');
+var ec_pem = require('ec-pem');
+var config = require('os').homedir() + '/.bali/';
+var fs = require('fs');
+
 
 /**
- * This function returns the TEST software security module managing the private key
- * for the specified tag.
+ * This function returns an object that implements the API for the software security module
+ * (notary key) associated with the specified unique tag.
  * 
- * @param {String} tag The unique tag for the hardware security module.
+ * @param {String} tag The unique tag for the software security module.
  * @param {String} testDirectory An optional directory to use for local testing.
- * @returns {Object} A proxy to the hardware security module managing the private key.
+ * @returns {Object} A proxy to the software security module managing the private key.
  */
-exports.getNotaryKey = function(tag, testDirectory) {
+exports.notaryKey = function(tag, testDirectory) {
     
     var NOTARY_TEMPLATE =
         '[\n' +
@@ -55,7 +63,7 @@ exports.getNotaryKey = function(tag, testDirectory) {
         // check for an existing configuration file
         if (fs.existsSync(filename)) {
             // read in the notary key information
-            source = fs.readFileSync(filename).toString();
+            var source = fs.readFileSync(filename).toString();
             var document = bali.parseDocument(source);
             protocol = bali.getStringForKey(document, '$protocol');
             if (V1.PROTOCOL !== protocol) {

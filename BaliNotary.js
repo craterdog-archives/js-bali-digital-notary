@@ -17,8 +17,8 @@
  */
 var BaliCitation = require('./BaliCitation');
 var bali = require('bali-document-notation/BaliDocuments');
-var V1 = require('./protocols/V1').V1;
-var V1Public = require('./protocols/V1Public').V1Public;
+var V1 = require('./protocols/V1');
+var V1Public = require('./protocols/V1Public');
 var V1Proxy = require('./protocols/V1Proxy');  // proxy to a hardware security module
 var V1Test = require('./protocols/V1Private');   // local test software secutity module
 var homeDirectory = require('os').homedir() + '/.bali/';
@@ -46,9 +46,9 @@ exports.notary = function(testDirectory) {
     // retrieve the notary key for the account
     var notaryKey;
     if (testDirectory) {
-        notaryKey = V1Test.getNotaryKey(citation.tag, testDirectory);
+        notaryKey = V1Test.notaryKey(citation.tag, testDirectory);
     } else {
-        notaryKey = V1Proxy.getNotaryKey(citation.tag);
+        notaryKey = V1Proxy.notaryKey(citation.tag);
     }
 
     return {

@@ -7,20 +7,26 @@
  * under the terms of The MIT License (MIT), as published by the Open   *
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
+'use strict';
+
+/*
+ * This module uses the singleton pattern to provide a proxy object that communicates
+ * with a hardware security module (HSM) for all cryptographic operations involving the
+ * associated private key. The private key itself is created on the HSM and never leaves
+ * it.  All operations requiring the private key are performed in hardware on the HSM.
+ */
 
 
 /**
- * This function returns a proxy to the hardward security module managing the private key
- * for the specified tag.
+ * This function returns a proxy object that implements the API for the hardware security module
+ * (notary key) associated with the specified unique tag.
  * 
- * @param {String} tag The unique tag for the hardware security module.
- * @returns {Object} A proxy to the hardware security module managing the private key.
+ * @param {String} tag A unique tag identifying a specifice hardware security module.
+ * @returns {Object} A proxy object to the hardware security module managing the private key.
  */
-exports.getNotaryKey = function(tag) {
+exports.notaryKey = function(tag) {
     
     return {
-
-        tag: tag,  // TODO: do we want to keep this or not (zero information)?
 
         toString: function() {
             throw new Error('NOTARY: The following method has not yet been implemented: ' + 'toString()');

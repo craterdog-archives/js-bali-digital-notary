@@ -7,9 +7,19 @@
  * under the terms of The MIT License (MIT), as published by the Open   *
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
+'use strict';
+
+/*
+ * This module defines a class containing the attributes associated with a Bali
+ * Document Citation™. A document citation references a Bali document in a way
+ * that prevents the document from being tampered with. The citation contains a
+ * digest attribute that is derived from the document content and can be
+ * regenerated when the document is retrieved to compare the digest values. They
+ * must be the same for the document to be considered valid.
+ */
 var bali = require('bali-document-notation/BaliDocuments');
 var codex = require('bali-document-notation/utilities/EncodingUtilities');
-var V1 = require('./protocols/V1').V1;
+var V1 = require('./protocols/V1');
 
 
 exports.create = function() {
