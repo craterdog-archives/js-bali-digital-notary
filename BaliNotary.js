@@ -7,51 +7,74 @@
  * under the terms of The MIT License (MIT), as published by the Open   *
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
+'use strict';
+
+/*
+ * This module defines a singleton that implements a digital notary interface that is
+ * used in the Bali Cloud Environment™. If a test directory is specified, it will
+ * be created and used as the location of the local key store. Otherwise, a proxy to
+ * a hardware security module will be used for all private key operations.
+ */
 var BaliCitation = require('./BaliCitation');
 var bali = require('bali-document-notation/BaliDocuments');
 var V1 = require('./protocols/V1').V1;
 var V1Public = require('./protocols/V1Public').V1Public;
 var V1Proxy = require('./protocols/V1Proxy');  // proxy to a hardware security module
 var V1Test = require('./protocols/V1Private');   // local test software secutity module
+var homeDirectory = require('os').homedir() + '/.bali/';
+var fs = require('fs');
 
 
 /**
- * This function returns the Bali Notary™ for the specified account tag.
+ * This function returns an object that implements the API for a digital notary.
  * 
- * @param {String} tag The unique tag for the account.
- * @param {String} testDirectory An optional directory to use for local testing.
- * @returns {Object} The Bali Notary™ for the specified account.
+ * @param {String} testDirectory The location of the test directory to be used for local
+ * configuration storage. If not specified, the location of the configuration is in
+ * '~/.bali/'.
+ * @returns {Object} An object that implements the API for a digital notary.
  */
-exports.loadNotary = function(tag, testDirectory) {
+exports.notary = function(testDirectory) {
 
+    // create the config directory if necessary
+    if (testDirectory) homeDirectory = testDirectory;
+    if (!fs.existsSync(homeDirectory)) fs.mkdirSync(homeDirectory, 448);  // drwx------ permissions
+
+    // load the account citation
+    var filename = homeDirectory + 'citation.bali';
+    var citation = loadCitation(filename);
+
+    // retrieve the notary key for the account
     var notaryKey;
     if (testDirectory) {
-        notaryKey = V1Test.getNotaryKey(tag, testDirectory);
+        notaryKey = V1Test.getNotaryKey(citation.tag, testDirectory);
     } else {
-        notaryKey = V1Proxy.getNotaryKey(tag);
+        notaryKey = V1Proxy.getNotaryKey(citation.tag);
     }
 
     return {
+
         generateKeys: function() {
-            var certificate = notaryKey.generate();
-            var reference = certificate.reference;
-            certificate = bali.parseDocument(certificate.source);
-            return {
-                citation: BaliCitation.fromReference(reference),
-                certificate: certificate
-            };
+            var result = notaryKey.generate();
+            var certificate = bali.parseDocument(result.source);
+            var reference = result.reference;
+            citation = BaliCitation.fromReference(reference);
+            storeCitation(filename, citation);
+            return certificate;
         },
 
         regenerateKeys: function() {
-            var certificate = notaryKey.regenerate();
-            var reference = certificate.reference;
-            certificate = bali.parseDocument(certificate.source);
-            return {
-                citation: BaliCitation.fromReference(reference),
-                certificate: certificate
-            };
+            var result = notaryKey.regenerate();
+            var certificate = bali.parseDocument(result.source);
+            var reference = result.reference;
+            citation = BaliCitation.fromReference(reference);
+            storeCitation(filename, citation);
+            return certificate;
         },
         
+        citation: function() {
+            return citation;
+        },
+
         notarizeDocument: function(tag, version, document) {
             if (!notaryKey.reference()) {
                 throw new Error('NOTARY: The following notary key has not yet been generated: ' + tag);
@@ -151,7 +174,7 @@ exports.loadNotary = function(tag, testDirectory) {
         
         decryptMessage: function(aem) {
             if (!notaryKey.reference()) {
-                throw new Error('NOTARY: The following notary key has not yet been generated: ' + tag);
+                throw new Error('NOTARY: The notary key has not yet been generated.');
             }
             if (!isAEM(aem)) {
                 throw new Error('NOTARY: The function was passed an invalid authenticated encrypted message: ' + aem);
@@ -187,4 +210,23 @@ function isCitation(citation) {
             citation.protocol &&
             citation.tag &&
             citation.version;
+}
+
+function loadCitation(filename) {
+    var citation;
+    var source;
+    if (fs.existsSync(filename)) {
+        source = fs.readFileSync(filename).toString();
+        citation = BaliCitation.fromSource(source);
+    } else {
+        citation = BaliCitation.create();
+        source = citation.toString();
+        fs.writeFileSync(filename, source, {mode: 384});  // -rw------- permissions
+    }
+    return citation;
+}
+
+function storeCitation(filename, citation) {
+    var source = citation.toString();
+    fs.writeFileSync(filename, source, {mode: 384});  // -rw------- permissions
 }

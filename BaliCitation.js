@@ -8,7 +8,18 @@
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
 var bali = require('bali-document-notation/BaliDocuments');
+var codex = require('bali-document-notation/utilities/EncodingUtilities');
 var V1 = require('./protocols/V1').V1;
+
+
+exports.create = function() {
+    var protocol = V1.PROTOCOL;
+    var tag = codex.randomTag();
+    var version = 'v1';
+    var digest = 'none';
+    var citation = new BaliCitation(protocol, tag, version, digest);
+    return citation;
+};
 
 
 exports.fromSource = function(source) {
