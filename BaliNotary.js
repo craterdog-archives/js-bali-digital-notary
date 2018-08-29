@@ -136,7 +136,7 @@ exports.notary = function(testDirectory) {
             }
         
             // check to see if the document's seal is valid
-            var protocol = certificate.getStringForKey('$protocol');
+            var protocol = certificate.getString('$protocol');
             switch(protocol) {
                 case V1.PROTOCOL:
                     // strip off the last seal from the document
@@ -150,7 +150,7 @@ exports.notary = function(testDirectory) {
                     source += reference;
         
                     // verify the signature using the public key from the notary certificate
-                    var publicKey = certificate.getStringForKey('$publicKey');
+                    var publicKey = certificate.getString('$publicKey');
                     var signature = seal.digitalSignature.toString();
                     var isValid = V1Public.verify(publicKey, source, signature);
                     return isValid;
@@ -163,8 +163,8 @@ exports.notary = function(testDirectory) {
             if (!BaliDocument.isDocument(certificate)) {
                 throw new Error('NOTARY: The function was passed an invalid Bali certificate: ' + certificate);
             }
-            var protocol = certificate.getStringForKey('$protocol');
-            var publicKey = certificate.getStringForKey('$publicKey');
+            var protocol = certificate.getString('$protocol');
+            var publicKey = certificate.getString('$publicKey');
             switch(protocol) {
                 case V1.PROTOCOL:
                     var aem = V1Public.encrypt(publicKey, message);

@@ -66,14 +66,14 @@ exports.notaryKey = function(tag, testDirectory) {
             // read in the notary key information
             var source = fs.readFileSync(filename).toString();
             var document = BaliDocument.fromSource(source);
-            protocol = document.getStringForKey('$protocol');
+            protocol = document.getString('$protocol');
             if (V1.PROTOCOL !== protocol) {
                 throw new Error('NOTARY: The protocol for the test private key is not supported: ' + protocol);
             }
-            version = document.getStringForKey('$version');
-            reference = document.getStringForKey('$reference');
-            publicKey = V1.encodedToBuffer(document.getStringForKey('$publicKey'));
-            privateKey = V1.encodedToBuffer(document.getStringForKey('$privateKey'));
+            version = document.getString('$version');
+            reference = document.getString('$reference');
+            publicKey = V1.encodedToBuffer(document.getString('$publicKey'));
+            privateKey = V1.encodedToBuffer(document.getString('$privateKey'));
         }
     } catch (e) {
         throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);

@@ -34,10 +34,10 @@ exports.create = function() {
 
 exports.fromSource = function(source) {
     var document = BaliDocument.fromSource(source);
-    var protocol = document.getStringForKey('$protocol');
-    var tag = document.getStringForKey('$tag');
-    var version = document.getStringForKey('$version');
-    var digest = document.getStringForKey('$digest');
+    var protocol = document.getString('$protocol');
+    var tag = document.getString('$tag');
+    var version = document.getString('$version');
+    var digest = document.getString('$digest');
     var citation = new BaliCitation(protocol, tag, version, digest);
     return citation;
 };
@@ -47,10 +47,10 @@ exports.fromReference = function(reference) {
     reference = reference.toString();
     var source = reference.slice(6, -1);  // remove '<bali:' and '>' wrapper
     var document = BaliDocument.fromSource(source);
-    var protocol = document.getStringForKey('$protocol');
-    var tag = document.getStringForKey('$tag');
-    var version = document.getStringForKey('$version');
-    var digest = document.getStringForKey('$digest');
+    var protocol = document.getString('$protocol');
+    var tag = document.getString('$tag');
+    var version = document.getString('$version');
+    var digest = document.getString('$digest');
     var citation = new BaliCitation(protocol, tag, version, digest);
     return citation;
 };

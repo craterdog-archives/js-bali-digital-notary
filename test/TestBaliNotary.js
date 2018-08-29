@@ -26,9 +26,9 @@ describe('Bali Digital Notary™', function() {
     describe('Test Citations', function() {
 
         it('should validate the citation for the certificate', function() {
-            var protocol = certificate.getStringForKey('$protocol');
-            var tag = certificate.getStringForKey('$tag');
-            var version = certificate.getStringForKey('$version');
+            var protocol = certificate.getString('$protocol');
+            var tag = certificate.getString('$tag');
+            var version = certificate.getString('$version');
             expect(protocol).to.equal('v1');
             expect(tag).to.equal(citation.tag);
             expect(version).to.equal(citation.version);
