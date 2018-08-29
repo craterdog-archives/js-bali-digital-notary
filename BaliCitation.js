@@ -44,6 +44,7 @@ exports.fromSource = function(source) {
 
 
 exports.fromReference = function(reference) {
+    reference = reference.toString();
     var source = reference.slice(6, -1);  // remove '<bali:' and '>' wrapper
     var document = BaliDocument.fromSource(source);
     var protocol = document.getStringForKey('$protocol');
