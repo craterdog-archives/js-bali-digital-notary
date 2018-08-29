@@ -22,7 +22,7 @@
  * actual HSM.
  */
 var V1 = require('./V1');
-var bali = require('bali-document-notation/BaliDocuments');
+var BaliDocument = require('bali-document-notation/BaliDocument');
 var crypto = require('crypto');
 var ec_pem = require('ec-pem');
 var config = require('os').homedir() + '/.bali/';
@@ -65,15 +65,15 @@ exports.notaryKey = function(tag, testDirectory) {
         if (fs.existsSync(filename)) {
             // read in the notary key information
             var source = fs.readFileSync(filename).toString();
-            var document = bali.parseDocument(source);
-            protocol = bali.getStringForKey(document, '$protocol');
+            var document = BaliDocument.fromSource(source);
+            protocol = document.getStringForKey('$protocol');
             if (V1.PROTOCOL !== protocol) {
                 throw new Error('NOTARY: The protocol for the test private key is not supported: ' + protocol);
             }
-            version = bali.getStringForKey(document, '$version');
-            reference = bali.getStringForKey(document, '$reference');
-            publicKey = V1.encodedToBuffer(bali.getStringForKey(document, '$publicKey'));
-            privateKey = V1.encodedToBuffer(bali.getStringForKey(document, '$privateKey'));
+            version = document.getStringForKey('$version');
+            reference = document.getStringForKey('$reference');
+            publicKey = V1.encodedToBuffer(document.getStringForKey('$publicKey'));
+            privateKey = V1.encodedToBuffer(document.getStringForKey('$privateKey'));
         }
     } catch (e) {
         throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);

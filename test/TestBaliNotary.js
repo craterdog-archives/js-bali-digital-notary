@@ -8,7 +8,7 @@
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
 
-var bali = require('bali-document-notation/BaliDocuments');
+var BaliDocument = require('bali-document-notation/BaliDocument');
 var codex = require('bali-document-notation/utilities/EncodingUtilities');
 var notary = require('../BaliNotary').notary('test/config/');
 var mocha = require('mocha');
@@ -26,9 +26,9 @@ describe('Bali Digital Notary™', function() {
     describe('Test Citations', function() {
 
         it('should validate the citation for the certificate', function() {
-            var protocol = bali.getStringForKey(certificate, '$protocol');
-            var tag = bali.getStringForKey(certificate, '$tag');
-            var version = bali.getStringForKey(certificate, '$version');
+            var protocol = certificate.getStringForKey('$protocol');
+            var tag = certificate.getStringForKey('$tag');
+            var version = certificate.getStringForKey('$version');
             expect(protocol).to.equal('v1');
             expect(tag).to.equal(citation.tag);
             expect(version).to.equal(citation.version);
@@ -43,7 +43,7 @@ describe('Bali Digital Notary™', function() {
         it('should digitally sign a document properly', function() {
             var tag = codex.randomTag();
             var version = 'v2.3.4';
-            var document = bali.parseDocument(source);
+            var document = BaliDocument.fromSource(source);
             var documentCitation = notary.notarizeDocument(tag, version, document);
             var isValid = notary.documentIsValid(certificate, document);
             expect(isValid).to.equal(true);
@@ -69,13 +69,13 @@ describe('Bali Digital Notary™', function() {
         it('should regenerate a notary key properly', function() {
             var tag = codex.randomTag();
             var version = 'v2.3.4';
-            var document = bali.parseDocument(source);
+            var document = BaliDocument.fromSource(source);
             notary.notarizeDocument(tag, version, document);
 
             var newCertificate = notary.regenerateKeys();
             expect(certificate).to.exist;  // jshint ignore:line
 
-            document = bali.parseDocument(source);
+            document = BaliDocument.fromSource(source);
             var newDocumentCitation = notary.notarizeDocument(tag, version, document);
             isValid = notary.documentIsValid(certificate, document);
             expect(isValid).to.equal(false);

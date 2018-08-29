@@ -17,7 +17,8 @@
  * hardware security module will be used for all private key operations.
  */
 var BaliCitation = require('./BaliCitation');
-var bali = require('bali-document-notation/BaliDocuments');
+var BaliDocument = require('bali-document-notation/BaliDocument');
+var utilities = require('bali-document-notation/utilities/DocumentUtilities');
 var V1 = require('./protocols/V1');
 var V1Public = require('./protocols/V1Public');
 var V1Proxy = require('./protocols/V1Proxy');  // proxy to a hardware security module
@@ -56,7 +57,7 @@ exports.notary = function(testDirectory) {
 
         generateKeys: function() {
             var result = notaryKey.generate();
-            var certificate = bali.parseDocument(result.source);
+            var certificate = BaliDocument.fromSource(result.source);
             var reference = result.reference;
             citation = BaliCitation.fromReference(reference);
             storeCitation(filename, citation);
@@ -65,7 +66,7 @@ exports.notary = function(testDirectory) {
 
         regenerateKeys: function() {
             var result = notaryKey.regenerate();
-            var certificate = bali.parseDocument(result.source);
+            var certificate = BaliDocument.fromSource(result.source);
             var reference = result.reference;
             citation = BaliCitation.fromReference(reference);
             storeCitation(filename, citation);
@@ -80,13 +81,13 @@ exports.notary = function(testDirectory) {
             if (!notaryKey.reference()) {
                 throw new Error('NOTARY: The following notary key has not yet been generated: ' + tag);
             }
-            if (!bali.isTag(tag)) {
+            if (!utilities.isTag(tag)) {
                 throw new Error('NOTARY: The function was passed an invalid Bali tag: ' + tag);
             }
-            if (!bali.isVersion(version)) {
+            if (!utilities.isVersion(version)) {
                 throw new Error('NOTARY: The function was passed an invalid Bali version: ' + version);
             }
-            if (!bali.isDocument(document)) {
+            if (!BaliDocument.isDocument(document)) {
                 throw new Error('NOTARY: The function was passed an invalid Bali document: ' + document);
             }
         
@@ -99,7 +100,7 @@ exports.notary = function(testDirectory) {
             var signature = notaryKey.sign(source);
         
             // append the notary seal to the document (modifies it in place)
-            bali.addSeal(document, reference, signature);
+            document.addSeal(reference, signature);
         
             // generate a citation to the notarized document
             source = document.toString();  // get updated source
@@ -113,7 +114,7 @@ exports.notary = function(testDirectory) {
             if (!isCitation(citation)) {
                 throw new Error('NOTARY: The function was passed an invalid document citation: ' + citation);
             }
-            if (!bali.isDocument(document)) {
+            if (!BaliDocument.isDocument(document)) {
                 throw new Error('NOTARY: The function was passed an invalid Bali document: ' + document);
             }
             var protocol = citation.protocol;
@@ -127,30 +128,30 @@ exports.notary = function(testDirectory) {
         },
         
         documentIsValid: function(certificate, document) {
-            if (!bali.isDocument(certificate)) {
+            if (!BaliDocument.isDocument(certificate)) {
                 throw new Error('NOTARY: The function was passed an invalid Bali certificate: ' + certificate);
             }
-            if (!bali.isDocument(document)) {
+            if (!BaliDocument.isDocument(document)) {
                 throw new Error('NOTARY: The function was passed an invalid Bali document: ' + document);
             }
         
             // check to see if the document's seal is valid
-            var protocol = bali.getStringForKey(certificate, '$protocol');
+            var protocol = certificate.getStringForKey('$protocol');
             switch(protocol) {
                 case V1.PROTOCOL:
                     // strip off the last seal from the document
-                    var seal = bali.getSeal(document);
-                    var stripped = bali.removeSeal(document);
+                    var seal = document.getLastSeal();
+                    var stripped = document.unsealed();
         
                     // calculate the digest of the stripped document + certificate reference
                     var source = stripped.toString();
                     // NOTE: the certificate reference must be included in the signed source!
-                    var reference = bali.getReference(seal);
+                    var reference = seal.certificateReference.toString();
                     source += reference;
         
                     // verify the signature using the public key from the notary certificate
-                    var publicKey = bali.getStringForKey(certificate, '$publicKey');
-                    var signature = bali.getSignature(seal);
+                    var publicKey = certificate.getStringForKey('$publicKey');
+                    var signature = seal.digitalSignature.toString();
                     var isValid = V1Public.verify(publicKey, source, signature);
                     return isValid;
                 default:
@@ -159,11 +160,11 @@ exports.notary = function(testDirectory) {
         },
         
         encryptMessage: function(certificate, message) {
-            if (!bali.isDocument(certificate)) {
+            if (!BaliDocument.isDocument(certificate)) {
                 throw new Error('NOTARY: The function was passed an invalid Bali certificate: ' + certificate);
             }
-            var protocol = bali.getStringForKey(certificate, '$protocol');
-            var publicKey = bali.getStringForKey(certificate, '$publicKey');
+            var protocol = certificate.getStringForKey('$protocol');
+            var publicKey = certificate.getStringForKey('$publicKey');
             switch(protocol) {
                 case V1.PROTOCOL:
                     var aem = V1Public.encrypt(publicKey, message);

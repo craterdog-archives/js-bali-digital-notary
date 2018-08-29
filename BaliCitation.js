@@ -17,7 +17,7 @@
  * regenerated when the document is retrieved to compare the digest values. They
  * must be the same for the document to be considered valid.
  */
-var bali = require('bali-document-notation/BaliDocuments');
+var BaliDocument = require('bali-document-notation/BaliDocument');
 var codex = require('bali-document-notation/utilities/EncodingUtilities');
 var V1 = require('./protocols/V1');
 
@@ -33,11 +33,11 @@ exports.create = function() {
 
 
 exports.fromSource = function(source) {
-    var document = bali.parseDocument(source);
-    var protocol = bali.getStringForKey(document, '$protocol');
-    var tag = bali.getStringForKey(document, '$tag');
-    var version = bali.getStringForKey(document, '$version');
-    var digest = bali.getStringForKey(document, '$digest');
+    var document = BaliDocument.fromSource(source);
+    var protocol = document.getStringForKey('$protocol');
+    var tag = document.getStringForKey('$tag');
+    var version = document.getStringForKey('$version');
+    var digest = document.getStringForKey('$digest');
     var citation = new BaliCitation(protocol, tag, version, digest);
     return citation;
 };
@@ -45,11 +45,11 @@ exports.fromSource = function(source) {
 
 exports.fromReference = function(reference) {
     var source = reference.slice(6, -1);  // remove '<bali:' and '>' wrapper
-    var catalog = bali.parseComponent(source);
-    var protocol = bali.getStringForKey(catalog, '$protocol');
-    var tag = bali.getStringForKey(catalog, '$tag');
-    var version = bali.getStringForKey(catalog, '$version');
-    var digest = bali.getStringForKey(catalog, '$digest');
+    var document = BaliDocument.fromSource(source);
+    var protocol = document.getStringForKey('$protocol');
+    var tag = document.getStringForKey('$tag');
+    var version = document.getStringForKey('$version');
+    var digest = document.getStringForKey('$digest');
     var citation = new BaliCitation(protocol, tag, version, digest);
     return citation;
 };
