@@ -18,7 +18,6 @@
  */
 var BaliCitation = require('./BaliCitation');
 var BaliDocument = require('bali-document-notation/BaliDocument');
-var utilities = require('bali-document-notation/utilities/DocumentUtilities');
 var V1 = require('./protocols/V1');
 var V1Public = require('./protocols/V1Public');
 var V1Proxy = require('./protocols/V1Proxy');  // proxy to a hardware security module
@@ -81,15 +80,6 @@ exports.notary = function(testDirectory) {
             if (!notaryKey.reference()) {
                 throw new Error('NOTARY: The following notary key has not yet been generated: ' + tag);
             }
-            if (!utilities.isTag(tag)) {
-                throw new Error('NOTARY: The function was passed an invalid Bali tag: ' + tag);
-            }
-            if (!utilities.isVersion(version)) {
-                throw new Error('NOTARY: The function was passed an invalid Bali version: ' + version);
-            }
-            if (!BaliDocument.isDocument(document)) {
-                throw new Error('NOTARY: The function was passed an invalid Bali document: ' + document);
-            }
         
             // prepare the document source for signing
             var reference = notaryKey.reference();
@@ -111,12 +101,6 @@ exports.notary = function(testDirectory) {
         },
         
         documentMatches: function(citation, document) {
-            if (!isCitation(citation)) {
-                throw new Error('NOTARY: The function was passed an invalid document citation: ' + citation);
-            }
-            if (!BaliDocument.isDocument(document)) {
-                throw new Error('NOTARY: The function was passed an invalid Bali document: ' + document);
-            }
             var protocol = citation.protocol;
             switch(protocol) {
                 case V1.PROTOCOL:
@@ -128,13 +112,6 @@ exports.notary = function(testDirectory) {
         },
         
         documentIsValid: function(certificate, document) {
-            if (!BaliDocument.isDocument(certificate)) {
-                throw new Error('NOTARY: The function was passed an invalid Bali certificate: ' + certificate);
-            }
-            if (!BaliDocument.isDocument(document)) {
-                throw new Error('NOTARY: The function was passed an invalid Bali document: ' + document);
-            }
-        
             // check to see if the document's seal is valid
             var protocol = certificate.getString('$protocol');
             switch(protocol) {
@@ -160,9 +137,6 @@ exports.notary = function(testDirectory) {
         },
         
         encryptMessage: function(certificate, message) {
-            if (!BaliDocument.isDocument(certificate)) {
-                throw new Error('NOTARY: The function was passed an invalid Bali certificate: ' + certificate);
-            }
             var protocol = certificate.getString('$protocol');
             var publicKey = certificate.getString('$publicKey');
             switch(protocol) {
@@ -178,9 +152,6 @@ exports.notary = function(testDirectory) {
             if (!notaryKey.reference()) {
                 throw new Error('NOTARY: The notary key has not yet been generated.');
             }
-            if (!isAEM(aem)) {
-                throw new Error('NOTARY: The function was passed an invalid authenticated encrypted message: ' + aem);
-            }
             var protocol = aem.protocol;
             switch(protocol) {
                 case V1.PROTOCOL:
@@ -195,24 +166,6 @@ exports.notary = function(testDirectory) {
 
 
 // PRIVATE FUNCTIONS
-
-function isAEM(aem) {
-    return aem &&
-            aem.constructor.name === 'Object' &&
-            aem.protocol &&
-            aem.iv &&
-            aem.auth &&
-            aem.seed &&
-            aem.ciphertext;
-}
-
-function isCitation(citation) {
-    return citation &&
-            citation.constructor.name === 'BaliCitation' &&
-            citation.protocol &&
-            citation.tag &&
-            citation.version;
-}
 
 function loadCitation(filename) {
     var citation;
