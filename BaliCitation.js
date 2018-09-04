@@ -67,20 +67,32 @@ BaliCitation.prototype.constructor = BaliCitation;
 
 
 BaliCitation.prototype.toString = function() {
-    var source = V1.CITATION_TEMPLATE;
-    source = source.replace(/%protocol/, this.protocol);
-    source = source.replace(/%tag/, this.tag);
-    source = source.replace(/%version/, this.version);
-    source = source.replace(/%digest/, this.digest);
+    var source = this.toBali();
     return source;
 };
 
 
 BaliCitation.prototype.toReference = function() {
-    var reference = V1.REFERENCE_TEMPLATE;
+    var reference = '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$digest:%digest]>';
     reference = reference.replace(/%protocol/, this.protocol);
     reference = reference.replace(/%tag/, this.tag);
     reference = reference.replace(/%version/, this.version);
     reference = reference.replace(/%digest/, this.digest);
     return reference;
+};
+
+
+BaliCitation.prototype.toBali = function(padding) {
+    padding = padding ? padding : '';
+    var source =  '[\n' +
+        padding + '    $protocol: %protocol\n' +
+        padding + '    $tag: %tag\n' +
+        padding + '    $version: %version\n' +
+        padding + '    $digest: %digest\n' +
+        padding + ']\n';
+    source = source.replace(/%protocol/, this.protocol);
+    source = source.replace(/%tag/, this.tag);
+    source = source.replace(/%version/, this.version);
+    source = source.replace(/%digest/, this.digest);
+    return source;
 };

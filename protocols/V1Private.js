@@ -39,16 +39,6 @@ var fs = require('fs');
  */
 exports.notaryKey = function(tag, testDirectory) {
     
-    var NOTARY_TEMPLATE =
-        '[\n' +
-        '    $protocol: %protocol\n' +
-        '    $tag: %tag\n' +
-        '    $version: %version\n' +
-        '    $reference: %reference\n' +
-        '    $publicKey: %publicKey\n' +
-        '    $privateKey: %privateKey\n' +
-        ']\n';
-
     // read in the notary key attributes
     var protocol;
     var version;
@@ -83,13 +73,26 @@ exports.notaryKey = function(tag, testDirectory) {
     return {
 
         toString: function() {
-            var source = NOTARY_TEMPLATE;
+            var string = this.toBali();
+            return string;
+        },
+
+        toBali: function(padding) {
+            padding = padding ? padding : '';
+            var source =  '[\n' +
+                padding + '    $protocol: %protocol\n' +
+                padding + '    $tag: %tag\n' +
+                padding + '    $version: %version\n' +
+                padding + '    $reference: %reference\n' +
+                padding + '    $publicKey: %publicKey\n' +
+                padding + '    $privateKey: %privateKey\n' +
+                padding + ']\n';
             source = source.replace(/%protocol/, protocol);
             source = source.replace(/%tag/, tag);
             source = source.replace(/%version/, version);
             source = source.replace(/%reference/, reference);
-            source = source.replace(/%publicKey/, V1.bufferToEncoded(publicKey, '    '));
-            source = source.replace(/%privateKey/, V1.bufferToEncoded(privateKey, '    '));
+            source = source.replace(/%publicKey/, V1.bufferToEncoded(publicKey, padding + '    '));
+            source = source.replace(/%privateKey/, V1.bufferToEncoded(privateKey, padding + '    '));
             return source;
         },
 
@@ -189,7 +192,14 @@ exports.notaryKey = function(tag, testDirectory) {
 // PRIVATE FUNCTIONS
 
 function certify(notaryKey, tag, version, publicKey) {
-    var source = V1.CERTIFICATE_TEMPLATE;
+    var source = 
+        '[\n' +
+        '    $protocol: %protocol\n' +
+        '    $tag: %tag\n' +
+        '    $version: %version\n' +
+        '    $publicKey: %publicKey\n' +
+        ']\n';
+
     source = source.replace(/%protocol/, V1.PROTOCOL);
     source = source.replace(/%tag/, tag);
     source = source.replace(/%version/, version);

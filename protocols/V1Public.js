@@ -52,13 +52,26 @@ exports.encrypt = function(encodedKey, plaintext) {
         auth: auth,
         seed: seed,
         ciphertext: ciphertext,
+
         toString: function() {
-            var source = V1.AEM_TEMPLATE;
+            var string = this.toBali();
+            return string;
+        },
+
+        toBali: function(padding) {
+            padding = padding ? padding : '';
+            var source =  '[\n' +
+                padding + '    $protocol: %protocol\n' +
+                padding + '    $iv: %iv\n' +
+                padding + '    $auth: %auth\n' +
+                padding + '    $seed: %seed\n' +
+                padding + '    $ciphertext: %ciphertext\n' +
+                padding + ']\n';
             source = source.replace(/%protocol/, this.protocol);
-            source = source.replace(/%iv/, V1.bufferToEncoded(this.iv, '    '));
-            source = source.replace(/%auth/, V1.bufferToEncoded(this.auth, '    '));
-            source = source.replace(/%seed/, V1.bufferToEncoded(this.seed, '    '));
-            source = source.replace(/%ciphertext/, V1.bufferToEncoded(this.ciphertext, '    '));
+            source = source.replace(/%iv/, V1.bufferToEncoded(this.iv, padding + '    '));
+            source = source.replace(/%auth/, V1.bufferToEncoded(this.auth, padding + '    '));
+            source = source.replace(/%seed/, V1.bufferToEncoded(this.seed, padding + '    '));
+            source = source.replace(/%ciphertext/, V1.bufferToEncoded(this.ciphertext, padding + '    '));
             return source;
         }
     };

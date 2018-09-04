@@ -26,36 +26,6 @@ exports.SIGNATURE = 'ecdsa-with-SHA1';
 exports.CIPHER = 'aes-256-gcm';
 
 
-// TEMPLATES
-
-exports.REFERENCE_TEMPLATE = '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$digest:%digest]>';
-
-exports.CITATION_TEMPLATE =
-    '[\n' +
-    '    $protocol: %protocol\n' +
-    '    $tag: %tag\n' +
-    '    $version: %version\n' +
-    '    $digest: %digest\n' +
-    ']\n';
-
-exports.CERTIFICATE_TEMPLATE =
-    '[\n' +
-    '    $protocol: %protocol\n' +
-    '    $tag: %tag\n' +
-    '    $version: %version\n' +
-    '    $publicKey: %publicKey\n' +
-    ']\n';
-
-exports.AEM_TEMPLATE =
-    '[\n' +
-    '    $protocol: %protocol\n' +
-    '    $iv: %iv\n' +
-    '    $auth: %auth\n' +
-    '    $seed: %seed\n' +
-    '    $ciphertext: %ciphertext\n' +
-    ']\n';
-
-
 // FUNCTIONS
 
 exports.digest = function(message) {
@@ -71,7 +41,7 @@ exports.cite = function(tag, version, document) {
     if (document) {
         encodedDigest = exports.digest(document);
     }
-    var reference = exports.REFERENCE_TEMPLATE;
+    var reference = '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$digest:%digest]>';
     reference = reference.replace(/%protocol/, exports.PROTOCOL);
     reference = reference.replace(/%tag/, tag);
     reference = reference.replace(/%version/, version);
