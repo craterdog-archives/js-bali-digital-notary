@@ -22,7 +22,7 @@ var codex = require('bali-document-notation/utilities/EncodingUtilities');
 var V1 = require('./protocols/V1');
 
 
-exports.create = function() {
+exports.fromScratch = function() {
     var protocol = V1.PROTOCOL;
     var tag = codex.randomTag();
     var version = 'v1';
@@ -67,7 +67,7 @@ BaliCitation.prototype.constructor = BaliCitation;
 
 
 BaliCitation.prototype.toString = function() {
-    var source = this.toBali();
+    var source = this.toSource();
     return source;
 };
 
@@ -82,7 +82,7 @@ BaliCitation.prototype.toReference = function() {
 };
 
 
-BaliCitation.prototype.toBali = function(padding) {
+BaliCitation.prototype.toSource = function(padding) {
     padding = padding ? padding : '';
     var source =  '[\n' +
         padding + '    $protocol: %protocol\n' +

@@ -54,11 +54,11 @@ exports.encrypt = function(encodedKey, plaintext) {
         ciphertext: ciphertext,
 
         toString: function() {
-            var string = this.toBali();
+            var string = this.toSource();
             return string;
         },
 
-        toBali: function(padding) {
+        toSource: function(padding) {
             padding = padding ? padding : '';
             var source =  '[\n' +
                 padding + '    $protocol: %protocol\n' +

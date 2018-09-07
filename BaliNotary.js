@@ -83,7 +83,7 @@ exports.notary = function(testDirectory) {
         
             // prepare the document source for signing
             var reference = notaryKey.reference();
-            var source = document.toString();
+            var source = document.toSource();
             source += reference;  // NOTE: the reference must be included in the signed source!
         
             // generate the notarization signature
@@ -93,7 +93,7 @@ exports.notary = function(testDirectory) {
             document.addSeal(reference, signature);
         
             // generate a citation to the notarized document
-            source = document.toString();  // get updated source
+            source = document.toSource();  // get updated source
             reference = V1.cite(tag, version, source);
             var citation = BaliCitation.fromReference(reference);
 
@@ -104,7 +104,7 @@ exports.notary = function(testDirectory) {
             var protocol = citation.protocol;
             switch(protocol) {
                 case V1.PROTOCOL:
-                    var digest = V1.digest(document.toString());
+                    var digest = V1.digest(document.toSource());
                     return citation.digest === digest;
                 default:
                     throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
@@ -121,7 +121,7 @@ exports.notary = function(testDirectory) {
                     var stripped = document.unsealed();
         
                     // calculate the digest of the stripped document + certificate reference
-                    var source = stripped.toString();
+                    var source = stripped.toSource();
                     // NOTE: the certificate reference must be included in the signed source!
                     var reference = seal.certificateReference.toString();
                     source += reference;
@@ -174,14 +174,14 @@ function loadCitation(filename) {
         source = fs.readFileSync(filename).toString();
         citation = BaliCitation.fromSource(source);
     } else {
-        citation = BaliCitation.create();
-        source = citation.toString();
+        citation = BaliCitation.fromScratch();
+        source = citation.toSource();
         fs.writeFileSync(filename, source, {mode: 384});  // -rw------- permissions
     }
     return citation;
 }
 
 function storeCitation(filename, citation) {
-    var source = citation.toString();
+    var source = citation.toSource();
     fs.writeFileSync(filename, source, {mode: 384});  // -rw------- permissions
 }

@@ -73,11 +73,11 @@ exports.notaryKey = function(tag, testDirectory) {
     return {
 
         toString: function() {
-            var string = this.toBali();
+            var string = this.toSource();
             return string;
         },
 
-        toBali: function(padding) {
+        toSource: function(padding) {
             padding = padding ? padding : '';
             var source =  '[\n' +
                 padding + '    $protocol: %protocol\n' +
@@ -107,7 +107,7 @@ exports.notaryKey = function(tag, testDirectory) {
             var source = certify(this, tag, version, publicKey);
             reference = V1.cite(tag, version, source);
             try {
-                fs.writeFileSync(filename, this.toString(), {mode: 384});  // -rw------- permissions
+                fs.writeFileSync(filename, this.toSource(), {mode: 384});  // -rw------- permissions
             } catch (e) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
             }
@@ -132,7 +132,7 @@ exports.notaryKey = function(tag, testDirectory) {
             source += ' ' + this.sign(source) + '\n';
             reference = V1.cite(tag, nextVersion, source);
             try {
-                fs.writeFileSync(filename, this.toString(), {mode: 384});  // -rw------- permissions
+                fs.writeFileSync(filename, this.toSource(), {mode: 384});  // -rw------- permissions
             } catch (e) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
             }
