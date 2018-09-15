@@ -29,6 +29,7 @@
     "mocha": "^5.2.0"
   },
   "dependencies": {
+    "bali-document-notation": "file:../js-bali-document-notation",
     "ec-pem": "^0.18.0"
   }
 }
