@@ -71,7 +71,7 @@ exports.notary = function(testDirectory) {
             storeCitation(filename, citation);
             return certificate;
         },
-        
+
         citation: function() {
             return citation;
         },
@@ -80,18 +80,18 @@ exports.notary = function(testDirectory) {
             if (!notaryKey.reference()) {
                 throw new Error('NOTARY: The following notary key has not yet been generated: ' + tag);
             }
-        
+
             // prepare the document source for signing
             var reference = notaryKey.reference();
             var source = document.toSource();
             source += reference;  // NOTE: the reference must be included in the signed source!
-        
+
             // generate the notarization signature
             var signature = notaryKey.sign(source);
-        
+
             // append the notary seal to the document (modifies it in place)
             document.addSeal(reference, signature);
-        
+
             // generate a citation to the notarized document
             source = document.toSource();  // get updated source
             reference = V1.cite(tag, version, source);
@@ -99,7 +99,7 @@ exports.notary = function(testDirectory) {
 
             return citation;
         },
-        
+
         documentMatches: function(citation, document) {
             var protocol = citation.protocol;
             switch(protocol) {
@@ -110,7 +110,7 @@ exports.notary = function(testDirectory) {
                     throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
             }
         },
-        
+
         documentIsValid: function(certificate, document) {
             // check to see if the document's seal is valid
             var protocol = certificate.getString('$protocol');
@@ -119,13 +119,13 @@ exports.notary = function(testDirectory) {
                     // strip off the last seal from the document
                     var seal = document.getLastSeal();
                     var stripped = document.unsealed();
-        
+
                     // calculate the digest of the stripped document + certificate reference
                     var source = stripped.toSource();
                     // NOTE: the certificate reference must be included in the signed source!
                     var reference = seal.certificateReference.toString();
                     source += reference;
-        
+
                     // verify the signature using the public key from the notary certificate
                     var publicKey = certificate.getString('$publicKey');
                     var signature = seal.digitalSignature.toString();
@@ -135,7 +135,7 @@ exports.notary = function(testDirectory) {
                     throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
             }
         },
-        
+
         encryptMessage: function(certificate, message) {
             var protocol = certificate.getString('$protocol');
             var publicKey = certificate.getString('$publicKey');
@@ -147,7 +147,7 @@ exports.notary = function(testDirectory) {
                     throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
             }
         },
-        
+
         decryptMessage: function(aem) {
             if (!notaryKey.reference()) {
                 throw new Error('NOTARY: The notary key has not yet been generated.');
