@@ -49,10 +49,10 @@ exports.cite = function(tag, version, document) {
     return reference;
 };
 
-exports.bufferToEncoded = function(buffer, padding) {
-    if (!padding) padding = '';
-    var base32 = codex.base32Encode(buffer, padding + '    ');
-    var encoded = "'" + base32 + "\n" + padding + "'";  // add in the "'"s
+exports.bufferToEncoded = function(buffer, indentation) {
+    if (!indentation) indentation = '';
+    var base32 = codex.base32Encode(buffer, indentation);
+    var encoded = "'" + base32 + indentation + "'";  // add in the "'"s
     return encoded;
 };
 

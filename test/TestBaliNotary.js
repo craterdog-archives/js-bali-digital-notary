@@ -18,10 +18,7 @@ describe('Bali Digital Notary™', function() {
 
     var certificate = notary.generateKeys();
     var citation = notary.citation();
-    var source =
-            '[\n' +
-            '    $foo: "bar"\n' +
-            ']\n';
+    var source = '[$foo: "bar"]\n';
 
     describe('Test Citations', function() {
 

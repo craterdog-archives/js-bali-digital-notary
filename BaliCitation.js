@@ -82,14 +82,14 @@ BaliCitation.prototype.toReference = function() {
 };
 
 
-BaliCitation.prototype.toSource = function(padding) {
-    padding = padding ? padding : '';
+BaliCitation.prototype.toSource = function(indentation) {
+    indentation = indentation ? indentation : '';
     var source =  '[\n' +
-        padding + '    $protocol: %protocol\n' +
-        padding + '    $tag: %tag\n' +
-        padding + '    $version: %version\n' +
-        padding + '    $digest: %digest\n' +
-        padding + ']\n';
+        indentation + '    $protocol: %protocol\n' +
+        indentation + '    $tag: %tag\n' +
+        indentation + '    $version: %version\n' +
+        indentation + '    $digest: %digest\n' +
+        indentation + ']\n';
     source = source.replace(/%protocol/, this.protocol);
     source = source.replace(/%tag/, this.tag);
     source = source.replace(/%version/, this.version);

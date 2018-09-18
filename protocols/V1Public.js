@@ -58,20 +58,20 @@ exports.encrypt = function(encodedKey, plaintext) {
             return string;
         },
 
-        toSource: function(padding) {
-            padding = padding ? padding : '';
+        toSource: function(indentation) {
+            indentation = indentation ? indentation : '';
             var source =  '[\n' +
-                padding + '    $protocol: %protocol\n' +
-                padding + '    $iv: %iv\n' +
-                padding + '    $auth: %auth\n' +
-                padding + '    $seed: %seed\n' +
-                padding + '    $ciphertext: %ciphertext\n' +
-                padding + ']\n';
+                indentation + '    $protocol: %protocol\n' +
+                indentation + '    $iv: %iv\n' +
+                indentation + '    $auth: %auth\n' +
+                indentation + '    $seed: %seed\n' +
+                indentation + '    $ciphertext: %ciphertext\n' +
+                indentation + ']\n';
             source = source.replace(/%protocol/, this.protocol);
-            source = source.replace(/%iv/, V1.bufferToEncoded(this.iv, padding + '    '));
-            source = source.replace(/%auth/, V1.bufferToEncoded(this.auth, padding + '    '));
-            source = source.replace(/%seed/, V1.bufferToEncoded(this.seed, padding + '    '));
-            source = source.replace(/%ciphertext/, V1.bufferToEncoded(this.ciphertext, padding + '    '));
+            source = source.replace(/%iv/, V1.bufferToEncoded(this.iv, indentation + '    '));
+            source = source.replace(/%auth/, V1.bufferToEncoded(this.auth, indentation + '    '));
+            source = source.replace(/%seed/, V1.bufferToEncoded(this.seed, indentation + '    '));
+            source = source.replace(/%ciphertext/, V1.bufferToEncoded(this.ciphertext, indentation + '    '));
             return source;
         }
     };

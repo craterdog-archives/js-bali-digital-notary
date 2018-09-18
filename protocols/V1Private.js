@@ -77,22 +77,22 @@ exports.notaryKey = function(tag, testDirectory) {
             return string;
         },
 
-        toSource: function(padding) {
-            padding = padding ? padding : '';
+        toSource: function(indentation) {
+            indentation = indentation ? indentation : '';
             var source =  '[\n' +
-                padding + '    $protocol: %protocol\n' +
-                padding + '    $tag: %tag\n' +
-                padding + '    $version: %version\n' +
-                padding + '    $reference: %reference\n' +
-                padding + '    $publicKey: %publicKey\n' +
-                padding + '    $privateKey: %privateKey\n' +
-                padding + ']\n';
+                indentation + '    $protocol: %protocol\n' +
+                indentation + '    $tag: %tag\n' +
+                indentation + '    $version: %version\n' +
+                indentation + '    $reference: %reference\n' +
+                indentation + '    $publicKey: %publicKey\n' +
+                indentation + '    $privateKey: %privateKey\n' +
+                indentation + ']\n';
             source = source.replace(/%protocol/, protocol);
             source = source.replace(/%tag/, tag);
             source = source.replace(/%version/, version);
             source = source.replace(/%reference/, reference);
-            source = source.replace(/%publicKey/, V1.bufferToEncoded(publicKey, padding + '    '));
-            source = source.replace(/%privateKey/, V1.bufferToEncoded(privateKey, padding + '    '));
+            source = source.replace(/%publicKey/, V1.bufferToEncoded(publicKey, indentation + '    '));
+            source = source.replace(/%privateKey/, V1.bufferToEncoded(privateKey, indentation + '    '));
             return source;
         },
 
