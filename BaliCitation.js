@@ -37,7 +37,7 @@ exports.fromSource = function(source) {
     var protocol = document.getString('$protocol');
     var tag = document.getString('$tag');
     var version = document.getString('$version');
-    var digest = document.getString('$digest');
+    var digest = document.getString('$digest').replace(/\s/g, '');
     var citation = new BaliCitation(protocol, tag, version, digest);
     return citation;
 };
@@ -50,7 +50,7 @@ exports.fromReference = function(reference) {
     var protocol = document.getString('$protocol');
     var tag = document.getString('$tag');
     var version = document.getString('$version');
-    var digest = document.getString('$digest');
+    var digest = document.getString('$digest').replace(/\s/g, '');
     var citation = new BaliCitation(protocol, tag, version, digest);
     return citation;
 };
@@ -60,7 +60,7 @@ function BaliCitation(protocol, tag, version, digest) {
     this.protocol = protocol;
     this.tag = tag;
     this.version = version;
-    this.digest = digest;
+    this.digest = digest.replace(/\s/g, '');
     return this;
 }
 BaliCitation.prototype.constructor = BaliCitation;
