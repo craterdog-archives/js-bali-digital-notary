@@ -17,7 +17,7 @@
  * hardware security module will be used for all private key operations.
  */
 var BaliCitation = require('./BaliCitation');
-var BaliDocument = require('bali-document-notation/BaliDocument');
+var parser = require('bali-document-notation/transformers/DocumentParser');
 var V1 = require('./protocols/V1');
 var V1Public = require('./protocols/V1Public');
 var V1Proxy = require('./protocols/V1Proxy');  // proxy to a hardware security module
@@ -56,7 +56,7 @@ exports.notary = function(testDirectory) {
 
         generateKeys: function() {
             var result = notaryKey.generate();
-            var certificate = BaliDocument.fromSource(result.source);
+            var certificate = parser.parseDocument(result.source);
             var reference = result.reference;
             citation = BaliCitation.fromReference(reference);
             storeCitation(filename, citation);
@@ -65,7 +65,7 @@ exports.notary = function(testDirectory) {
 
         regenerateKeys: function() {
             var result = notaryKey.regenerate();
-            var certificate = BaliDocument.fromSource(result.source);
+            var certificate = parser.parseDocument(result.source);
             var reference = result.reference;
             citation = BaliCitation.fromReference(reference);
             storeCitation(filename, citation);
