@@ -16,14 +16,14 @@
  * and used as the location of the local key store. Otherwise, a proxy to a
  * hardware security module will be used for all private key operations.
  */
+var homeDirectory = require('os').homedir() + '/.bali/';
+var fs = require('fs');
+var BaliDocument = require('bali-document-notation/BaliDocument');
 var BaliCitation = require('./BaliCitation');
-var parser = require('bali-document-notation/transformers/DocumentParser');
 var V1 = require('./protocols/V1');
 var V1Public = require('./protocols/V1Public');
 var V1Proxy = require('./protocols/V1Proxy');  // proxy to a hardware security module
 var V1Test = require('./protocols/V1Private');   // local test software secutity module
-var homeDirectory = require('os').homedir() + '/.bali/';
-var fs = require('fs');
 
 
 /**
@@ -56,7 +56,7 @@ exports.notary = function(testDirectory) {
 
         generateKeys: function() {
             var result = notaryKey.generate();
-            var certificate = parser.parseDocument(result.source);
+            var certificate = BaliDocument.fromSource(result.source);
             var reference = result.reference;
             citation = BaliCitation.fromReference(reference);
             storeCitation(filename, citation);
@@ -65,7 +65,7 @@ exports.notary = function(testDirectory) {
 
         regenerateKeys: function() {
             var result = notaryKey.regenerate();
-            var certificate = parser.parseDocument(result.source);
+            var certificate = BaliDocument.fromSource(result.source);
             var reference = result.reference;
             citation = BaliCitation.fromReference(reference);
             storeCitation(filename, citation);
@@ -90,7 +90,7 @@ exports.notary = function(testDirectory) {
             var signature = notaryKey.sign(source);
 
             // append the notary seal to the document (modifies it in place)
-            document.addSeal(reference, signature);
+            document.addNotarySeal(reference, signature);
 
             // generate a citation to the notarized document
             source = document.toSource();  // get updated source
@@ -123,12 +123,12 @@ exports.notary = function(testDirectory) {
                     // calculate the digest of the stripped document + certificate reference
                     var source = stripped.toSource();
                     // NOTE: the certificate reference must be included in the signed source!
-                    var reference = seal.certificateReference.toString();
+                    var reference = seal.children[0].toString();
                     source += reference;
 
                     // verify the signature using the public key from the notary certificate
                     var publicKey = certificate.getString('$publicKey');
-                    var signature = seal.digitalSignature.toString();
+                    var signature = seal.children[1].toString();
                     var isValid = V1Public.verify(publicKey, source, signature);
                     return isValid;
                 default:

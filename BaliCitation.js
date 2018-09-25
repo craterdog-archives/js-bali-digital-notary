@@ -17,7 +17,7 @@
  * regenerated when the document is retrieved to compare the digest values. They
  * must be the same for the document to be considered valid.
  */
-var parser = require('bali-document-notation/transformers/DocumentParser');
+var BaliDocument = require('bali-document-notation/BaliDocument');
 var codex = require('bali-document-notation/utilities/EncodingUtilities');
 var V1 = require('./protocols/V1');
 
@@ -33,7 +33,7 @@ exports.fromScratch = function() {
 
 
 exports.fromSource = function(source) {
-    var document = parser.parseDocument(source);
+    var document = BaliDocument.fromSource(source);
     var protocol = document.getString('$protocol');
     var tag = document.getString('$tag');
     var version = document.getString('$version');
@@ -46,7 +46,7 @@ exports.fromSource = function(source) {
 exports.fromReference = function(reference) {
     reference = reference.toString();
     var source = reference.slice(6, -1);  // remove '<bali:' and '>' wrapper
-    var document = parser.parseDocument(source);
+    var document = BaliDocument.fromSource(source);
     var protocol = document.getString('$protocol');
     var tag = document.getString('$tag');
     var version = document.getString('$version');

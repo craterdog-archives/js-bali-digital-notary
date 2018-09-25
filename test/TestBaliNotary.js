@@ -8,11 +8,11 @@
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
 
-var parser = require('bali-document-notation/transformers/DocumentParser');
-var codex = require('bali-document-notation/utilities/EncodingUtilities');
-var notary = require('../BaliNotary').notary('test/config/');
 var mocha = require('mocha');
 var expect = require('chai').expect;
+var BaliDocument = require('bali-document-notation/BaliDocument');
+var codex = require('bali-document-notation/utilities/EncodingUtilities');
+var notary = require('../BaliNotary').notary('test/config/');
 
 describe('Bali Digital Notary™', function() {
 
@@ -40,7 +40,7 @@ describe('Bali Digital Notary™', function() {
         it('should digitally sign a document properly', function() {
             var tag = codex.randomTag();
             var version = 'v2.3.4';
-            var document = parser.parseDocument(source);
+            var document = BaliDocument.fromSource(source);
             var documentCitation = notary.notarizeDocument(tag, version, document);
             var isValid = notary.documentIsValid(certificate, document);
             expect(isValid).to.equal(true);
@@ -66,13 +66,13 @@ describe('Bali Digital Notary™', function() {
         it('should regenerate a notary key properly', function() {
             var tag = codex.randomTag();
             var version = 'v2.3.4';
-            var document = parser.parseDocument(source);
+            var document = BaliDocument.fromSource(source);
             notary.notarizeDocument(tag, version, document);
 
             var newCertificate = notary.regenerateKeys();
             expect(certificate).to.exist;  // jshint ignore:line
 
-            document = parser.parseDocument(source);
+            document = BaliDocument.fromSource(source);
             var newDocumentCitation = notary.notarizeDocument(tag, version, document);
             isValid = notary.documentIsValid(certificate, document);
             expect(isValid).to.equal(false);
