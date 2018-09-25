@@ -22,7 +22,7 @@
  * actual HSM.
  */
 var V1 = require('./V1');
-var parser = require('bali-document-notation/transformers/DocumentParser');
+var BaliDocument = require('bali-document-notation/BaliDocument');
 var crypto = require('crypto');
 var ec_pem = require('ec-pem');
 var config = require('os').homedir() + '/.bali/';
@@ -55,7 +55,7 @@ exports.notaryKey = function(tag, testDirectory) {
         if (fs.existsSync(filename)) {
             // read in the notary key information
             var source = fs.readFileSync(filename).toString();
-            var document = parser.parseDocument(source);
+            var document = BaliDocument.fromSource(source);
             protocol = document.getString('$protocol');
             if (V1.PROTOCOL !== protocol) {
                 throw new Error('NOTARY: The protocol for the test private key is not supported: ' + protocol);
