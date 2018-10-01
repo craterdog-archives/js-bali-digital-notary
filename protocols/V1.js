@@ -41,12 +41,12 @@ exports.cite = function(tag, version, document) {
     if (document) {
         encodedDigest = exports.digest(document);
     }
-    var reference = '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$digest:%digest]>';
-    reference = reference.replace(/%protocol/, exports.PROTOCOL);
-    reference = reference.replace(/%tag/, tag);
-    reference = reference.replace(/%version/, version);
-    reference = reference.replace(/%digest/, encodedDigest);
-    return reference;
+    var citation = '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$digest:%digest]>';
+    citation = citation.replace(/%protocol/, exports.PROTOCOL);
+    citation = citation.replace(/%tag/, tag);
+    citation = citation.replace(/%version/, version);
+    citation = citation.replace(/%digest/, encodedDigest);
+    return citation;
 };
 
 exports.bufferToEncoded = function(buffer, indentation) {

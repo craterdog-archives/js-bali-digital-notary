@@ -12,12 +12,14 @@ var mocha = require('mocha');
 var expect = require('chai').expect;
 var BaliDocument = require('bali-document-notation/BaliDocument');
 var codex = require('bali-document-notation/utilities/EncodingUtilities');
+var Citation = require('../BaliNotary').Citation;
 var notary = require('../BaliNotary').notary('test/config/');
 
 describe('Bali Digital Notary™', function() {
 
     var certificate = notary.generateKeys();
-    var citation = notary.citation();
+    var reference = notary.citation();
+    var citation = Citation.fromReference(reference);
     var source = '[$foo: "bar"]\n';
 
     describe('Test Citations', function() {
@@ -29,7 +31,7 @@ describe('Bali Digital Notary™', function() {
             expect(protocol).to.equal('v1');
             expect(tag).to.equal(citation.tag);
             expect(version).to.equal(citation.version);
-            var isValid = notary.documentMatches(citation, certificate);
+            var isValid = notary.documentMatches(reference, certificate);
             expect(isValid).to.equal(true);
         });
 

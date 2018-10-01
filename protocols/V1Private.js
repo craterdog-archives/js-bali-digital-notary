@@ -42,7 +42,7 @@ exports.notaryKey = function(tag, testDirectory) {
     // read in the notary key attributes
     var protocol;
     var version;
-    var reference;
+    var citation;
     var publicKey;
     var privateKey;
     if (testDirectory) config = testDirectory;
@@ -61,7 +61,7 @@ exports.notaryKey = function(tag, testDirectory) {
                 throw new Error('NOTARY: The protocol for the test private key is not supported: ' + protocol);
             }
             version = document.getString('$version');
-            reference = document.getString('$reference');
+            citation = document.getString('$citation');
             publicKey = V1.encodedToBuffer(document.getString('$publicKey'));
             privateKey = V1.encodedToBuffer(document.getString('$privateKey'));
         }
@@ -83,14 +83,14 @@ exports.notaryKey = function(tag, testDirectory) {
                 indentation + '    $protocol: %protocol\n' +
                 indentation + '    $tag: %tag\n' +
                 indentation + '    $version: %version\n' +
-                indentation + '    $reference: %reference\n' +
+                indentation + '    $citation: %citation\n' +
                 indentation + '    $publicKey: %publicKey\n' +
                 indentation + '    $privateKey: %privateKey\n' +
                 indentation + ']\n';
             source = source.replace(/%protocol/, protocol);
             source = source.replace(/%tag/, tag);
             source = source.replace(/%version/, version);
-            source = source.replace(/%reference/, reference);
+            source = source.replace(/%citation/, citation);
             source = source.replace(/%publicKey/, V1.bufferToEncoded(publicKey, indentation + '    '));
             source = source.replace(/%privateKey/, V1.bufferToEncoded(privateKey, indentation + '    '));
             return source;
@@ -105,14 +105,14 @@ exports.notaryKey = function(tag, testDirectory) {
             publicKey = curve.getPublicKey();
             // sign with new key
             var source = certify(this, tag, version, publicKey);
-            reference = V1.cite(tag, version, source);
+            citation = V1.cite(tag, version, source);
             try {
                 fs.writeFileSync(filename, this.toSource(), {mode: 384});  // -rw------- permissions
             } catch (e) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
             }
             return {
-                reference: reference,
+                citation: citation,
                 source: source
             };
         },
@@ -130,21 +130,21 @@ exports.notaryKey = function(tag, testDirectory) {
             publicKey = curve.getPublicKey();
             source += V1.cite(tag, nextVersion, source);
             source += ' ' + this.sign(source) + '\n';
-            reference = V1.cite(tag, nextVersion, source);
+            citation = V1.cite(tag, nextVersion, source);
             try {
                 fs.writeFileSync(filename, this.toSource(), {mode: 384});  // -rw------- permissions
             } catch (e) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
             }
             return {
-                reference: reference,
+                citation: citation,
                 source: source
             };
         },
 
         forget: function() {
             version = undefined;
-            reference = undefined;
+            citation = undefined;
             publicKey = undefined;
             privateKey = undefined;
             try {
@@ -156,8 +156,8 @@ exports.notaryKey = function(tag, testDirectory) {
             }
         },
 
-        reference: function() {
-            return reference;
+        citation: function() {
+            return citation;
         },
 
         sign: function(document) {

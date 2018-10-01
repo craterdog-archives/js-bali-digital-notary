@@ -19,7 +19,7 @@
 var homeDirectory = require('os').homedir() + '/.bali/';
 var fs = require('fs');
 var BaliDocument = require('bali-document-notation/BaliDocument');
-var BaliCitation = require('./BaliCitation');
+var codex = require('bali-document-notation/utilities/EncodingUtilities');
 var V1 = require('./protocols/V1');
 var V1Public = require('./protocols/V1Public');
 var V1Proxy = require('./protocols/V1Proxy');  // proxy to a hardware security module
@@ -42,14 +42,15 @@ exports.notary = function(testDirectory) {
 
     // load the account citation
     var filename = homeDirectory + 'citation.bali';
-    var citation = loadCitation(filename);
+    var certificateCitation = loadCitation(filename);
 
     // retrieve the notary key for the account
+    var tag = Citation.fromReference(certificateCitation).tag;
     var notaryKey;
     if (testDirectory) {
-        notaryKey = V1Test.notaryKey(citation.tag, testDirectory);
+        notaryKey = V1Test.notaryKey(tag, testDirectory);
     } else {
-        notaryKey = V1Proxy.notaryKey(citation.tag);
+        notaryKey = V1Proxy.notaryKey(tag);
     }
 
     return {
@@ -57,55 +58,52 @@ exports.notary = function(testDirectory) {
         generateKeys: function() {
             var result = notaryKey.generate();
             var certificate = BaliDocument.fromSource(result.source);
-            var reference = result.reference;
-            citation = BaliCitation.fromReference(reference);
-            storeCitation(filename, citation);
+            certificateCitation = result.citation;
+            storeCitation(filename, certificateCitation);
             return certificate;
         },
 
         regenerateKeys: function() {
             var result = notaryKey.regenerate();
             var certificate = BaliDocument.fromSource(result.source);
-            var reference = result.reference;
-            citation = BaliCitation.fromReference(reference);
-            storeCitation(filename, citation);
+            certificateCitation = result.citation;
+            storeCitation(filename, certificateCitation);
             return certificate;
         },
 
         citation: function() {
-            return citation;
+            return certificateCitation;
         },
 
         notarizeDocument: function(tag, version, document) {
-            if (!notaryKey.reference()) {
+            if (!notaryKey.citation()) {
                 throw new Error('NOTARY: The following notary key has not yet been generated: ' + tag);
             }
 
             // prepare the document source for signing
-            var reference = notaryKey.reference();
             var source = document.toSource();
-            source += reference;  // NOTE: the reference must be included in the signed source!
+            source += certificateCitation;  // NOTE: the citation must be included in the signed source!
 
             // generate the notarization signature
             var signature = notaryKey.sign(source);
 
             // append the notary seal to the document (modifies it in place)
-            document.addNotarySeal(reference, signature);
+            document.addNotarySeal(certificateCitation, signature);
 
             // generate a citation to the notarized document
             source = document.toSource();  // get updated source
-            reference = V1.cite(tag, version, source);
-            var citation = BaliCitation.fromReference(reference);
+            var citation = V1.cite(tag, version, source);
 
             return citation;
         },
 
         documentMatches: function(citation, document) {
-            var protocol = citation.protocol;
+            var documentCitation = Citation.fromReference(citation);
+            var protocol = documentCitation.protocol;
             switch(protocol) {
                 case V1.PROTOCOL:
                     var digest = V1.digest(document.toSource());
-                    return citation.digest === digest;
+                    return documentCitation.digest === digest;
                 default:
                     throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
             }
@@ -120,11 +118,11 @@ exports.notary = function(testDirectory) {
                     var seal = document.getLastSeal();
                     var stripped = document.unsealed();
 
-                    // calculate the digest of the stripped document + certificate reference
+                    // calculate the digest of the stripped document + certificate citation
                     var source = stripped.toSource();
-                    // NOTE: the certificate reference must be included in the signed source!
-                    var reference = seal.children[0].toString();
-                    source += reference;
+                    // NOTE: the certificate citation must be included in the signed source!
+                    var citation = seal.children[0].toString();
+                    source += citation;
 
                     // verify the signature using the public key from the notary certificate
                     var publicKey = certificate.getString('$publicKey');
@@ -149,7 +147,7 @@ exports.notary = function(testDirectory) {
         },
 
         decryptMessage: function(aem) {
-            if (!notaryKey.reference()) {
+            if (!notaryKey.citation()) {
                 throw new Error('NOTARY: The notary key has not yet been generated.');
             }
             var protocol = aem.protocol;
@@ -165,6 +163,82 @@ exports.notary = function(testDirectory) {
 };
 
 
+function Citation(protocol, tag, version, digest) {
+    this.protocol = protocol;
+    this.tag = tag;
+    this.version = version;
+    this.digest = digest.replace(/\s/g, '');
+    return this;
+}
+Citation.prototype.constructor = Citation;
+exports.Citation = Citation;
+
+
+Citation.fromScratch = function() {
+    var protocol = V1.PROTOCOL;
+    var tag = codex.randomTag();
+    var version = 'v1';
+    var digest = 'none';
+    var citation = new Citation(protocol, tag, version, digest);
+    return citation;
+};
+
+
+Citation.fromSource = function(source) {
+    var document = BaliDocument.fromSource(source);
+    var protocol = document.getString('$protocol');
+    var tag = document.getString('$tag');
+    var version = document.getString('$version');
+    var digest = document.getString('$digest').replace(/\s/g, '');
+    var citation = new Citation(protocol, tag, version, digest);
+    return citation;
+};
+
+
+Citation.fromReference = function(reference) {
+    reference = reference.toString();
+    var source = reference.slice(6, -1);  // remove '<bali:' and '>' wrapper
+    var document = BaliDocument.fromSource(source);
+    var protocol = document.getString('$protocol');
+    var tag = document.getString('$tag');
+    var version = document.getString('$version');
+    var digest = document.getString('$digest').replace(/\s/g, '');
+    var citation = new Citation(protocol, tag, version, digest);
+    return citation;
+};
+
+
+Citation.prototype.toString = function() {
+    var source = this.toSource();
+    return source;
+};
+
+
+Citation.prototype.toReference = function() {
+    var reference = '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$digest:%digest]>';
+    reference = reference.replace(/%protocol/, this.protocol);
+    reference = reference.replace(/%tag/, this.tag);
+    reference = reference.replace(/%version/, this.version);
+    reference = reference.replace(/%digest/, this.digest);
+    return reference;
+};
+
+
+Citation.prototype.toSource = function(indentation) {
+    indentation = indentation ? indentation : '';
+    var source =  '[\n' +
+        indentation + '    $protocol: %protocol\n' +
+        indentation + '    $tag: %tag\n' +
+        indentation + '    $version: %version\n' +
+        indentation + '    $digest: %digest\n' +
+        indentation + ']\n';
+    source = source.replace(/%protocol/, this.protocol);
+    source = source.replace(/%tag/, this.tag);
+    source = source.replace(/%version/, this.version);
+    source = source.replace(/%digest/, this.digest);
+    return source;
+};
+
 // PRIVATE FUNCTIONS
 
 function loadCitation(filename) {
@@ -172,16 +246,18 @@ function loadCitation(filename) {
     var source;
     if (fs.existsSync(filename)) {
         source = fs.readFileSync(filename).toString();
-        citation = BaliCitation.fromSource(source);
+        citation = Citation.fromSource(source);
     } else {
-        citation = BaliCitation.fromScratch();
+        citation = Citation.fromScratch();
         source = citation.toSource();
         fs.writeFileSync(filename, source, {mode: 384});  // -rw------- permissions
     }
-    return citation;
+    var reference = citation.toReference();
+    return reference;
 }
 
-function storeCitation(filename, citation) {
+function storeCitation(filename, reference) {
+    var citation = Citation.fromReference(reference);
     var source = citation.toSource();
     fs.writeFileSync(filename, source, {mode: 384});  // -rw------- permissions
 }
