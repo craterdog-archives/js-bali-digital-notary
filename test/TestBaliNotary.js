@@ -71,7 +71,7 @@ describe('Bali Digital Notary™', function() {
             var document = BaliDocument.fromSource(source);
             notary.notarizeDocument(tag, version, document);
 
-            var newCertificate = notary.regenerateKeys();
+            var newCertificate = notary.generateKeys();
             expect(certificate).to.exist;  // jshint ignore:line
 
             document = BaliDocument.fromSource(source);

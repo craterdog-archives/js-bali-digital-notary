@@ -63,14 +63,6 @@ exports.notary = function(testDirectory) {
             return certificate;
         },
 
-        regenerateKeys: function() {
-            var result = notaryKey.regenerate();
-            var certificate = BaliDocument.fromSource(result.certificate);
-            certificateCitation = result.citation;
-            storeCitation(filename, certificateCitation);
-            return certificate;
-        },
-
         citation: function() {
             return certificateCitation;
         },
