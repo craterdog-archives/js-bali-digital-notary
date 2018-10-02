@@ -18,8 +18,8 @@ var notary = require('../BaliNotary').notary('test/config/');
 describe('Bali Digital Notary™', function() {
 
     var certificate = notary.generateKeys();
-    var reference = notary.citation();
-    var citation = Citation.fromReference(reference);
+    var citation = notary.citation();
+    var object = Citation.fromReference(citation);
     var source = '[$foo: "bar"]\n';
 
     describe('Test Citations', function() {
@@ -29,9 +29,9 @@ describe('Bali Digital Notary™', function() {
             var tag = certificate.getString('$tag');
             var version = certificate.getString('$version');
             expect(protocol).to.equal('v1');
-            expect(tag).to.equal(citation.tag);
-            expect(version).to.equal(citation.version);
-            var isValid = notary.documentMatches(reference, certificate);
+            expect(tag).to.equal(object.tag);
+            expect(version).to.equal(object.version);
+            var isValid = notary.documentMatches(citation, certificate);
             expect(isValid).to.equal(true);
         });
 

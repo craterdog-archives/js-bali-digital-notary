@@ -57,7 +57,7 @@ exports.notary = function(testDirectory) {
 
         generateKeys: function() {
             var result = notaryKey.generate();
-            var certificate = BaliDocument.fromSource(result.source);
+            var certificate = BaliDocument.fromSource(result.certificate);
             certificateCitation = result.citation;
             storeCitation(filename, certificateCitation);
             return certificate;
@@ -65,7 +65,7 @@ exports.notary = function(testDirectory) {
 
         regenerateKeys: function() {
             var result = notaryKey.regenerate();
-            var certificate = BaliDocument.fromSource(result.source);
+            var certificate = BaliDocument.fromSource(result.certificate);
             certificateCitation = result.citation;
             storeCitation(filename, certificateCitation);
             return certificate;

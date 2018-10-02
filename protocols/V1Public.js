@@ -14,12 +14,22 @@
  * public key. The public key is associated with a private key that is maintained
  * within a hardware security module (HSM).
  */
-var V1 = require('./V1');
 var crypto = require('crypto');
 var ec_pem = require('ec-pem');
+var V1 = require('./V1');
 
 
-exports.verify = function(encodedKey, message, encodedSignature) {
+/**
+ * This function uses the specified base 32 encoded public key to determine whether
+ * or not the specified base 32 encoded digital signature was generated using the
+ * corresponding private key on the specified message.
+ * 
+ * @param {String} encodedKey The base 32 encoded public key.
+ * @param {String} message The digitally signed message.
+ * @param {String} encodedSignature The digital signature generated using the private key.
+ * @returns {Boolean} Whether or not the digital signature is valid.
+ */
+function verify(encodedKey, message, encodedSignature) {
     var signature = V1.encodedToBuffer(encodedSignature);
     var publicKey = V1.encodedToBuffer(encodedKey);
     var curve = crypto.createECDH(V1.CURVE);
@@ -28,9 +38,20 @@ exports.verify = function(encodedKey, message, encodedSignature) {
     var verifier = crypto.createVerify(V1.SIGNATURE);
     verifier.update(message);
     return verifier.verify(pem.encodePublicKey(), signature);
-};
+}
+exports.verify = verify;
 
-exports.encrypt = function(encodedKey, plaintext) {
+
+/**
+ * This function uses the specified base 32 encoded public key to encrypt the specified
+ * plaintext message. The result is an authenticated encrypted message (AEM) object that
+ * can only be decrypted using the associated private key.
+ * 
+ * @param {String} encodedKey The base 32 encoded public key to use for encryption.
+ * @param {String} message The plaintext message to be encrypted.
+ * @returns {Object} An authenticated encrypted message object.
+ */
+function encrypt(encodedKey, message) {
     var publicKey = V1.encodedToBuffer(encodedKey);
     // generate and encrypt a 32-byte symmetric key
     var curve = crypto.createECDH(V1.CURVE);
@@ -41,23 +62,39 @@ exports.encrypt = function(encodedKey, plaintext) {
     // encrypt the message using the symmetric key
     var iv = crypto.randomBytes(12);
     var cipher = crypto.createCipheriv(V1.CIPHER, symmetricKey, iv);
-    var ciphertext = cipher.update(plaintext, 'utf8');
+    var ciphertext = cipher.update(message, 'utf8');
     ciphertext = Buffer.concat([ciphertext, cipher.final()]);
     var auth = cipher.getAuthTag();
 
-    // construct the authenticated encrypted message
+    // construct the authenticated encrypted message (AEM)
     var aem = {
-        protocol: V1.PROTOCOL,
-        iv: iv,
-        auth: auth,
-        seed: seed,
-        ciphertext: ciphertext,
+        protocol: V1.PROTOCOL,   // the version of the Bali security protocol used
+        iv: iv,                  // the initialization vector
+        auth: auth,              // the message authentication code
+        seed: seed,              // the seed for the symmetric key
+        ciphertext: ciphertext,  // the resulting ciphertext
 
+        /**
+         * This method implements the standard toString() method for the AEM object by
+         * delegating to the toSource() method which produces a canonical Bali source
+         * code string for the AEM object.
+         * 
+         * @returns {String} A canonical Bali source code string for the AEM object.
+         */
         toString: function() {
             var string = this.toSource();
             return string;
         },
 
+        /**
+         * This method returns the canonical Bali source code representation for the AEM
+         * object. It allows an optional indentation to be included which will be prepended
+         * to each indented line of the resulting string.
+         * 
+         * @param {String} indentation A string of spaces to be used as additional indentation
+         * for each line within the resulting string.
+         * @returns {String} A canonical Bali source code string for the AEM object.
+         */
         toSource: function(indentation) {
             indentation = indentation ? indentation : '';
             var source =  '[\n' +
@@ -77,4 +114,5 @@ exports.encrypt = function(encodedKey, plaintext) {
     };
 
     return aem;
-};
+}
+exports.encrypt = encrypt;

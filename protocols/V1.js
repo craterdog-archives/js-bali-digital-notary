@@ -10,8 +10,8 @@
 'use strict';
 
 /*
- * This module defines a library of constants and functions that needed by the version
- * one (V1) security protocol implementation for the Bali Cloud Environment™.
+ * This module defines a library of constants and functions that are needed by the version
+ * one (v1) security protocol implementation for the Bali Cloud Environment™.
  */
 var codex = require('bali-document-notation/utilities/EncodingUtilities');
 var crypto = require('crypto');
@@ -28,18 +28,40 @@ exports.CIPHER = 'aes-256-gcm';
 
 // FUNCTIONS
 
-exports.digest = function(message) {
+/**
+ * This function returns a cryptographically secure base 32 encoded digital digest of
+ * the specified message. The digest is a Bali binary string and will always be the same
+ * for the same message.
+ * 
+ * @param {String} message The message to be digested.
+ * @returns {String} A base 32 encoded digital digest of the message.
+ */
+function digest(message) {
     var hasher = crypto.createHash(exports.DIGEST);
     hasher.update(message);
     var digest = hasher.digest();
     var encodedDigest = "'" + codex.base32Encode(digest).replace(/\s+/g, '') + "'";
     return encodedDigest;
-};
+}
+exports.digest = digest;
 
-exports.cite = function(tag, version, document) {
+
+/**
+ * This function returns a reference citation for the specified document. The citation is
+ * a Bali reference containing an encoded Bali catalog that includes the protocol version,
+ * document tag and version number, and a digital digest of the document. It can be used
+ * to retrieve the document from the Bali Cloud Environment™ and verify that the retrieved
+ * document has not be modified since it was cited.
+ * 
+ * @param {String} tag The unique tag for the document.
+ * @param {String} version The current version of the document.
+ * @param {String} document The document to be cited.
+ * @returns {String} A Bali reference citation for the document.
+ */
+function cite(tag, version, document) {
     var encodedDigest = 'none';
     if (document) {
-        encodedDigest = exports.digest(document);
+        encodedDigest = digest(document);
     }
     var citation = '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$digest:%digest]>';
     citation = citation.replace(/%protocol/, exports.PROTOCOL);
@@ -47,17 +69,37 @@ exports.cite = function(tag, version, document) {
     citation = citation.replace(/%version/, version);
     citation = citation.replace(/%digest/, encodedDigest);
     return citation;
-};
+}
+exports.cite = cite;
 
-exports.bufferToEncoded = function(buffer, indentation) {
+
+/**
+ * This function converts a binary buffer into a base 32 encoded Bali binary string.
+ * 
+ * @param {Buffer} buffer A binary buffer.
+ * @param {String} indentation A string of spaces to be used as additional indentation
+ * for each line within an encoded string that is longer than 60 characters long.
+ * @returns {String} A base 32 encoded Bali binary string representing the bytes from
+ * the buffer.
+ */
+function bufferToEncoded(buffer, indentation) {
     if (!indentation) indentation = '';
     var base32 = codex.base32Encode(buffer, indentation);
     var encoded = "'" + base32 + indentation + "'";  // add in the "'"s
     return encoded;
-};
+}
+exports.bufferToEncoded = bufferToEncoded;
 
-exports.encodedToBuffer = function(encoded) {
+
+/**
+ * This function converts a base 32 encoded Bali binary string into a binary buffer.
+ * 
+ * @param {String} encoded The base 32 encoded Bali binary string.
+ * @returns {Buffer} A binary buffer containing the bytes that were encoded in the string.
+ */
+function encodedToBuffer(encoded) {
     var base32 = encoded.slice(1, -1);  // remove the "'"s
     var buffer = codex.base32Decode(base32);
     return buffer;
-};
+}
+exports.encodedToBuffer = encodedToBuffer;

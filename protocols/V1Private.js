@@ -21,17 +21,18 @@
  * implements these operations as a software security module to allow testing without an
  * actual HSM.
  */
-var V1 = require('./V1');
-var BaliDocument = require('bali-document-notation/BaliDocument');
+var fs = require('fs');
+var config = require('os').homedir() + '/.bali/';
 var crypto = require('crypto');
 var ec_pem = require('ec-pem');
-var config = require('os').homedir() + '/.bali/';
-var fs = require('fs');
+var BaliDocument = require('bali-document-notation/BaliDocument');
+var V1 = require('./V1');
 
 
 /**
  * This function returns an object that implements the API for the software security module
- * (notary key) associated with the specified unique tag.
+ * (notary key) associated with the specified unique tag. The internal attributes for the
+ * notary key are hidden from the code that is using the notary key.
  * 
  * @param {String} tag The unique tag for the software security module.
  * @param {String} testDirectory An optional directory to use for local testing.
@@ -40,11 +41,11 @@ var fs = require('fs');
 exports.notaryKey = function(tag, testDirectory) {
     
     // read in the notary key attributes
-    var protocol;
-    var version;
-    var citation;
-    var publicKey;
-    var privateKey;
+    var protocol;    // the version of the Bali security protocol used
+    var version;     // the version of the notary key
+    var citation;    // a reference citation to the public notary certificate
+    var publicKey;   // the public key residing in the certificate in the cloud
+    var privateKey;  // the private key that is used for signing and decryption
     if (testDirectory) config = testDirectory;
     var filename = config + tag + '.bali';
     try {
@@ -72,11 +73,27 @@ exports.notaryKey = function(tag, testDirectory) {
     // return the notary key
     return {
 
+        /**
+         * This method implements the standard toString() method for the notary key by
+         * delegating to the toSource() method which produces a canonical Bali source
+         * code string for the notary key.
+         * 
+         * @returns {String} A canonical Bali source code string for the notary key.
+         */
         toString: function() {
             var string = this.toSource();
             return string;
         },
 
+        /**
+         * This method returns the canonical Bali source code representation for the notary
+         * key. It allows an optional indentation to be included which will be prepended
+         * to each indented line of the resulting string.
+         * 
+         * @param {String} indentation A string of spaces to be used as additional indentation
+         * for each line within the resulting string.
+         * @returns {String} A canonical Bali source code string for the notary key.
+         */
         toSource: function(indentation) {
             indentation = indentation ? indentation : '';
             var source =  '[\n' +
@@ -96,6 +113,15 @@ exports.notaryKey = function(tag, testDirectory) {
             return source;
         },
 
+        /**
+         * This method generates a new public-private key pair and uses the private key as the
+         * new notary key. It returns the Bali source code for the public notary certificate as
+         * well as a reference citation to the new certificate.
+         * 
+         * @returns {Object} An object containing the Bali source code for the new notary
+         * certificate and a reference citation to the certificate's location in the Bali
+         * Cloud Environment™.
+         */
         generate: function() {
             protocol = V1.PROTOCOL;
             version = 'v1';
@@ -104,44 +130,57 @@ exports.notaryKey = function(tag, testDirectory) {
             privateKey = curve.getPrivateKey();
             publicKey = curve.getPublicKey();
             // sign with new key
-            var source = certify(this, tag, version, publicKey);
-            citation = V1.cite(tag, version, source);
+            var certificate = certify(this, tag, version, publicKey);
+            citation = V1.cite(tag, version, certificate);
             try {
                 fs.writeFileSync(filename, this.toSource(), {mode: 384});  // -rw------- permissions
             } catch (e) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
             }
             return {
-                citation: citation,
-                source: source
+                certificate: certificate,  // the Bali source code for the new public notary certificate
+                citation: citation  // a reference citation to the location of the certificate
             };
         },
 
+        /**
+         * This method regenerates a the public-private key pair associated with this notary
+         * key. It returns the Bali source code for the next version of the public notary
+         * certificate as well as a reference citation to the certificate.
+         * 
+         * @returns {Object} An object containing the Bali source code for the new notary
+         * certificate and a reference citation to the certificate's location in the Bali
+         * Cloud Environment™.
+         */
         regenerate: function() {
-            var nextVersion = 'v' + (Number(version.slice(1)) + 1);
+            var newVersion = 'v' + (Number(version.slice(1)) + 1);
             var curve = crypto.createECDH(V1.CURVE);
             curve.generateKeys();
             var newPublicKey = curve.getPublicKey();
             // sign with old key
-            var source = certify(this, tag, nextVersion, newPublicKey);
+            var certificate = certify(this, tag, newVersion, newPublicKey);
             // sign with new key
-            version = nextVersion;
+            version = newVersion;
             privateKey = curve.getPrivateKey();
             publicKey = curve.getPublicKey();
-            source += V1.cite(tag, nextVersion, source);
-            source += ' ' + this.sign(source) + '\n';
-            citation = V1.cite(tag, nextVersion, source);
+            certificate += V1.cite(tag, newVersion, certificate);
+            certificate += ' ' + this.sign(certificate) + '\n';
+            citation = V1.cite(tag, newVersion, certificate);
             try {
                 fs.writeFileSync(filename, this.toSource(), {mode: 384});  // -rw------- permissions
             } catch (e) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
             }
             return {
-                citation: citation,
-                source: source
+                certificate: certificate,  // the Bali source code for the new public notary certificate
+                citation: citation  // a reference citation to the location of the certificate
             };
         },
 
+        /**
+         * This method causes the notary key to forget all information it knows about the
+         * current public-private key pair.
+         */
         forget: function() {
             version = undefined;
             citation = undefined;
@@ -149,6 +188,7 @@ exports.notaryKey = function(tag, testDirectory) {
             privateKey = undefined;
             try {
                 if (fs.existsSync(filename)) {
+                    // remove the configuration file
                     fs.unlinkSync(filename);
                 }
             } catch (e) {
@@ -156,10 +196,25 @@ exports.notaryKey = function(tag, testDirectory) {
             }
         },
 
+        /**
+         * This method returns a reference citation to the public notary certificate that
+         * is stored in the Bali Cloud Environment™.
+         * 
+         * @returns {String} A reference citation to the public notary certificate that is stored
+         * in the Bali Cloud Environment™.
+         */
         citation: function() {
             return citation;
         },
 
+        /**
+         * This method generates a digital signature of the specified document using the notary
+         * key. The resulting digital signature is base 32 encoded and may be verified using the
+         * V1Public.verify() method and the corresponding public key.
+         * 
+         * @param {String} document The document to be digitally signed.
+         * @returns {String} A base 32 encoded digital signature of the document.
+         */
         sign: function(document) {
             var curve = crypto.createECDH(V1.CURVE);
             curve.setPrivateKey(privateKey);
@@ -171,6 +226,13 @@ exports.notaryKey = function(tag, testDirectory) {
             return encodedSignature;
         },
 
+        /**
+         * This function uses the notary key to encrypt the specified authenticated encrypted
+         * message. The result is the decrypted message.
+         * 
+         * @param {Object} aem The authenticated encrypted message to be decrypted.
+         * @returns {String} The decrypted plaintext message.
+         */
         decrypt: function(aem) {
             // decrypt the 32-byte symmetric key
             var seed = aem.seed;
@@ -181,9 +243,9 @@ exports.notaryKey = function(tag, testDirectory) {
             // decrypt the ciphertext using the symmetric key
             var decipher = crypto.createDecipheriv(V1.CIPHER, symmetricKey, aem.iv);
             decipher.setAuthTag(aem.auth);
-            var plaintext = decipher.update(aem.ciphertext, undefined, 'utf8');
-            plaintext += decipher.final('utf8');
-            return plaintext;
+            var message = decipher.update(aem.ciphertext, undefined, 'utf8');
+            message += decipher.final('utf8');
+            return message;
         }
     };
 };
@@ -192,7 +254,7 @@ exports.notaryKey = function(tag, testDirectory) {
 // PRIVATE FUNCTIONS
 
 function certify(notaryKey, tag, version, publicKey) {
-    var source = 
+    var certificate = 
         '[\n' +
         '    $protocol: %protocol\n' +
         '    $tag: %tag\n' +
@@ -200,11 +262,11 @@ function certify(notaryKey, tag, version, publicKey) {
         '    $publicKey: %publicKey\n' +
         ']\n';
 
-    source = source.replace(/%protocol/, V1.PROTOCOL);
-    source = source.replace(/%tag/, tag);
-    source = source.replace(/%version/, version);
-    source = source.replace(/%publicKey/, V1.bufferToEncoded(publicKey, '    '));
-    source += V1.cite(tag, version);  // no document, self-signed
-    source += ' ' + notaryKey.sign(source) + '\n';
-    return source;
+    certificate = certificate.replace(/%protocol/, V1.PROTOCOL);
+    certificate = certificate.replace(/%tag/, tag);
+    certificate = certificate.replace(/%version/, version);
+    certificate = certificate.replace(/%publicKey/, V1.bufferToEncoded(publicKey, '    '));
+    certificate += V1.cite(tag, version);  // no document, self-signed
+    certificate += ' ' + notaryKey.sign(certificate) + '\n';
+    return certificate;
 }
