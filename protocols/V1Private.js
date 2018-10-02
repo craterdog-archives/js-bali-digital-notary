@@ -127,9 +127,9 @@ exports.notaryKey = function(tag, testDirectory) {
             // generate a new public-private key pair
             var curve = crypto.createECDH(V1.CURVE);
             curve.generateKeys();
-            var newVersion = version ? 'v' + (Number(version.slice(1)) + 1) : 'v1';
+            version = version ? 'v' + (Number(version.slice(1)) + 1) : 'v1';
+            publicKey = curve.getPublicKey();
             var newPrivateKey = curve.getPrivateKey();
-            var newPublicKey = curve.getPublicKey();
             if (!privateKey) {
                 privateKey = newPrivateKey;
             }
@@ -144,9 +144,9 @@ exports.notaryKey = function(tag, testDirectory) {
                 ']\n';
             certificate = certificate.replace(/%protocol/, V1.PROTOCOL);
             certificate = certificate.replace(/%tag/, tag);
-            certificate = certificate.replace(/%version/, newVersion);
-            certificate = certificate.replace(/%publicKey/, V1.bufferToEncoded(newPublicKey, '    '));
-            certificate += V1.cite(tag, newVersion);  // no document because it is self-signed
+            certificate = certificate.replace(/%version/, version);
+            certificate = certificate.replace(/%publicKey/, V1.bufferToEncoded(publicKey, '    '));
+            certificate += V1.cite(tag, version);  // no document because it is self-signed
 
             // sign the certificate with the private key
             certificate += ' ' + this.sign(certificate) + '\n';
@@ -155,16 +155,14 @@ exports.notaryKey = function(tag, testDirectory) {
             if (isRegeneration) {
                 // sign the certificate with the new private key
                 privateKey = newPrivateKey;
-                certificate += V1.cite(tag, newVersion, certificate);
+                certificate += V1.cite(tag, version, certificate);
                 certificate += ' ' + this.sign(certificate) + '\n';
             }
 
             // generate a citation for the new certificate
-            citation = V1.cite(tag, newVersion, certificate);
+            citation = V1.cite(tag, version, certificate);
 
             // save the state of this notary key in the local configuration file
-            version = newVersion;
-            publicKey = newPublicKey;
             try {
                 fs.writeFileSync(filename, this.toSource(), {mode: 384});  // -rw------- permissions
             } catch (e) {
