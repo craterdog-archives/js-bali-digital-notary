@@ -13,6 +13,7 @@
  * This module defines a library of constants and functions that are needed by the version
  * one (v1) security protocol implementation for the Bali Cloud Environment™.
  */
+var documents = require('bali-document-notation/BaliDocument');
 var codex = require('bali-document-notation/utilities/EncodingUtilities');
 var crypto = require('crypto');
 
@@ -103,3 +104,80 @@ function encodedToBuffer(encoded) {
     return buffer;
 }
 exports.encodedToBuffer = encodedToBuffer;
+
+
+function Citation(protocol, tag, version, digest) {
+    this.protocol = protocol;
+    this.tag = tag;
+    this.version = version;
+    this.digest = digest.replace(/\s/g, '');
+    return this;
+}
+Citation.prototype.constructor = Citation;
+exports.Citation = Citation;
+
+
+Citation.fromScratch = function() {
+    var protocol = exports.PROTOCOL;
+    var tag = codex.randomTag();
+    var version = 'v1';
+    var digest = 'none';
+    var citation = new Citation(protocol, tag, version, digest);
+    return citation;
+};
+
+
+Citation.fromSource = function(source) {
+    var document = documents.fromSource(source);
+    var protocol = document.getString('$protocol');
+    var tag = document.getString('$tag');
+    var version = document.getString('$version');
+    var digest = document.getString('$digest').replace(/\s/g, '');
+    var citation = new Citation(protocol, tag, version, digest);
+    return citation;
+};
+
+
+Citation.fromReference = function(reference) {
+    reference = reference.toString();
+    var source = reference.slice(6, -1);  // remove '<bali:' and '>' wrapper
+    var document = documents.fromSource(source);
+    var protocol = document.getString('$protocol');
+    var tag = document.getString('$tag');
+    var version = document.getString('$version');
+    var digest = document.getString('$digest');
+    var citation = new Citation(protocol, tag, version, digest);
+    return citation;
+};
+
+
+Citation.prototype.toString = function() {
+    var source = this.toSource();
+    return source;
+};
+
+
+Citation.prototype.toReference = function() {
+    var reference = '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$digest:%digest]>';
+    reference = reference.replace(/%protocol/, this.protocol);
+    reference = reference.replace(/%tag/, this.tag);
+    reference = reference.replace(/%version/, this.version);
+    reference = reference.replace(/%digest/, this.digest);
+    return reference;
+};
+
+
+Citation.prototype.toSource = function(indentation) {
+    indentation = indentation ? indentation : '';
+    var source =  '[\n' +
+        indentation + '    $protocol: %protocol\n' +
+        indentation + '    $tag: %tag\n' +
+        indentation + '    $version: %version\n' +
+        indentation + '    $digest: %digest\n' +
+        indentation + ']\n';
+    source = source.replace(/%protocol/, this.protocol);
+    source = source.replace(/%tag/, this.tag);
+    source = source.replace(/%version/, this.version);
+    source = source.replace(/%digest/, this.digest);
+    return source;
+};
