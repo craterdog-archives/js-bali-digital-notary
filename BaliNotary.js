@@ -89,6 +89,55 @@ exports.notaryKey = function(testDirectory) {
             return citation;
         },
 
+        documentMatches: function(reference, document) {
+            var citation = V1.Citation.fromReference(reference);
+            var protocol = citation.protocol;
+            switch(protocol) {
+                case V1.PROTOCOL:
+                    var digest = V1.digest(document.toSource());
+                    return citation.digest === digest;
+                default:
+                    throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
+            }
+        },
+
+        documentIsValid: function(certificate, document) {
+            // check to see if the document's seal is valid
+            var protocol = certificate.getString('$protocol');
+            switch(protocol) {
+                case V1.PROTOCOL:
+                    // strip off the last seal from the document
+                    var seal = document.getLastSeal();
+                    var stripped = document.unsealed();
+
+                    // calculate the digest of the stripped document + certificate citation
+                    var source = stripped.toSource();
+                    // NOTE: the certificate citation must be included in the signed source!
+                    var citation = seal.children[0].toString();
+                    source += citation;
+
+                    // verify the signature using the public key from the notary certificate
+                    var publicKey = certificate.getString('$publicKey');
+                    var signature = seal.children[1].toString();
+                    var isValid = V1Public.verify(publicKey, source, signature);
+                    return isValid;
+                default:
+                    throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
+            }
+        },
+
+        encryptMessage: function(certificate, message) {
+            var protocol = certificate.getString('$protocol');
+            var publicKey = certificate.getString('$publicKey');
+            switch(protocol) {
+                case V1.PROTOCOL:
+                    var aem = V1Public.encrypt(publicKey, message);
+                    return aem;
+                default:
+                    throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
+            }
+        },
+
         decryptMessage: function(aem) {
             if (!notaryKey.citation()) {
                 throw new Error('NOTARY: The notary key has not yet been generated.');
@@ -102,59 +151,8 @@ exports.notaryKey = function(testDirectory) {
                     throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
             }
         }
+
     };
-};
-
-
-exports.documentMatches = function(reference, document) {
-    var citation = V1.Citation.fromReference(reference);
-    var protocol = citation.protocol;
-    switch(protocol) {
-        case V1.PROTOCOL:
-            var digest = V1.digest(document.toSource());
-            return citation.digest === digest;
-        default:
-            throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
-    }
-};
-
-
-exports.documentIsValid = function(certificate, document) {
-    // check to see if the document's seal is valid
-    var protocol = certificate.getString('$protocol');
-    switch(protocol) {
-        case V1.PROTOCOL:
-            // strip off the last seal from the document
-            var seal = document.getLastSeal();
-            var stripped = document.unsealed();
-
-            // calculate the digest of the stripped document + certificate citation
-            var source = stripped.toSource();
-            // NOTE: the certificate citation must be included in the signed source!
-            var citation = seal.children[0].toString();
-            source += citation;
-
-            // verify the signature using the public key from the notary certificate
-            var publicKey = certificate.getString('$publicKey');
-            var signature = seal.children[1].toString();
-            var isValid = V1Public.verify(publicKey, source, signature);
-            return isValid;
-        default:
-            throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
-    }
-};
-
-
-exports.encryptMessage = function(certificate, message) {
-    var protocol = certificate.getString('$protocol');
-    var publicKey = certificate.getString('$publicKey');
-    switch(protocol) {
-        case V1.PROTOCOL:
-            var aem = V1Public.encrypt(publicKey, message);
-            return aem;
-        default:
-            throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
-    }
 };
 
 
