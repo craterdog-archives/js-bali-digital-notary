@@ -41,11 +41,11 @@ var V1 = require('./V1');
 exports.notaryKey = function(tag, testDirectory) {
     
     // read in the notary key attributes
-    var version;     // the version of the notary key
+    var currentVersion;     // the version of the notary key
     var publicKey;   // the public key residing in the certificate in the cloud
     var privateKey;  // the private key that is used for signing and decryption
-    var certificate; // the public notary certificate containing the public key
-    var citation;    // a reference citation to the public notary certificate
+    var notaryCertificate; // the public notary certificate containing the public key
+    var certificateCitation;    // a reference citation to the public notary certificate
     if (testDirectory) config = testDirectory;
     try {
         // create the configuration directory if necessary
@@ -65,8 +65,8 @@ exports.notaryKey = function(tag, testDirectory) {
             if (tag !== document.getString('$tag')) {
                 throw new Error('NOTARY: The tag for the test private key is incorrect: ' + tag);
             }
-            version = document.getString('$version');
-            citation = V1.Citation.fromReference(document.getString('$citation'));
+            currentVersion = document.getString('$version');
+            certificateCitation = V1.Citation.fromReference(document.getString('$citation'));
             publicKey = V1.encodedToBuffer(document.getString('$publicKey'));
             privateKey = V1.encodedToBuffer(document.getString('$privateKey'));
         }
@@ -76,7 +76,7 @@ exports.notaryKey = function(tag, testDirectory) {
         if (fs.existsSync(filename)) {
             // read in the notary certificate information
             source = fs.readFileSync(filename).toString();
-            certificate = documents.fromSource(source);
+            notaryCertificate = documents.fromSource(source);
         }
     } catch (e) {
         throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
@@ -117,8 +117,8 @@ exports.notaryKey = function(tag, testDirectory) {
                 indentation + ']\n';
             source = source.replace(/%protocol/, V1.PROTOCOL);
             source = source.replace(/%tag/, tag);
-            source = source.replace(/%version/, version);
-            source = source.replace(/%citation/, citation.toReference());
+            source = source.replace(/%version/, currentVersion);
+            source = source.replace(/%citation/, certificateCitation.toReference());
             source = source.replace(/%publicKey/, V1.bufferToEncoded(publicKey, indentation + '    '));
             source = source.replace(/%privateKey/, V1.bufferToEncoded(privateKey, indentation + '    '));
             return source;
@@ -130,7 +130,7 @@ exports.notaryKey = function(tag, testDirectory) {
          * @returns {String} The notary certificate associated with this notary key.
          */
         certificate: function() {
-            return certificate;
+            return notaryCertificate;
         },
 
         /**
@@ -141,7 +141,7 @@ exports.notaryKey = function(tag, testDirectory) {
          * with this notary key.
          */
         citation: function() {
-            return citation;
+            return certificateCitation;
         },
 
         /**
@@ -159,7 +159,7 @@ exports.notaryKey = function(tag, testDirectory) {
             // generate a new public-private key pair
             var curve = crypto.createECDH(V1.CURVE);
             curve.generateKeys();
-            version = version ? 'v' + (Number(version.slice(1)) + 1) : 'v1';
+            currentVersion = currentVersion ? 'v' + (Number(currentVersion.slice(1)) + 1) : 'v1';
             publicKey = curve.getPublicKey();
 
             // generate the new public notary certificate
@@ -172,24 +172,24 @@ exports.notaryKey = function(tag, testDirectory) {
                 ']';
             source = source.replace(/%protocol/, V1.PROTOCOL);
             source = source.replace(/%tag/, tag);
-            source = source.replace(/%version/, version);
+            source = source.replace(/%version/, currentVersion);
             source = source.replace(/%publicKey/, V1.bufferToEncoded(publicKey, '    '));
 
             if (isRegeneration) {
                 // sign the certificate with the old private key
-                var previousReference = citation.toReference();
+                var previousReference = certificateCitation.toReference();
                 source = previousReference + '\n' + source + '\n' + previousReference;
                 source += ' ' + this.sign(source);
             }
 
             // sign the certificate with the new private key
             privateKey = curve.getPrivateKey();
-            source += '\n' + V1.cite(tag, version);  // no source since it is self-signed
+            source += '\n' + V1.cite(tag, currentVersion);  // no source since it is self-signed
             source += ' ' + this.sign(source) + '\n';
 
             // generate a citation for the new certificate
-            certificate = documents.fromSource(source);
-            citation = V1.Citation.fromReference(V1.cite(tag, version, source));
+            notaryCertificate = documents.fromSource(source);
+            certificateCitation = V1.Citation.fromReference(V1.cite(tag, currentVersion, source));
 
             // save the state of this notary key and certificate in the local configuration
             try {
@@ -201,7 +201,7 @@ exports.notaryKey = function(tag, testDirectory) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
             }
 
-            return certificate;
+            return notaryCertificate;
         },
 
         /**
@@ -209,8 +209,8 @@ exports.notaryKey = function(tag, testDirectory) {
          * current public-private key pair.
          */
         forget: function() {
-            version = undefined;
-            citation = undefined;
+            currentVersion = undefined;
+            certificateCitation = undefined;
             publicKey = undefined;
             privateKey = undefined;
             try {

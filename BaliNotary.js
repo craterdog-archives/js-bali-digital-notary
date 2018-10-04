@@ -70,6 +70,7 @@ exports.notaryKey = function(testDirectory) {
 
         notarizeDocument: function(tag, version, document) {
             // prepare the document source for signing
+            var certificateCitation = notaryKey.citation();
             if (!certificateCitation) {
                 throw new Error('NOTARY: The following notary key has not yet been generated: ' + tag);
             }
