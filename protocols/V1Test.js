@@ -161,10 +161,6 @@ exports.notaryKey = function(tag, testDirectory) {
             curve.generateKeys();
             version = version ? 'v' + (Number(version.slice(1)) + 1) : 'v1';
             publicKey = curve.getPublicKey();
-            var newPrivateKey = curve.getPrivateKey();
-            if (!privateKey) {
-                privateKey = newPrivateKey;
-            }
 
             // generate the new public notary certificate
             var source = 
@@ -173,29 +169,29 @@ exports.notaryKey = function(tag, testDirectory) {
                 '    $tag: %tag\n' +
                 '    $version: %version\n' +
                 '    $publicKey: %publicKey\n' +
-                ']\n';
+                ']';
             source = source.replace(/%protocol/, V1.PROTOCOL);
             source = source.replace(/%tag/, tag);
             source = source.replace(/%version/, version);
             source = source.replace(/%publicKey/, V1.bufferToEncoded(publicKey, '    '));
-            source += V1.cite(tag, version);  // no document because it is self-signed
 
-            // sign the certificate with the private key
-            source += ' ' + this.sign(source) + '\n';
-
-            // update the notary key state
             if (isRegeneration) {
-                // sign the certificate with the new private key
-                privateKey = newPrivateKey;
-                source += V1.cite(tag, version, source);
-                source += ' ' + this.sign(source) + '\n';
+                // sign the certificate with the old private key
+                var previousReference = citation.toReference();
+                source = previousReference + '\n' + source + '\n' + previousReference;
+                source += ' ' + this.sign(source);
             }
+
+            // sign the certificate with the new private key
+            privateKey = curve.getPrivateKey();
+            source += '\n' + V1.cite(tag, version);  // no source since it is self-signed
+            source += ' ' + this.sign(source) + '\n';
 
             // generate a citation for the new certificate
             certificate = documents.fromSource(source);
             citation = V1.Citation.fromReference(V1.cite(tag, version, source));
 
-            // save the state of this notary key in the local configuration file
+            // save the state of this notary key and certificate in the local configuration
             try {
                 var filename = config + 'notaryKey.bali';
                 fs.writeFileSync(filename, this.toSource(), {mode: 384});  // -rw------- permissions
