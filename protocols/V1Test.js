@@ -200,6 +200,8 @@ exports.notaryKey = function(tag, testDirectory) {
             } catch (e) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
             }
+
+            return certificate;
         },
 
         /**

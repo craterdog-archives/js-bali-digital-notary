@@ -62,9 +62,10 @@ exports.notaryKey = function(testDirectory) {
         },
 
         generateKeys: function() {
-            notaryKey.generate();
+            var notaryCertificate = notaryKey.generate();
             var certificateCitation = notaryKey.citation();
             storeCitation(filename, certificateCitation);
+            return notaryCertificate;
         },
 
         notarizeDocument: function(tag, version, document) {

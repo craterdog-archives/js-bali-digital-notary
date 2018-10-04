@@ -16,8 +16,7 @@ var notary = require('../BaliNotary').notaryKey('test/config/');
 
 describe('Bali Digital Notary™', function() {
 
-    notary.generateKeys();
-    var certificate = notary.notaryCertificate();
+    var certificate = notary.generateKeys();
     var citation = notary.certificateCitation();
     var source = '[$foo: "bar"]\n';
 
@@ -66,8 +65,7 @@ describe('Bali Digital Notary™', function() {
             var document = BaliDocument.fromSource(source);
             notary.notarizeDocument(tag, version, document);
 
-            notary.generateKeys();
-            var newCertificate = notary.notaryCertificate();
+            var newCertificate = notary.generateKeys();
             expect(certificate).to.exist;  // jshint ignore:line
 
             document = BaliDocument.fromSource(source);

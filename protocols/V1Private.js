@@ -32,20 +32,24 @@ exports.notaryKey = function(tag) {
             throw new Error('NOTARY: The following method has not yet been implemented: ' + 'toString()');
         },
 
+        toSource: function(indentation) {
+            throw new Error('NOTARY: The following method has not yet been implemented: ' + 'toString()');
+        },
+
+        certificate: function() {
+            throw new Error('NOTARY: The following method has not yet been implemented: ' + 'generate()');
+        },
+
+        citation: function() {
+            throw new Error('NOTARY: The following method has not yet been implemented: ' + 'generate()');
+        },
+
         generate: function() {
             throw new Error('NOTARY: The following method has not yet been implemented: ' + 'generate()');
         },
 
-        regenerate: function() {
-            throw new Error('NOTARY: The following method has not yet been implemented: ' + 'regenerate()');
-        },
-
         forget: function() {
             throw new Error('NOTARY: The following method has not yet been implemented: ' + 'forget()');
-        },
-
-        reference: function() {
-            throw new Error('NOTARY: The following method has not yet been implemented: ' + 'reference()');
         },
 
         sign: function(document) {
