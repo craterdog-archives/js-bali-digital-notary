@@ -47,16 +47,17 @@ exports.notaryKey = function(tag, testDirectory) {
     var notaryCertificate; // the public notary certificate containing the public key
     var certificateCitation;    // a reference citation to the public notary certificate
     if (testDirectory) config = testDirectory;
+    var keyFilename = config + 'NotaryKey.bali';
+    var certificateFilename = config + 'NotaryCertificate.bali';
     try {
         // create the configuration directory if necessary
         if (!fs.existsSync(config)) fs.mkdirSync(config, 448);  // drwx------ permissions
 
         // check for an existing notary key file
-        var filename = config + 'notaryKey.bali';
         var source;
-        if (fs.existsSync(filename)) {
+        if (fs.existsSync(keyFilename)) {
             // read in the notary key information
-            source = fs.readFileSync(filename).toString();
+            source = fs.readFileSync(keyFilename).toString();
             var document = documents.fromSource(source);
             var protocol = document.getString('$protocol');
             if (V1.PROTOCOL !== protocol) {
@@ -72,10 +73,9 @@ exports.notaryKey = function(tag, testDirectory) {
         }
 
         // check for an existing notary certificate file
-        filename = config + 'notaryCertificate.bali';
-        if (fs.existsSync(filename)) {
+        if (fs.existsSync(certificateFilename)) {
             // read in the notary certificate information
-            source = fs.readFileSync(filename).toString();
+            source = fs.readFileSync(certificateFilename).toString();
             notaryCertificate = documents.fromSource(source);
         }
     } catch (e) {
@@ -193,10 +193,8 @@ exports.notaryKey = function(tag, testDirectory) {
 
             // save the state of this notary key and certificate in the local configuration
             try {
-                var filename = config + 'notaryKey.bali';
-                fs.writeFileSync(filename, this.toSource(), {mode: 384});  // -rw------- permissions
-                filename = config + 'notaryCertificate.bali';
-                fs.writeFileSync(filename, source, {mode: 384});  // -rw------- permissions
+                fs.writeFileSync(keyFilename, this.toSource(), {mode: 384});  // -rw------- permissions
+                fs.writeFileSync(certificateFilename, source, {mode: 384});  // -rw------- permissions
             } catch (e) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
             }
@@ -214,15 +212,13 @@ exports.notaryKey = function(tag, testDirectory) {
             publicKey = undefined;
             privateKey = undefined;
             try {
-                var filename = config + 'notaryKey.bali';
-                if (fs.existsSync(filename)) {
+                if (fs.existsSync(keyFilename)) {
                     // remove the configuration file
-                    fs.unlinkSync(filename);
+                    fs.unlinkSync(keyFilename);
                 }
-                filename = config + 'notaryCertificate.bali';
-                if (fs.existsSync(filename)) {
+                if (fs.existsSync(certificateFilename)) {
                     // remove the configuration file
-                    fs.unlinkSync(filename);
+                    fs.unlinkSync(certificateFilename);
                 }
             } catch (e) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);

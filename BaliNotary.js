@@ -39,7 +39,7 @@ exports.notaryKey = function(testDirectory) {
     if (!fs.existsSync(homeDirectory)) fs.mkdirSync(homeDirectory, 448);  // drwx------ permissions
 
     // load the account citation
-    var filename = homeDirectory + 'citation.bali';
+    var filename = homeDirectory + 'Citation.bali';
     var certificateCitation = loadCitation(filename);
 
     // retrieve the notary key for the account
