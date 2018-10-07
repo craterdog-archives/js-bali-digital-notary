@@ -9,4 +9,4 @@
  ************************************************************************/
 'use strict';
 
-exports.notary = require('./src/BaliNotary');
+module.exports = require('./src/BaliNotary');
