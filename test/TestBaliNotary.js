@@ -10,9 +10,8 @@
 
 var mocha = require('mocha');
 var expect = require('chai').expect;
-var BaliDocument = require('bali-document-notation/BaliDocument');
-var codex = require('bali-document-notation/utilities/EncodingUtilities');
-var notary = require('../BaliNotary').notaryKey('test/config/');
+var bali = require('bali-document-notation');
+var notary = require('../src/BaliNotary').notaryKey('test/config/');
 
 describe('Bali Digital Notary™', function() {
 
@@ -34,9 +33,9 @@ describe('Bali Digital Notary™', function() {
     describe('Test Signing and Verification', function() {
 
         it('should digitally sign a document properly', function() {
-            var tag = codex.randomTag();
+            var tag = bali.codex.randomTag();
             var version = 'v2.3.4';
-            var document = BaliDocument.fromSource(source);
+            var document = bali.document.fromSource(source);
             var documentCitation = notary.notarizeDocument(tag, version, document);
             var isValid = notary.documentIsValid(certificate, document);
             expect(isValid).to.equal(true);
@@ -60,15 +59,15 @@ describe('Bali Digital Notary™', function() {
     describe('Test Key Regeneration', function() {
 
         it('should regenerate a notary key properly', function() {
-            var tag = codex.randomTag();
+            var tag = bali.codex.randomTag();
             var version = 'v2.3.4';
-            var document = BaliDocument.fromSource(source);
+            var document = bali.document.fromSource(source);
             notary.notarizeDocument(tag, version, document);
 
             var newCertificate = notary.generateKeys();
             expect(certificate).to.exist;  // jshint ignore:line
 
-            document = BaliDocument.fromSource(source);
+            document = bali.document.fromSource(source);
             var newDocumentCitation = notary.notarizeDocument(tag, version, document);
             isValid = notary.documentIsValid(certificate, document);
             expect(isValid).to.equal(false);

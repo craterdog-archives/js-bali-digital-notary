@@ -2,7 +2,6 @@
   "name": "bali-digital-notary",
   "version": "1.0.0",
   "description": "This library provides JavaScript based digital notary capability for the Bali Cloud OS™.",
-  "main": "Gruntfile.js",
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/craterdog-bali/js-bali-digital-notary.git"

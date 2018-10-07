@@ -18,10 +18,10 @@
  */
 var fs = require('fs');
 var homeDirectory = require('os').homedir() + '/.bali/';
-var V1 = require('./protocols/V1');
-var V1Public = require('./protocols/V1Public');
-var V1Private = require('./protocols/V1Private');  // proxy to a hardware security module
-var V1Test = require('./protocols/V1Test');   // local test software secutity module
+var V1 = require('./v1/V1');
+var V1Public = require('./v1/V1Public');
+var V1Private = require('./v1/V1Private');  // proxy to a hardware security module
+var V1Test = require('./v1/V1Test');   // local test software secutity module
 
 
 /**

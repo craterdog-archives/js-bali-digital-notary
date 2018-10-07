@@ -13,8 +13,7 @@
  * This module defines a library of constants and functions that are needed by the version
  * one (v1) security protocol implementation for the Bali Cloud Environment™.
  */
-var documents = require('bali-document-notation/BaliDocument');
-var codex = require('bali-document-notation/utilities/EncodingUtilities');
+var bali = require('bali-document-notation');
 var crypto = require('crypto');
 
 
@@ -41,7 +40,7 @@ function digest(message) {
     var hasher = crypto.createHash(exports.DIGEST);
     hasher.update(message);
     var digest = hasher.digest();
-    var encodedDigest = "'" + codex.base32Encode(digest).replace(/\s+/g, '') + "'";
+    var encodedDigest = "'" + bali.codex.base32Encode(digest).replace(/\s+/g, '') + "'";
     return encodedDigest;
 }
 exports.digest = digest;
@@ -85,7 +84,7 @@ exports.cite = cite;
  */
 function bufferToEncoded(buffer, indentation) {
     if (!indentation) indentation = '';
-    var base32 = codex.base32Encode(buffer, indentation);
+    var base32 = bali.codex.base32Encode(buffer, indentation);
     var encoded = "'" + base32 + indentation + "'";  // add in the "'"s
     return encoded;
 }
@@ -100,7 +99,7 @@ exports.bufferToEncoded = bufferToEncoded;
  */
 function encodedToBuffer(encoded) {
     var base32 = encoded.slice(1, -1);  // remove the "'"s
-    var buffer = codex.base32Decode(base32);
+    var buffer = bali.codex.base32Decode(base32);
     return buffer;
 }
 exports.encodedToBuffer = encodedToBuffer;
@@ -119,7 +118,7 @@ exports.Citation = Citation;
 
 Citation.fromScratch = function() {
     var protocol = exports.PROTOCOL;
-    var tag = codex.randomTag();
+    var tag = bali.codex.randomTag();
     var version = 'v1';
     var digest = 'none';
     var citation = new Citation(protocol, tag, version, digest);
@@ -128,7 +127,7 @@ Citation.fromScratch = function() {
 
 
 Citation.fromSource = function(source) {
-    var document = documents.fromSource(source);
+    var document = bali.document.fromSource(source);
     var protocol = document.getString('$protocol');
     var tag = document.getString('$tag');
     var version = document.getString('$version');
@@ -141,7 +140,7 @@ Citation.fromSource = function(source) {
 Citation.fromReference = function(reference) {
     reference = reference.toString();
     var source = reference.slice(6, -1);  // remove '<bali:' and '>' wrapper
-    var document = documents.fromSource(source);
+    var document = bali.document.fromSource(source);
     var protocol = document.getString('$protocol');
     var tag = document.getString('$tag');
     var version = document.getString('$version');
