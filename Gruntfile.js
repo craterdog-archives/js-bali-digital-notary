@@ -12,7 +12,7 @@ module.exports = function(grunt) {
     jshint: {
       files: [
         'Gruntfile.js',
-        'src/**/*.js'
+        'src/**/*.js',
         'test/*.js'
       ],
       options: {
