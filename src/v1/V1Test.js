@@ -58,7 +58,7 @@ exports.notaryKey = function(tag, testDirectory) {
         if (fs.existsSync(keyFilename)) {
             // read in the notary key information
             source = fs.readFileSync(keyFilename).toString();
-            var document = bali.document.fromSource(source);
+            var document = bali.parser.parseDocument(source);
             var protocol = document.getString('$protocol');
             if (V1.PROTOCOL !== protocol) {
                 throw new Error('NOTARY: The protocol for the test private key is not supported: ' + protocol);
@@ -76,7 +76,7 @@ exports.notaryKey = function(tag, testDirectory) {
         if (fs.existsSync(certificateFilename)) {
             // read in the notary certificate information
             source = fs.readFileSync(certificateFilename).toString();
-            notaryCertificate = bali.document.fromSource(source);
+            notaryCertificate = bali.parser.parseDocument(source);
         }
     } catch (e) {
         throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
@@ -188,7 +188,7 @@ exports.notaryKey = function(tag, testDirectory) {
             source += ' ' + this.sign(source) + '\n';
 
             // generate a citation for the new certificate
-            notaryCertificate = bali.document.fromSource(source);
+            notaryCertificate = bali.parser.parseDocument(source);
             certificateCitation = V1.Citation.fromReference(V1.cite(tag, currentVersion, source));
 
             // save the state of this notary key and certificate in the local configuration

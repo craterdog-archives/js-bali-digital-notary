@@ -127,7 +127,7 @@ Citation.fromScratch = function() {
 
 
 Citation.fromSource = function(source) {
-    var document = bali.document.fromSource(source);
+    var document = bali.parser.parseDocument(source);
     var protocol = document.getString('$protocol');
     var tag = document.getString('$tag');
     var version = document.getString('$version');
@@ -140,11 +140,11 @@ Citation.fromSource = function(source) {
 Citation.fromReference = function(reference) {
     reference = reference.toString();
     var source = reference.slice(6, -1);  // remove '<bali:' and '>' wrapper
-    var document = bali.document.fromSource(source);
-    var protocol = document.getString('$protocol');
-    var tag = document.getString('$tag');
-    var version = document.getString('$version');
-    var digest = document.getString('$digest');
+    var catalog = bali.parser.parseStructure(source);
+    var protocol = catalog.getString('$protocol');
+    var tag = catalog.getString('$tag');
+    var version = catalog.getString('$version');
+    var digest = catalog.getString('$digest');
     var citation = new Citation(protocol, tag, version, digest);
     return citation;
 };

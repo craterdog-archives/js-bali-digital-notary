@@ -18,6 +18,7 @@
  */
 var fs = require('fs');
 var homeDirectory = require('os').homedir() + '/.bali/';
+var bali = require('bali-document-notation');
 var V1 = require('./v1/V1');
 var V1Public = require('./v1/V1Public');
 var V1Private = require('./v1/V1Private');  // proxy to a hardware security module
@@ -75,17 +76,18 @@ exports.notaryKey = function(testDirectory) {
                 throw new Error('NOTARY: The following notary key has not yet been generated: ' + tag);
             }
             var certificateReference = certificateCitation.toReference();
-            var source = document.toSource();
+            var source = bali.formatter.formatTree(document);
             source += certificateReference;  // NOTE: the reference must be included in the signed source!
 
-            // generate the notarization signature
-            var signature = notaryKey.sign(source);
+            // generate the digital signature
+            var digitalSignature = notaryKey.sign(source);
 
             // append the notary seal to the document (modifies it in place)
-            document.addNotarySeal(certificateReference, signature);
+            var seal = new bali.Seal(certificateReference, digitalSignature);
+            document.addNotarySeal(seal);
 
             // generate a citation to the notarized document
-            source = document.toSource();  // get updated source
+            source = bali.formatter.formatTree(document);  // get updated source
             var citation = V1.cite(tag, version, source);
 
             return citation;
@@ -96,7 +98,7 @@ exports.notaryKey = function(testDirectory) {
             var protocol = citation.protocol;
             switch(protocol) {
                 case V1.PROTOCOL:
-                    var digest = V1.digest(document.toSource());
+                    var digest = V1.digest(bali.formatter.formatTree(document));
                     return citation.digest === digest;
                 default:
                     throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
@@ -115,13 +117,13 @@ exports.notaryKey = function(testDirectory) {
                     // calculate the digest of the stripped document + certificate citation
                     var source = stripped.toSource();
                     // NOTE: the certificate citation must be included in the signed source!
-                    var citation = seal.children[0].toString();
-                    source += citation;
+                    var certificateCitation = seal.certificateCitation.toString();
+                    source += certificateCitation;
 
-                    // verify the signature using the public key from the notary certificate
+                    // verify the digital signature using the public key from the notary certificate
                     var publicKey = certificate.getString('$publicKey');
-                    var signature = seal.children[1].toString();
-                    var isValid = V1Public.verify(publicKey, source, signature);
+                    var digitalSignature = seal.digitalSignature.toString();
+                    var isValid = V1Public.verify(publicKey, source, digitalSignature);
                     return isValid;
                 default:
                     throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
