@@ -76,7 +76,7 @@ exports.notaryKey = function(testDirectory) {
                 throw new Error('NOTARY: The following notary key has not yet been generated: ' + tag);
             }
             var certificateReference = certificateCitation.toReference();
-            var source = bali.formatter.formatTree(document);
+            var source = bali.formatter.formatComponent(document);
             source += certificateReference;  // NOTE: the reference must be included in the signed source!
 
             // generate the digital signature
@@ -87,7 +87,7 @@ exports.notaryKey = function(testDirectory) {
             document.addNotarySeal(seal);
 
             // generate a citation to the notarized document
-            source = bali.formatter.formatTree(document);  // get updated source
+            source = bali.formatter.formatComponent(document);  // get updated source
             var citation = V1.cite(tag, version, source);
 
             return citation;
@@ -98,7 +98,7 @@ exports.notaryKey = function(testDirectory) {
             var protocol = citation.protocol;
             switch(protocol) {
                 case V1.PROTOCOL:
-                    var digest = V1.digest(bali.formatter.formatTree(document));
+                    var digest = V1.digest(bali.formatter.formatComponent(document));
                     return citation.digest === digest;
                 default:
                     throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
