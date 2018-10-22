@@ -19,7 +19,7 @@ var bali = require('bali-document-notation');
 
 // ALGORITHMS AND PROTOCOLS
 
-exports.PROTOCOL = 'v1';
+exports.PROTOCOL = new bali.Version('v1');
 exports.CURVE = 'secp521r1';
 exports.DIGEST = 'sha512';
 exports.SIGNATURE = 'ecdsa-with-SHA1';
@@ -33,12 +33,12 @@ exports.CIPHER = 'aes-256-gcm';
  * the specified message. The digest is a Bali binary string and will always be the same
  * for the same message.
  * 
- * @param {String} message The message to be digested.
+ * @param {Object} message The message to be digested.
  * @returns {Binary} A base 32 encoded digital digest of the message.
  */
 function digest(message) {
     var hasher = crypto.createHash(exports.DIGEST);
-    hasher.update(message);
+    hasher.update(message.toString());
     var digest = hasher.digest();
     var encodedDigest = "'" + bali.codex.base32Encode(digest) + "'";
     encodedDigest = new bali.Binary(encodedDigest);
@@ -62,10 +62,10 @@ exports.digest = digest;
 function cite(tag, version, document) {
     var encodedDigest = bali.Template.NONE;
     if (document) {
-        encodedDigest = digest(document.toSource());
+        encodedDigest = digest(document);
     }
     var citation = new Citation(exports.PROTOCOL, tag, version, encodedDigest);
-    return citation.toReference();
+    return citation;
 }
 exports.cite = cite;
 
@@ -103,7 +103,7 @@ Citation.fromSource = function(source) {
 
 
 Citation.fromReference = function(reference) {
-    reference = reference.toString();
+    reference = reference.toSource();
     var source = reference.slice(6, -1);  // remove '<bali:' and '>' wrapper
     var catalog = bali.parser.parseComponent(source);
     var protocol = catalog.getValue('$protocol');

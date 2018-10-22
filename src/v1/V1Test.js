@@ -186,13 +186,12 @@ exports.notaryKey = function(tag, testDirectory) {
 
             // sign the certificate with the new private key
             privateKey = curve.getPrivateKey();
-            source += '\n' + V1.cite(tag, currentVersion);  // no source since it is self-signed
+            source += '\n' + V1.cite(tag, currentVersion).toReference();  // no source since it is self-signed
             source += ' ' + this.sign(source) + '\n';
 
             // generate a citation for the new certificate
             notaryCertificate = bali.parser.parseDocument(source);
-            var certificateReference = V1.cite(tag, currentVersion, notaryCertificate);
-            certificateCitation = V1.Citation.fromReference(certificateReference);
+            certificateCitation = V1.cite(tag, currentVersion, notaryCertificate);
 
             // save the state of this notary key and certificate in the local configuration
             try {
