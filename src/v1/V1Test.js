@@ -129,7 +129,7 @@ exports.notaryKey = function(tag, testDirectory) {
          * This method returns a citation referencing the notary certificate associated
          * with this notary key.
          * 
-         * @returns {Citation} A citation referencing the notary certificate associated
+         * @returns {Catalog} A citation referencing the notary certificate associated
          * with this notary key.
          */
         citation: function() {
@@ -138,12 +138,9 @@ exports.notaryKey = function(tag, testDirectory) {
 
         /**
          * This method generates a new public-private key pair and uses the private key as the
-         * new notary key. It returns the Bali source code for the public notary certificate as
-         * well as a reference citation to the new certificate.
+         * new notary key. It returns the new public notary certificate.
          * 
-         * @returns {Object} An object containing the Bali source code for the new notary
-         * certificate and a reference citation to the certificate's location in the Bali
-         * Cloud Environment™.
+         * @returns {Document} The new notary certificate.
          */
         generate: function() {
             var isRegeneration = !!privateKey;
@@ -235,10 +232,10 @@ exports.notaryKey = function(tag, testDirectory) {
         },
 
         /**
-         * This function uses the notary key to encrypt the specified authenticated encrypted
+         * This function uses the notary key to decrypt the specified authenticated encrypted
          * message. The result is the decrypted message.
          * 
-         * @param {Object} aem The authenticated encrypted message to be decrypted.
+         * @param {Catalog} aem The authenticated encrypted message to be decrypted.
          * @returns {String} The decrypted plaintext message.
          */
         decrypt: function(aem) {

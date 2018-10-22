@@ -71,6 +71,12 @@ exports.cite = function(tag, version, document) {
 };
 
 
+/**
+ * This function creates a new document citation with a new unique tag. The digest for
+ * the citation is set to Template.NONE since there is no document yet to cite.
+ * 
+ * @returns {Catalog} A new document citation.
+ */
 exports.citationFromScratch = function() {
     var protocol = exports.PROTOCOL;
     var tag = new bali.Tag();
@@ -85,6 +91,12 @@ exports.citationFromScratch = function() {
 };
 
 
+/**
+ * This function creates a document citation based on the specified Bali source code.
+ * 
+ * @param {String} source The Bali source code for the document citation. 
+ * @returns {Catalog} The resulting document citation.
+ */
 exports.citationFromSource = function(source) {
     var document = bali.parser.parseDocument(source);
     var protocol = document.getValue('$protocol');
@@ -100,6 +112,14 @@ exports.citationFromSource = function(source) {
 };
 
 
+/**
+ * This function creates a document citation based on the specified document reference.
+ * The attributes for the document citation are encoded in the body of the document
+ * reference.
+ * 
+ * @param {Reference} reference The Bali reference containing the citation attributes.
+ * @returns {Catalog} The resulting document citation.
+ */
 exports.citationFromReference = function(reference) {
     reference = reference.toSource();
     var source = reference.slice(6, -1);  // remove '<bali:' and '>' wrapper
@@ -108,6 +128,14 @@ exports.citationFromReference = function(reference) {
 };
 
 
+/**
+ * This function creates a document reference based on the specified document citation.
+ * The attributes for the document citation are encoded in the body of the new document
+ * reference.
+ * 
+ * @param {Catalog} citation The document citation containing the citation attributes.
+ * @returns {Reference} The resulting Bali reference containing the citation attributes.
+ */
 exports.referenceFromCitation = function(citation) {
     var reference = '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$digest:%digest]>';
     reference = reference.replace(/%protocol/, citation.getValue('$protocol'));

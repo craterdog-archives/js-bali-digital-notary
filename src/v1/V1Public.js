@@ -49,7 +49,7 @@ exports.verify = function(publicKey, message, signature) {
  * 
  * @param {Binary} publicKey The base 32 encoded public key to use for encryption.
  * @param {String} message The plaintext message to be encrypted.
- * @returns {Object} An authenticated encrypted message object.
+ * @returns {Catalog} An authenticated encrypted message object.
  */
 exports.encrypt = function(publicKey, message) {
     publicKey = publicKey.getBuffer();
