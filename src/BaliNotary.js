@@ -141,7 +141,7 @@ exports.notaryKey = function(testDirectory) {
             if (!notaryKey.citation()) {
                 throw new Error('NOTARY: The notary key has not yet been generated.');
             }
-            var protocol = aem.protocol;
+            var protocol = aem.getValue('$protocol');
             if (protocol.equalTo(V1.PROTOCOL)) {
                 var message = notaryKey.decrypt(aem);
                 return message;

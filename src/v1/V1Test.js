@@ -63,7 +63,7 @@ exports.notaryKey = function(tag, testDirectory) {
             if (!V1.PROTOCOL.equalTo(protocol)) {
                 throw new Error('NOTARY: The protocol for the test private key is not supported: ' + protocol);
             }
-            if (tag.equalTo(document.getValue('$tag'))) {
+            if (!tag.equalTo(document.getValue('$tag'))) {
                 throw new Error('NOTARY: The tag for the test private key is incorrect: ' + tag);
             }
             currentVersion = document.getValue('$version');
@@ -106,22 +106,14 @@ exports.notaryKey = function(tag, testDirectory) {
          * @returns {String} A canonical Bali source code string for the notary key.
          */
         toSource: function(indentation) {
-            indentation = indentation ? indentation : '';
-            var source =  '[\n' +
-                indentation + '    $protocol: %protocol\n' +
-                indentation + '    $tag: %tag\n' +
-                indentation + '    $version: %version\n' +
-                indentation + '    $publicKey: %publicKey\n' +
-                indentation + '    $privateKey: %privateKey\n' +
-                indentation + '    $citation: %citation\n' +
-                indentation + ']\n';
-            source = source.replace(/%protocol/, V1.PROTOCOL);
-            source = source.replace(/%tag/, tag);
-            source = source.replace(/%version/, currentVersion);
-            source = source.replace(/%publicKey/, new bali.Binary(publicKey).toSource(indentation + '    '));
-            source = source.replace(/%privateKey/, new bali.Binary(privateKey).toSource(indentation + '    '));
-            source = source.replace(/%citation/, certificateCitation.toSource(indentation + '    '));
-            return source;
+            var notaryKey = new bali.Catalog();
+            notaryKey.setValue('$protocol', V1.PROTOCOL);
+            notaryKey.setValue('$tag', tag);
+            notaryKey.setValue('$version', currentVersion);
+            notaryKey.setValue('$privateKey', new bali.Binary(privateKey));
+            notaryKey.setValue('$publicKey', new bali.Binary(publicKey));
+            notaryKey.setValue('$citation', certificateCitation);
+            return notaryKey.toSource(indentation);
         },
 
         /**
@@ -164,18 +156,13 @@ exports.notaryKey = function(tag, testDirectory) {
             publicKey = curve.getPublicKey();
 
             // generate the new public notary certificate
-            var source = 
-                '[\n' +
-                '    $protocol: %protocol\n' +
-                '    $tag: %tag\n' +
-                '    $version: %version\n' +
-                '    $publicKey: %publicKey\n' +
-                ']';
-            source = source.replace(/%protocol/, V1.PROTOCOL);
-            source = source.replace(/%tag/, tag);
-            source = source.replace(/%version/, currentVersion);
-            source = source.replace(/%publicKey/, new bali.Binary(publicKey).toSource('    '));
+            notaryCertificate = new bali.Catalog();
+            notaryCertificate.setValue('$protocol', V1.PROTOCOL);
+            notaryCertificate.setValue('$tag', tag);
+            notaryCertificate.setValue('$version', currentVersion);
+            notaryCertificate.setValue('$publicKey', new bali.Binary(publicKey));
 
+            var source = notaryCertificate.toSource();
             if (isRegeneration) {
                 // sign the certificate with the old private key
                 var previousReference = V1.referenceFromCitation(certificateCitation).toSource();
@@ -190,17 +177,18 @@ exports.notaryKey = function(tag, testDirectory) {
             source += '\n' + newReference + ' ' + this.sign(source) + '\n';
 
             // generate a citation for the new certificate
-            notaryCertificate = bali.parser.parseDocument(source);
-            certificateCitation = V1.cite(tag, currentVersion, notaryCertificate);
+            certificateCitation = V1.cite(tag, currentVersion, source);
 
             // save the state of this notary key and certificate in the local configuration
             try {
-                fs.writeFileSync(keyFilename, this.toSource(), {mode: 384});  // -rw------- permissions
+                var document = this.toSource() + '\n';  // required by ISO
+                fs.writeFileSync(keyFilename, document, {mode: 384});  // -rw------- permissions
                 fs.writeFileSync(certificateFilename, source, {mode: 384});  // -rw------- permissions
             } catch (e) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
             }
 
+            notaryCertificate = bali.parser.parseDocument(source);
             return notaryCertificate;
         },
 
@@ -254,16 +242,24 @@ exports.notaryKey = function(tag, testDirectory) {
          * @returns {String} The decrypted plaintext message.
          */
         decrypt: function(aem) {
+            var protocol = aem.getValue('$protocol');
+            if (!V1.PROTOCOL.equalTo(protocol)) {
+                throw new Error('NOTARY: The protocol for decrypting a message is not supported: ' + protocol);
+            }
+            var iv = aem.getValue('$iv').getBuffer();
+            var auth = aem.getValue('$auth').getBuffer();
+            var seed = aem.getValue('$seed').getBuffer();
+            var ciphertext = aem.getValue('$ciphertext').getBuffer();
+
             // decrypt the 32-byte symmetric key
-            var seed = aem.seed;
             var curve = crypto.createECDH(V1.CURVE);
             curve.setPrivateKey(privateKey);
             var symmetricKey = curve.computeSecret(seed).slice(0, 32);  // take only first 32 bytes
 
             // decrypt the ciphertext using the symmetric key
-            var decipher = crypto.createDecipheriv(V1.CIPHER, symmetricKey, aem.iv);
-            decipher.setAuthTag(aem.auth);
-            var message = decipher.update(aem.ciphertext, undefined, 'utf8');
+            var decipher = crypto.createDecipheriv(V1.CIPHER, symmetricKey, iv);
+            decipher.setAuthTag(auth);
+            var message = decipher.update(ciphertext, undefined, 'utf8');
             message += decipher.final('utf8');
             return message;
         }

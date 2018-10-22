@@ -30,7 +30,7 @@ var V1 = require('./V1');
  * @param {Binary} signature The digital signature generated using the private key.
  * @returns {Boolean} Whether or not the digital signature is valid.
  */
-function verify(publicKey, message, signature) {
+exports.verify = function(publicKey, message, signature) {
     signature = signature.getBuffer();
     publicKey = publicKey.getBuffer();
     var curve = crypto.createECDH(V1.CURVE);
@@ -39,8 +39,7 @@ function verify(publicKey, message, signature) {
     var verifier = crypto.createVerify(V1.SIGNATURE);
     verifier.update(message);
     return verifier.verify(pem.encodePublicKey(), signature);
-}
-exports.verify = verify;
+};
 
 
 /**
@@ -52,7 +51,7 @@ exports.verify = verify;
  * @param {String} message The plaintext message to be encrypted.
  * @returns {Object} An authenticated encrypted message object.
  */
-function encrypt(publicKey, message) {
+exports.encrypt = function(publicKey, message) {
     publicKey = publicKey.getBuffer();
     // generate and encrypt a 32-byte symmetric key
     var curve = crypto.createECDH(V1.CURVE);
@@ -68,52 +67,12 @@ function encrypt(publicKey, message) {
     var auth = cipher.getAuthTag();
 
     // construct the authenticated encrypted message (AEM)
-    var aem = {
-        protocol: V1.PROTOCOL,   // the version of the Bali security protocol used
-        iv: iv,                  // the initialization vector
-        auth: auth,              // the message authentication code
-        seed: seed,              // the seed for the symmetric key
-        ciphertext: ciphertext,  // the resulting ciphertext
-
-        /**
-         * This method implements the standard toString() method for the AEM object by
-         * delegating to the toSource() method which produces a canonical Bali source
-         * code string for the AEM object.
-         * 
-         * @returns {String} A canonical Bali source code string for the AEM object.
-         */
-        toString: function() {
-            var string = this.toSource();
-            return string;
-        },
-
-        /**
-         * This method returns the canonical Bali source code representation for the AEM
-         * object. It allows an optional indentation to be included which will be prepended
-         * to each indented line of the resulting string.
-         * 
-         * @param {String} indentation A string of spaces to be used as additional indentation
-         * for each line within the resulting string.
-         * @returns {String} A canonical Bali source code string for the AEM object.
-         */
-        toSource: function(indentation) {
-            indentation = indentation ? indentation : '';
-            var source =  '[\n' +
-                indentation + '    $protocol: %protocol\n' +
-                indentation + '    $iv: %iv\n' +
-                indentation + '    $auth: %auth\n' +
-                indentation + '    $seed: %seed\n' +
-                indentation + '    $ciphertext: %ciphertext\n' +
-                indentation + ']\n';
-            source = source.replace(/%protocol/, this.protocol);
-            source = source.replace(/%iv/, new bali.Binary(this.iv).toSource(indentation + '    '));
-            source = source.replace(/%auth/, new bali.Binary(this.auth).toSource(indentation + '    '));
-            source = source.replace(/%seed/, new bali.Binary(this.seed).toSource(indentation + '    '));
-            source = source.replace(/%ciphertext/, new bali.Binary(this.ciphertext).toSource(indentation + '    '));
-            return source;
-        }
-    };
+    var aem = new bali.Catalog();
+    aem.setValue('$protocol', V1.PROTOCOL);
+    aem.setValue('$iv', new bali.Binary(iv));
+    aem.setValue('$auth', new bali.Binary(auth));
+    aem.setValue('$seed', new bali.Binary(seed));
+    aem.setValue('$ciphertext', new bali.Binary(ciphertext));
 
     return aem;
-}
-exports.encrypt = encrypt;
+};
