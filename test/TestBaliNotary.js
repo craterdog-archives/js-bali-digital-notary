@@ -16,16 +16,16 @@ var V1 = require('../src/v1/V1');
 
 describe('Bali Digital Notary™', function() {
 
-    var certificate = notary.generateKeys();
-    var citation = notary.certificateCitation();
+    var notaryCertificate = notary.generateKeys();
+    var certificateCitation = notary.getCitation();
     var source = '[$foo: "bar"]\n';
 
     describe('Test Citations', function() {
 
         it('should validate the citation for the certificate', function() {
-            var protocol = certificate.getValue('$protocol');
+            var protocol = notaryCertificate.getValue('$protocol');
             expect(protocol.toSource()).to.equal('v1');
-            var isValid = notary.documentMatches(citation, certificate);
+            var isValid = notary.documentMatches(certificateCitation, notaryCertificate);
             expect(isValid).to.equal(true);
         });
 
@@ -38,7 +38,7 @@ describe('Bali Digital Notary™', function() {
             var version = new bali.Version('v2.3.4');
             var document = bali.parser.parseDocument(source);
             var documentCitation = notary.notarizeDocument(tag, version, document);
-            var isValid = notary.documentIsValid(certificate, document);
+            var isValid = notary.documentIsValid(notaryCertificate, document);
             expect(isValid).to.equal(true);
             var matches = notary.documentMatches(documentCitation, document);
             expect(matches).to.equal(true);
@@ -50,7 +50,7 @@ describe('Bali Digital Notary™', function() {
 
         it('should encrypt and decrypt a message properly', function() {
             var message = 'This is a test...';
-            var encrypted = notary.encryptMessage(certificate, message);
+            var encrypted = notary.encryptMessage(notaryCertificate, message);
             var decrypted = notary.decryptMessage(encrypted);
             expect(decrypted).to.equal(message);
         });
@@ -66,11 +66,11 @@ describe('Bali Digital Notary™', function() {
             notary.notarizeDocument(tag, version, document);
 
             var newCertificate = notary.generateKeys();
-            expect(certificate).to.exist;  // jshint ignore:line
+            expect(notaryCertificate).to.exist;  // jshint ignore:line
 
             document = bali.parser.parseDocument(source);
             var newDocumentCitation = notary.notarizeDocument(tag, version, document);
-            isValid = notary.documentIsValid(certificate, document);
+            isValid = notary.documentIsValid(notaryCertificate, document);
             expect(isValid).to.equal(false);
 
             isValid = notary.documentIsValid(newCertificate, document);

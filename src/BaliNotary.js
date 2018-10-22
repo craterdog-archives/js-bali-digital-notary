@@ -44,7 +44,7 @@ exports.notaryKey = function(testDirectory) {
     var certificateCitation = loadCitation(filename);
 
     // retrieve the notary key for the account
-    var tag = certificateCitation.tag;
+    var tag = certificateCitation.getValue('$tag');
     var notaryKey;
     if (testDirectory) {
         notaryKey = V1Test.notaryKey(tag, testDirectory);
@@ -54,11 +54,11 @@ exports.notaryKey = function(testDirectory) {
 
     return {
 
-        notaryCertificate: function() {
+        getCertificate: function() {
             return notaryKey.certificate();
         },
 
-        certificateCitation: function() {
+        getCitation: function() {
             return notaryKey.citation();
         },
 
@@ -75,7 +75,7 @@ exports.notaryKey = function(testDirectory) {
             if (!certificateCitation) {
                 throw new Error('NOTARY: The following notary key has not yet been generated: ' + tag);
             }
-            var certificateReference = certificateCitation.toReference();
+            var certificateReference = V1.referenceFromCitation(certificateCitation);
             var source = bali.formatter.formatComponent(document);
             source += certificateReference;  // NOTE: the reference must be included in the signed source!
 
@@ -93,10 +93,10 @@ exports.notaryKey = function(testDirectory) {
         },
 
         documentMatches: function(citation, document) {
-            var protocol = citation.protocol;
+            var protocol = citation.getValue('$protocol');
             if (protocol.equalTo(V1.PROTOCOL)) {
                 var digest = V1.digest(document);
-                return citation.digest.equalTo(digest);
+                return digest.equalTo(citation.getValue('$digest'));
             } else {
                 throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
             }
@@ -161,16 +161,17 @@ function loadCitation(filename) {
     var citation;
     if (fs.existsSync(filename)) {
         source = fs.readFileSync(filename).toString();
-        citation = V1.Citation.fromSource(source);
+        var document = bali.parser.parseDocument(source);
+        citation = document.documentContent;
     } else {
-        citation = V1.Citation.fromScratch();
-        source = citation.toSource();
-        fs.writeFileSync(filename, source, {mode: 384});  // -rw------- permissions
+        citation = V1.citationFromScratch();
+        storeCitation(filename, citation);
     }
     return citation;
 }
 
 function storeCitation(filename, citation) {
-    var source = citation.toSource();
+    var document = new bali.Document(undefined, citation);
+    var source = document.toSource();
     fs.writeFileSync(filename, source, {mode: 384});  // -rw------- permissions
 }

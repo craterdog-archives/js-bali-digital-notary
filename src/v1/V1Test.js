@@ -67,10 +67,9 @@ exports.notaryKey = function(tag, testDirectory) {
                 throw new Error('NOTARY: The tag for the test private key is incorrect: ' + tag);
             }
             currentVersion = document.getValue('$version');
-            var certificateReference = document.getValue('$citation');
-            certificateCitation = V1.Citation.fromReference(certificateReference);
             publicKey = document.getValue('$publicKey').getBuffer();
             privateKey = document.getValue('$privateKey').getBuffer();
+            certificateCitation = document.getValue('$citation');
         }
 
         // check for an existing notary certificate file
@@ -112,16 +111,16 @@ exports.notaryKey = function(tag, testDirectory) {
                 indentation + '    $protocol: %protocol\n' +
                 indentation + '    $tag: %tag\n' +
                 indentation + '    $version: %version\n' +
-                indentation + '    $citation: %citation\n' +
                 indentation + '    $publicKey: %publicKey\n' +
                 indentation + '    $privateKey: %privateKey\n' +
+                indentation + '    $citation: %citation\n' +
                 indentation + ']\n';
             source = source.replace(/%protocol/, V1.PROTOCOL);
             source = source.replace(/%tag/, tag);
             source = source.replace(/%version/, currentVersion);
-            source = source.replace(/%citation/, certificateCitation.toReference());
             source = source.replace(/%publicKey/, new bali.Binary(publicKey).toSource(indentation + '    '));
             source = source.replace(/%privateKey/, new bali.Binary(privateKey).toSource(indentation + '    '));
+            source = source.replace(/%citation/, certificateCitation.toSource(indentation + '    '));
             return source;
         },
 
@@ -179,15 +178,16 @@ exports.notaryKey = function(tag, testDirectory) {
 
             if (isRegeneration) {
                 // sign the certificate with the old private key
-                var previousReference = certificateCitation.toReference();
-                source = '' + previousReference + '\n' + source + '\n' + previousReference;
+                var previousReference = V1.referenceFromCitation(certificateCitation).toSource();
+                source = previousReference + '\n' + source + '\n' + previousReference;
                 source += ' ' + this.sign(source);
             }
 
             // sign the certificate with the new private key
             privateKey = curve.getPrivateKey();
-            source += '\n' + V1.cite(tag, currentVersion).toReference();  // no source since it is self-signed
-            source += ' ' + this.sign(source) + '\n';
+            var newCitation = V1.cite(tag, currentVersion);  // no source since it is self-signed
+            var newReference = V1.referenceFromCitation(newCitation).toSource();
+            source += '\n' + newReference + ' ' + this.sign(source) + '\n';
 
             // generate a citation for the new certificate
             notaryCertificate = bali.parser.parseDocument(source);

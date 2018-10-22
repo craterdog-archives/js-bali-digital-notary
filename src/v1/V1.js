@@ -64,85 +64,63 @@ function cite(tag, version, document) {
     if (document) {
         encodedDigest = digest(document);
     }
-    var citation = new Citation(exports.PROTOCOL, tag, version, encodedDigest);
+    var citation = new bali.Catalog();
+    citation.setValue('$protocol', exports.PROTOCOL);
+    citation.setValue('$tag', tag);
+    citation.setValue('$version', version);
+    citation.setValue('$digest', encodedDigest);
     return citation;
 }
 exports.cite = cite;
 
 
-function Citation(protocol, tag, version, digest) {
-    this.protocol = protocol;
-    this.tag = tag;
-    this.version = version;
-    this.digest = digest;
-    return this;
-}
-Citation.prototype.constructor = Citation;
-exports.Citation = Citation;
-
-
-Citation.fromScratch = function() {
+function citationFromScratch() {
     var protocol = exports.PROTOCOL;
     var tag = new bali.Tag();
     var version = new bali.Version('v1');
     var digest = bali.Template.NONE;
-    var citation = new Citation(protocol, tag, version, digest);
+    var citation = new bali.Catalog();
+    citation.setValue('$protocol', protocol);
+    citation.setValue('$tag', tag);
+    citation.setValue('$version', version);
+    citation.setValue('$digest', digest);
     return citation;
-};
+}
+exports.citationFromScratch = citationFromScratch;
 
 
-Citation.fromSource = function(source) {
+function citationFromSource(source) {
     var document = bali.parser.parseDocument(source);
     var protocol = document.getValue('$protocol');
     var tag = document.getValue('$tag');
     var version = document.getValue('$version');
     var digest = document.getValue('$digest');
-    var citation = new Citation(protocol, tag, version, digest);
+    var citation = new bali.Catalog();
+    citation.setValue('$protocol', protocol);
+    citation.setValue('$tag', tag);
+    citation.setValue('$version', version);
+    citation.setValue('$digest', digest);
     return citation;
-};
+}
+exports.citationFromSource = citationFromSource;
 
 
-Citation.fromReference = function(reference) {
+function citationFromReference(reference) {
     reference = reference.toSource();
     var source = reference.slice(6, -1);  // remove '<bali:' and '>' wrapper
-    var catalog = bali.parser.parseComponent(source);
-    var protocol = catalog.getValue('$protocol');
-    var tag = catalog.getValue('$tag');
-    var version = catalog.getValue('$version');
-    var digest = catalog.getValue('$digest');
-    var citation = new Citation(protocol, tag, version, digest);
+    var citation = bali.parser.parseComponent(source);
     return citation;
-};
+}
+exports.citationFromReference = citationFromReference;
 
 
-Citation.prototype.toString = function() {
-    var source = this.toSource();
-    return source;
-};
-
-
-Citation.prototype.toSource = function(indentation) {
-    indentation = indentation ? indentation : '';
-    var source =  '[\n' +
-        indentation + '    $protocol: %protocol\n' +
-        indentation + '    $tag: %tag\n' +
-        indentation + '    $version: %version\n' +
-        indentation + '    $digest: %digest\n' +
-        indentation + ']\n';
-    source = source.replace(/%protocol/, this.protocol);
-    source = source.replace(/%tag/, this.tag);
-    source = source.replace(/%version/, this.version);
-    source = source.replace(/%digest/, this.digest);
-    return source;
-};
-
-
-Citation.prototype.toReference = function() {
+function referenceFromCitation(citation) {
     var reference = '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$digest:%digest]>';
-    reference = reference.replace(/%protocol/, this.protocol);
-    reference = reference.replace(/%tag/, this.tag);
-    reference = reference.replace(/%version/, this.version);
-    reference = reference.replace(/%digest/, this.digest.toSource().replace(/\s+/g, ''));
+    reference = reference.replace(/%protocol/, citation.getValue('$protocol'));
+    reference = reference.replace(/%tag/, citation.getValue('$tag'));
+    reference = reference.replace(/%version/, citation.getValue('$version'));
+    reference = reference.replace(/%digest/, citation.getValue('$digest').toSource().replace(/\s+/g, ''));
     reference = new bali.Reference(reference);
     return reference;
-};
+}
+exports.referenceFromCitation = referenceFromCitation;
