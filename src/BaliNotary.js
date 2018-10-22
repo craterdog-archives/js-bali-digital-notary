@@ -87,8 +87,7 @@ exports.notaryKey = function(testDirectory) {
             document.addNotarySeal(seal);
 
             // generate a citation to the notarized document
-            source = bali.formatter.formatComponent(document);  // get updated source
-            var citation = V1.cite(tag, version, source);
+            var citation = V1.cite(tag, version, document);
 
             return citation;
         },
@@ -96,10 +95,10 @@ exports.notaryKey = function(testDirectory) {
         documentMatches: function(reference, document) {
             var citation = V1.Citation.fromReference(reference);
             var protocol = citation.protocol;
-            switch(protocol) {
+            switch(protocol.toSource()) {
                 case V1.PROTOCOL:
                     var digest = V1.digest(bali.formatter.formatComponent(document));
-                    return citation.digest === digest;
+                    return citation.digest.equalTo(digest);
                 default:
                     throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
             }
@@ -107,8 +106,8 @@ exports.notaryKey = function(testDirectory) {
 
         documentIsValid: function(certificate, document) {
             // check to see if the document's seal is valid
-            var protocol = certificate.getString('$protocol');
-            switch(protocol) {
+            var protocol = certificate.getValue('$protocol');
+            switch(protocol.toSource()) {
                 case V1.PROTOCOL:
                     // strip off the last seal from the document
                     var seal = document.getLastSeal();
@@ -121,8 +120,8 @@ exports.notaryKey = function(testDirectory) {
                     source += certificateCitation;
 
                     // verify the digital signature using the public key from the notary certificate
-                    var publicKey = certificate.getString('$publicKey');
-                    var digitalSignature = seal.digitalSignature.toString();
+                    var publicKey = certificate.getValue('$publicKey');
+                    var digitalSignature = seal.digitalSignature;
                     var isValid = V1Public.verify(publicKey, source, digitalSignature);
                     return isValid;
                 default:
@@ -131,9 +130,9 @@ exports.notaryKey = function(testDirectory) {
         },
 
         encryptMessage: function(certificate, message) {
-            var protocol = certificate.getString('$protocol');
-            var publicKey = certificate.getString('$publicKey');
-            switch(protocol) {
+            var protocol = certificate.getValue('$protocol');
+            var publicKey = certificate.getValue('$publicKey');
+            switch(protocol.toSource()) {
                 case V1.PROTOCOL:
                     var aem = V1Public.encrypt(publicKey, message);
                     return aem;

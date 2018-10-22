@@ -13,8 +13,8 @@
  * This module defines a library of constants and functions that are needed by the version
  * one (v1) security protocol implementation for the Bali Cloud Environment™.
  */
-var bali = require('bali-document-notation');
 var crypto = require('crypto');
+var bali = require('bali-document-notation');
 
 
 // ALGORITHMS AND PROTOCOLS
@@ -34,13 +34,14 @@ exports.CIPHER = 'aes-256-gcm';
  * for the same message.
  * 
  * @param {String} message The message to be digested.
- * @returns {String} A base 32 encoded digital digest of the message.
+ * @returns {Binary} A base 32 encoded digital digest of the message.
  */
 function digest(message) {
     var hasher = crypto.createHash(exports.DIGEST);
     hasher.update(message);
     var digest = hasher.digest();
-    var encodedDigest = "'" + bali.codex.base32Encode(digest).replace(/\s+/g, '') + "'";
+    var encodedDigest = "'" + bali.codex.base32Encode(digest) + "'";
+    encodedDigest = new bali.Binary(encodedDigest);
     return encodedDigest;
 }
 exports.digest = digest;
@@ -53,63 +54,27 @@ exports.digest = digest;
  * to retrieve the document from the Bali Cloud Environment™ and verify that the retrieved
  * document has not be modified since it was cited.
  * 
- * @param {String} tag The unique tag for the document.
- * @param {String} version The current version of the document.
- * @param {String} document The document to be cited.
- * @returns {String} A Bali reference citation for the document.
+ * @param {Tag} tag The unique tag for the document.
+ * @param {Version} version The current version of the document.
+ * @param {Document} document The document to be cited.
+ * @returns {Reference} A Bali reference citation for the document.
  */
 function cite(tag, version, document) {
-    var encodedDigest = 'none';
+    var encodedDigest = bali.Template.NONE;
     if (document) {
-        encodedDigest = digest(document);
+        encodedDigest = digest(document.toSource());
     }
-    var citation = '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$digest:%digest]>';
-    citation = citation.replace(/%protocol/, exports.PROTOCOL);
-    citation = citation.replace(/%tag/, tag);
-    citation = citation.replace(/%version/, version);
-    citation = citation.replace(/%digest/, encodedDigest);
-    return citation;
+    var citation = new Citation(exports.PROTOCOL, tag, version, encodedDigest);
+    return citation.toReference();
 }
 exports.cite = cite;
-
-
-/**
- * This function converts a binary buffer into a base 32 encoded Bali binary string.
- * 
- * @param {Buffer} buffer A binary buffer.
- * @param {String} indentation A string of spaces to be used as additional indentation
- * for each line within an encoded string that is longer than 60 characters long.
- * @returns {String} A base 32 encoded Bali binary string representing the bytes from
- * the buffer.
- */
-function bufferToEncoded(buffer, indentation) {
-    if (!indentation) indentation = '';
-    var base32 = bali.codex.base32Encode(buffer, indentation);
-    var encoded = "'" + base32 + indentation + "'";  // add in the "'"s
-    return encoded;
-}
-exports.bufferToEncoded = bufferToEncoded;
-
-
-/**
- * This function converts a base 32 encoded Bali binary string into a binary buffer.
- * 
- * @param {String} encoded The base 32 encoded Bali binary string.
- * @returns {Buffer} A binary buffer containing the bytes that were encoded in the string.
- */
-function encodedToBuffer(encoded) {
-    var base32 = encoded.slice(1, -1);  // remove the "'"s
-    var buffer = bali.codex.base32Decode(base32);
-    return buffer;
-}
-exports.encodedToBuffer = encodedToBuffer;
 
 
 function Citation(protocol, tag, version, digest) {
     this.protocol = protocol;
     this.tag = tag;
     this.version = version;
-    this.digest = digest.replace(/\s/g, '');
+    this.digest = digest;
     return this;
 }
 Citation.prototype.constructor = Citation;
@@ -118,9 +83,9 @@ exports.Citation = Citation;
 
 Citation.fromScratch = function() {
     var protocol = exports.PROTOCOL;
-    var tag = bali.codex.randomTag();
-    var version = 'v1';
-    var digest = 'none';
+    var tag = new bali.Tag();
+    var version = new bali.Version('v1');
+    var digest = bali.Template.NONE;
     var citation = new Citation(protocol, tag, version, digest);
     return citation;
 };
@@ -128,10 +93,10 @@ Citation.fromScratch = function() {
 
 Citation.fromSource = function(source) {
     var document = bali.parser.parseDocument(source);
-    var protocol = document.getString('$protocol');
-    var tag = document.getString('$tag');
-    var version = document.getString('$version');
-    var digest = document.getString('$digest').replace(/\s/g, '');
+    var protocol = document.getValue('$protocol');
+    var tag = document.getValue('$tag');
+    var version = document.getValue('$version');
+    var digest = document.getValue('$digest');
     var citation = new Citation(protocol, tag, version, digest);
     return citation;
 };
@@ -141,10 +106,10 @@ Citation.fromReference = function(reference) {
     reference = reference.toString();
     var source = reference.slice(6, -1);  // remove '<bali:' and '>' wrapper
     var catalog = bali.parser.parseComponent(source);
-    var protocol = catalog.getString('$protocol');
-    var tag = catalog.getString('$tag');
-    var version = catalog.getString('$version');
-    var digest = catalog.getString('$digest');
+    var protocol = catalog.getValue('$protocol');
+    var tag = catalog.getValue('$tag');
+    var version = catalog.getValue('$version');
+    var digest = catalog.getValue('$digest');
     var citation = new Citation(protocol, tag, version, digest);
     return citation;
 };
@@ -153,16 +118,6 @@ Citation.fromReference = function(reference) {
 Citation.prototype.toString = function() {
     var source = this.toSource();
     return source;
-};
-
-
-Citation.prototype.toReference = function() {
-    var reference = '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$digest:%digest]>';
-    reference = reference.replace(/%protocol/, this.protocol);
-    reference = reference.replace(/%tag/, this.tag);
-    reference = reference.replace(/%version/, this.version);
-    reference = reference.replace(/%digest/, this.digest);
-    return reference;
 };
 
 
@@ -179,4 +134,15 @@ Citation.prototype.toSource = function(indentation) {
     source = source.replace(/%version/, this.version);
     source = source.replace(/%digest/, this.digest);
     return source;
+};
+
+
+Citation.prototype.toReference = function() {
+    var reference = '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$digest:%digest]>';
+    reference = reference.replace(/%protocol/, this.protocol);
+    reference = reference.replace(/%tag/, this.tag);
+    reference = reference.replace(/%version/, this.version);
+    reference = reference.replace(/%digest/, this.digest.toSource().replace(/\s+/g, ''));
+    reference = new bali.Reference(reference);
+    return reference;
 };

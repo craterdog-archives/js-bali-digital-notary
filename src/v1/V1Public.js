@@ -16,6 +16,7 @@
  */
 var crypto = require('crypto');
 var ec_pem = require('ec-pem');
+var bali = require('bali-document-notation');
 var V1 = require('./V1');
 
 
@@ -24,14 +25,14 @@ var V1 = require('./V1');
  * or not the specified base 32 encoded digital signature was generated using the
  * corresponding private key on the specified message.
  * 
- * @param {String} encodedKey The base 32 encoded public key.
+ * @param {Binary} publicKey The base 32 encoded public key.
  * @param {String} message The digitally signed message.
- * @param {String} encodedSignature The digital signature generated using the private key.
+ * @param {Binary} signature The digital signature generated using the private key.
  * @returns {Boolean} Whether or not the digital signature is valid.
  */
-function verify(encodedKey, message, encodedSignature) {
-    var signature = V1.encodedToBuffer(encodedSignature);
-    var publicKey = V1.encodedToBuffer(encodedKey);
+function verify(publicKey, message, signature) {
+    signature = signature.getBuffer();
+    publicKey = publicKey.getBuffer();
     var curve = crypto.createECDH(V1.CURVE);
     curve.setPublicKey(publicKey);
     var pem = ec_pem(curve, V1.CURVE);
@@ -47,12 +48,12 @@ exports.verify = verify;
  * plaintext message. The result is an authenticated encrypted message (AEM) object that
  * can only be decrypted using the associated private key.
  * 
- * @param {String} encodedKey The base 32 encoded public key to use for encryption.
+ * @param {Binary} publicKey The base 32 encoded public key to use for encryption.
  * @param {String} message The plaintext message to be encrypted.
  * @returns {Object} An authenticated encrypted message object.
  */
-function encrypt(encodedKey, message) {
-    var publicKey = V1.encodedToBuffer(encodedKey);
+function encrypt(publicKey, message) {
+    publicKey = publicKey.getBuffer();
     // generate and encrypt a 32-byte symmetric key
     var curve = crypto.createECDH(V1.CURVE);
     curve.generateKeys();
@@ -105,10 +106,10 @@ function encrypt(encodedKey, message) {
                 indentation + '    $ciphertext: %ciphertext\n' +
                 indentation + ']\n';
             source = source.replace(/%protocol/, this.protocol);
-            source = source.replace(/%iv/, V1.bufferToEncoded(this.iv, indentation + '    '));
-            source = source.replace(/%auth/, V1.bufferToEncoded(this.auth, indentation + '    '));
-            source = source.replace(/%seed/, V1.bufferToEncoded(this.seed, indentation + '    '));
-            source = source.replace(/%ciphertext/, V1.bufferToEncoded(this.ciphertext, indentation + '    '));
+            source = source.replace(/%iv/, new bali.Binary(this.iv).toSource(indentation + '    '));
+            source = source.replace(/%auth/, new bali.Binary(this.auth).toSource(indentation + '    '));
+            source = source.replace(/%seed/, new bali.Binary(this.seed).toSource(indentation + '    '));
+            source = source.replace(/%ciphertext/, new bali.Binary(this.ciphertext).toSource(indentation + '    '));
             return source;
         }
     };

@@ -34,7 +34,7 @@ var V1 = require('./V1');
  * (notary key) associated with the specified unique tag. The internal attributes for the
  * notary key are hidden from the code that is using the notary key.
  * 
- * @param {String} tag The unique tag for the software security module.
+ * @param {Tag} tag The unique tag for the software security module.
  * @param {String} testDirectory An optional directory to use for local testing.
  * @returns {Object} A proxy to the software security module managing the private key.
  */
@@ -59,17 +59,18 @@ exports.notaryKey = function(tag, testDirectory) {
             // read in the notary key information
             source = fs.readFileSync(keyFilename).toString();
             var document = bali.parser.parseDocument(source);
-            var protocol = document.getString('$protocol');
-            if (V1.PROTOCOL !== protocol) {
+            var protocol = document.getValue('$protocol');
+            if (!V1.PROTOCOL.equalTo(protocol)) {
                 throw new Error('NOTARY: The protocol for the test private key is not supported: ' + protocol);
             }
-            if (tag !== document.getString('$tag')) {
+            if (tag.equalTo(document.getValue('$tag'))) {
                 throw new Error('NOTARY: The tag for the test private key is incorrect: ' + tag);
             }
-            currentVersion = document.getString('$version');
-            certificateCitation = V1.Citation.fromReference(document.getString('$citation'));
-            publicKey = V1.encodedToBuffer(document.getString('$publicKey'));
-            privateKey = V1.encodedToBuffer(document.getString('$privateKey'));
+            currentVersion = document.getValue('$version');
+            var certificateReference = document.getValue('$citation');
+            certificateCitation = V1.Citation.fromReference(certificateReference);
+            publicKey = document.getValue('$publicKey').getBuffer();
+            privateKey = document.getValue('$privateKey').getBuffer();
         }
 
         // check for an existing notary certificate file
@@ -119,15 +120,15 @@ exports.notaryKey = function(tag, testDirectory) {
             source = source.replace(/%tag/, tag);
             source = source.replace(/%version/, currentVersion);
             source = source.replace(/%citation/, certificateCitation.toReference());
-            source = source.replace(/%publicKey/, V1.bufferToEncoded(publicKey, indentation + '    '));
-            source = source.replace(/%privateKey/, V1.bufferToEncoded(privateKey, indentation + '    '));
+            source = source.replace(/%publicKey/, new bali.Binary(publicKey).toSource(indentation + '    '));
+            source = source.replace(/%privateKey/, new bali.Binary(privateKey).toSource(indentation + '    '));
             return source;
         },
 
         /**
          * This method returns the notary certificate associated with this notary key.
          * 
-         * @returns {String} The notary certificate associated with this notary key.
+         * @returns {Document} The notary certificate associated with this notary key.
          */
         certificate: function() {
             return notaryCertificate;
@@ -159,7 +160,8 @@ exports.notaryKey = function(tag, testDirectory) {
             // generate a new public-private key pair
             var curve = crypto.createECDH(V1.CURVE);
             curve.generateKeys();
-            currentVersion = currentVersion ? 'v' + (Number(currentVersion.slice(1)) + 1) : 'v1';
+            currentVersion = currentVersion ? 'v' + (Number(currentVersion.toSource().slice(1)) + 1) : 'v1';
+            currentVersion = new bali.Version(currentVersion);
             publicKey = curve.getPublicKey();
 
             // generate the new public notary certificate
@@ -173,12 +175,12 @@ exports.notaryKey = function(tag, testDirectory) {
             source = source.replace(/%protocol/, V1.PROTOCOL);
             source = source.replace(/%tag/, tag);
             source = source.replace(/%version/, currentVersion);
-            source = source.replace(/%publicKey/, V1.bufferToEncoded(publicKey, '    '));
+            source = source.replace(/%publicKey/, new bali.Binary(publicKey).toSource('    '));
 
             if (isRegeneration) {
                 // sign the certificate with the old private key
                 var previousReference = certificateCitation.toReference();
-                source = previousReference + '\n' + source + '\n' + previousReference;
+                source = '' + previousReference + '\n' + source + '\n' + previousReference;
                 source += ' ' + this.sign(source);
             }
 
@@ -189,7 +191,8 @@ exports.notaryKey = function(tag, testDirectory) {
 
             // generate a citation for the new certificate
             notaryCertificate = bali.parser.parseDocument(source);
-            certificateCitation = V1.Citation.fromReference(V1.cite(tag, currentVersion, source));
+            var certificateReference = V1.cite(tag, currentVersion, notaryCertificate);
+            certificateCitation = V1.Citation.fromReference(certificateReference);
 
             // save the state of this notary key and certificate in the local configuration
             try {
@@ -226,22 +229,22 @@ exports.notaryKey = function(tag, testDirectory) {
         },
 
         /**
-         * This method generates a digital signature of the specified document using the notary
+         * This method generates a digital signature of the specified message using the notary
          * key. The resulting digital signature is base 32 encoded and may be verified using the
          * V1Public.verify() method and the corresponding public key.
          * 
-         * @param {String} document The document to be digitally signed.
-         * @returns {String} A base 32 encoded digital signature of the document.
+         * @param {String} message The message to be digitally signed.
+         * @returns {Binary} A base 32 encoded digital signature of the message.
          */
-        sign: function(document) {
+        sign: function(message) {
             var curve = crypto.createECDH(V1.CURVE);
             curve.setPrivateKey(privateKey);
             var pem = ec_pem(curve, V1.CURVE);
             var signer = crypto.createSign(V1.SIGNATURE);
-            signer.update(document);
+            signer.update(message);
             var signature = signer.sign(pem.encodePrivateKey());
-            var encodedSignature = V1.bufferToEncoded(signature);
-            return encodedSignature;
+            var binary = new bali.Binary(signature);
+            return binary;
         },
 
         /**
