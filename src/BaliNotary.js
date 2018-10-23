@@ -113,8 +113,8 @@ exports.notaryKey = function(testDirectory) {
                 // calculate the digest of the stripped document + certificate citation
                 var source = stripped.toSource();
                 // NOTE: the certificate citation must be included in the signed source!
-                var certificateCitation = seal.certificateCitation.toString();
-                source += certificateCitation;
+                var certificateReference = seal.certificateReference.toString();
+                source += certificateReference;
 
                 // verify the digital signature using the public key from the notary certificate
                 var publicKey = certificate.getValue('$publicKey');
