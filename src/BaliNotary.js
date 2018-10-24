@@ -44,12 +44,12 @@ exports.notaryKey = function(testDirectory) {
     var certificateCitation = loadCitation(filename);
 
     // retrieve the notary key for the account
-    var tag = certificateCitation.getValue('$tag');
+    var notaryTag = certificateCitation.getValue('$tag');
     var notaryKey;
     if (testDirectory) {
-        notaryKey = V1Test.notaryKey(tag, testDirectory);
+        notaryKey = V1Test.notaryKey(notaryTag, testDirectory);
     } else {
-        notaryKey = V1Private.notaryKey(tag);
+        notaryKey = V1Private.notaryKey(notaryTag);
     }
 
     return {
@@ -73,7 +73,7 @@ exports.notaryKey = function(testDirectory) {
             // prepare the document source for signing
             var certificateCitation = notaryKey.citation();
             if (!certificateCitation) {
-                throw new Error('NOTARY: The following notary key has not yet been generated: ' + tag);
+                throw new Error('NOTARY: The following notary key has not yet been generated: ' + notaryTag);
             }
             var certificateReference = V1.referenceFromCitation(certificateCitation);
             var source = bali.formatter.formatComponent(document);
