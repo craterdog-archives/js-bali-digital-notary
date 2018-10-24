@@ -24,7 +24,7 @@
  * @param {String} tag A unique tag identifying a specifice hardware security module.
  * @returns {Object} A proxy object to the hardware security module managing the private key.
  */
-exports.notaryKey = function(tag) {
+exports.securityModule = function(tag) {
     
     return {
 

@@ -38,7 +38,7 @@ var V1 = require('./V1');
  * @param {String} testDirectory An optional directory to use for local testing.
  * @returns {Object} A proxy to the software security module managing the private key.
  */
-exports.notaryKey = function(tag, testDirectory) {
+exports.securityModule = function(tag, testDirectory) {
     
     // read in the notary key attributes
     var currentVersion;     // the version of the notary key
@@ -106,14 +106,14 @@ exports.notaryKey = function(tag, testDirectory) {
          * @returns {String} A canonical Bali source code string for the notary key.
          */
         toSource: function(indentation) {
-            var notaryKey = new bali.Catalog();
-            notaryKey.setValue('$protocol', V1.PROTOCOL);
-            notaryKey.setValue('$tag', tag);
-            notaryKey.setValue('$version', currentVersion);
-            notaryKey.setValue('$privateKey', new bali.Binary(privateKey));
-            notaryKey.setValue('$publicKey', new bali.Binary(publicKey));
-            notaryKey.setValue('$citation', certificateCitation);
-            return notaryKey.toSource(indentation);
+            var securityModule = new bali.Catalog();
+            securityModule.setValue('$protocol', V1.PROTOCOL);
+            securityModule.setValue('$tag', tag);
+            securityModule.setValue('$version', currentVersion);
+            securityModule.setValue('$privateKey', new bali.Binary(privateKey));
+            securityModule.setValue('$publicKey', new bali.Binary(publicKey));
+            securityModule.setValue('$citation', certificateCitation);
+            return securityModule.toSource(indentation);
         },
 
         /**

@@ -45,33 +45,41 @@ exports.notaryKey = function(testDirectory) {
 
     // retrieve the notary key for the account
     var notaryTag = certificateCitation.getValue('$tag');
-    var notaryKey;
+    var securityModule;
     if (testDirectory) {
-        notaryKey = V1Test.notaryKey(notaryTag, testDirectory);
+        securityModule = V1Test.securityModule(notaryTag, testDirectory);
     } else {
-        notaryKey = V1Private.notaryKey(notaryTag);
+        securityModule = V1Private.securityModule(notaryTag);
     }
 
     return {
 
-        getCertificate: function() {
-            return notaryKey.certificate();
+        getNotaryCertificate: function() {
+            return securityModule.certificate();
         },
 
-        getCitation: function() {
-            return notaryKey.citation();
+        getNotaryCitation: function() {
+            return securityModule.citation();
+        },
+
+        extractCitation: function(reference) {
+            return V1.citationFromReference(reference);
+        },
+
+        createCitation: function(tag, version, digest) {
+            return V1.citationFromAttributes(tag, version, digest);
         },
 
         generateKeys: function() {
-            var notaryCertificate = notaryKey.generate();
-            var certificateCitation = notaryKey.citation();
+            var notaryCertificate = securityModule.generate();
+            var certificateCitation = securityModule.citation();
             storeCitation(filename, certificateCitation);
             return notaryCertificate;
         },
 
         notarizeDocument: function(tag, version, document) {
             // prepare the document source for signing
-            var certificateCitation = notaryKey.citation();
+            var certificateCitation = securityModule.citation();
             if (!certificateCitation) {
                 throw new Error('NOTARY: The following notary key has not yet been generated: ' + notaryTag);
             }
@@ -80,7 +88,7 @@ exports.notaryKey = function(testDirectory) {
             source += certificateReference;  // NOTE: the reference must be included in the signed source!
 
             // generate the digital signature
-            var digitalSignature = notaryKey.sign(source);
+            var digitalSignature = securityModule.sign(source);
 
             // append the notary seal to the document (modifies it in place)
             var seal = new bali.Seal(certificateReference, digitalSignature);
@@ -138,12 +146,12 @@ exports.notaryKey = function(testDirectory) {
         },
 
         decryptMessage: function(aem) {
-            if (!notaryKey.citation()) {
+            if (!securityModule.citation()) {
                 throw new Error('NOTARY: The notary key has not yet been generated.');
             }
             var protocol = aem.getValue('$protocol');
             if (protocol.equalTo(V1.PROTOCOL)) {
-                var message = notaryKey.decrypt(aem);
+                var message = securityModule.decrypt(aem);
                 return message;
             } else {
                 throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);

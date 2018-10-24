@@ -17,12 +17,13 @@ var V1 = require('../src/v1/V1');
 describe('Bali Digital Notary™', function() {
 
     var notaryCertificate = notary.generateKeys();
-    var certificateCitation = notary.getCitation();
+    var certificateCitation = notary.getNotaryCitation();
     var source = '[$foo: "bar"]\n';
 
     describe('Test Citations', function() {
 
         it('should validate the citation for the certificate', function() {
+            expect(notaryCertificate.equalTo(notary.getNotaryCertificate())).to.equal(true);
             var protocol = notaryCertificate.getValue('$protocol');
             expect(protocol.toSource()).to.equal('v1');
             var isValid = notary.documentMatches(certificateCitation, notaryCertificate);

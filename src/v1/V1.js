@@ -58,15 +58,33 @@ exports.digest = function(message) {
  * @returns {Reference} A Bali reference citation for the document.
  */
 exports.cite = function(tag, version, document) {
-    var encodedDigest = bali.Template.NONE;
+    var digest = bali.Template.NONE;
     if (document) {
-        encodedDigest = exports.digest(document);
+        digest = exports.digest(document);
     }
+    var citation = exports.citationFromAttributes(tag, version, digest);
+    return citation;
+};
+
+
+/**
+ * This function creates a new document citation using the specified attributes. If no
+ * digest is specified, the digest value is set to Template.NONE.
+ * 
+ * @param {Tag} tag The unique tag for the cited document.
+ * @param {Version} version The version of the cited document, default is 'v1'.
+ * @param {Binary} digest The (optional) base 32 encoded digest of the cited document.
+ * @returns {Catalog} A new document citation.
+ */
+exports.citationFromAttributes = function(tag, version, digest) {
+    var protocol = exports.PROTOCOL;
+    version = version || new bali.Version('v1');
+    digest = digest || bali.Template.NONE;
     var citation = new bali.Catalog();
-    citation.setValue('$protocol', exports.PROTOCOL);
+    citation.setValue('$protocol', protocol);
     citation.setValue('$tag', tag);
     citation.setValue('$version', version);
-    citation.setValue('$digest', encodedDigest);
+    citation.setValue('$digest', digest);
     return citation;
 };
 
@@ -78,15 +96,10 @@ exports.cite = function(tag, version, document) {
  * @returns {Catalog} A new document citation.
  */
 exports.citationFromScratch = function() {
-    var protocol = exports.PROTOCOL;
     var tag = new bali.Tag();
     var version = new bali.Version('v1');
     var digest = bali.Template.NONE;
-    var citation = new bali.Catalog();
-    citation.setValue('$protocol', protocol);
-    citation.setValue('$tag', tag);
-    citation.setValue('$version', version);
-    citation.setValue('$digest', digest);
+    var citation = exports.citationFromAttributes(tag, version, digest);
     return citation;
 };
 
@@ -100,14 +113,13 @@ exports.citationFromScratch = function() {
 exports.citationFromSource = function(source) {
     var document = bali.parser.parseDocument(source);
     var protocol = document.getValue('$protocol');
+    if (!exports.PROTOCOL.equalTo(protocol)) {
+        throw new Error('NOTARY: The protocol for the citation is not supported: ' + protocol);
+    }
     var tag = document.getValue('$tag');
     var version = document.getValue('$version');
     var digest = document.getValue('$digest');
-    var citation = new bali.Catalog();
-    citation.setValue('$protocol', protocol);
-    citation.setValue('$tag', tag);
-    citation.setValue('$version', version);
-    citation.setValue('$digest', digest);
+    var citation = exports.citationFromAttributes(tag, version, digest);
     return citation;
 };
 
