@@ -70,6 +70,10 @@ exports.notaryKey = function(testDirectory) {
             return V1.citationFromAttributes(tag, version, digest);
         },
 
+        createReference: function(citation) {
+            return V1.referenceFromCitation(citation);
+        },
+
         generateKeys: function() {
             var notaryCertificate = securityModule.generate();
             var certificateCitation = securityModule.citation();
