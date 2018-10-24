@@ -169,9 +169,10 @@ exports.securityModule = function(tag, testDirectory) {
 
             // sign the certificate with the new private key
             privateKey = curve.getPrivateKey();
-            var newCitation = V1.cite(tag, currentVersion);  // no source since it is self-signed
+            var newCitation = V1.citationFromAttributes(tag, currentVersion);  // no digest since it is self-referential
             var newReference = V1.referenceFromCitation(newCitation).toSource();
-            source += '\n' + newReference + ' ' + this.sign(source) + '\n';
+            source += '\n' + newReference;
+            source += ' ' + this.sign(source) + '\n';
 
             // generate a citation for the new certificate
             certificateCitation = V1.cite(tag, currentVersion, source);

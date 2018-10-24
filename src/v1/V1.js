@@ -58,10 +58,7 @@ exports.digest = function(message) {
  * @returns {Reference} A Bali reference citation for the document.
  */
 exports.cite = function(tag, version, document) {
-    var digest = bali.Template.NONE;
-    if (document) {
-        digest = exports.digest(document);
-    }
+    var digest = exports.digest(document);
     var citation = exports.citationFromAttributes(tag, version, digest);
     return citation;
 };

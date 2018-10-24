@@ -77,7 +77,10 @@ exports.notaryKey = function(testDirectory) {
             return notaryCertificate;
         },
 
-        notarizeDocument: function(tag, version, document) {
+        notarizeDocument: function(citation, document) {
+            var tag = citation.getValue('$tag');
+            var version = citation.getValue('$version');
+
             // prepare the document source for signing
             var certificateCitation = securityModule.citation();
             if (!certificateCitation) {
@@ -118,11 +121,10 @@ exports.notaryKey = function(testDirectory) {
                 var seal = document.getLastSeal();
                 var stripped = document.unsealed();
 
-                // calculate the digest of the stripped document + certificate citation
+                // calculate the digest of the stripped document + certificate reference
                 var source = stripped.toSource();
-                // NOTE: the certificate citation must be included in the signed source!
-                var certificateReference = seal.certificateReference.toString();
-                source += certificateReference;
+                // NOTE: the certificate reference must be included in the signed source!
+                source += seal.certificateReference.toString();
 
                 // verify the digital signature using the public key from the notary certificate
                 var publicKey = certificate.getValue('$publicKey');
