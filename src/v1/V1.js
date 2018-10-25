@@ -75,6 +75,7 @@ exports.cite = function(tag, version, document) {
  */
 exports.citationFromAttributes = function(tag, version, digest) {
     var protocol = exports.PROTOCOL;
+    tag = tag || new bali.Tag();
     version = version || new bali.Version('v1');
     digest = digest || bali.Template.NONE;
     var citation = new bali.Catalog();
@@ -82,21 +83,6 @@ exports.citationFromAttributes = function(tag, version, digest) {
     citation.setValue('$tag', tag);
     citation.setValue('$version', version);
     citation.setValue('$digest', digest);
-    return citation;
-};
-
-
-/**
- * This function creates a new document citation with a new unique tag. The digest for
- * the citation is set to Template.NONE since there is no document yet to cite.
- * 
- * @returns {Catalog} A new document citation.
- */
-exports.citationFromScratch = function() {
-    var tag = new bali.Tag();
-    var version = new bali.Version('v1');
-    var digest = bali.Template.NONE;
-    var citation = exports.citationFromAttributes(tag, version, digest);
     return citation;
 };
 

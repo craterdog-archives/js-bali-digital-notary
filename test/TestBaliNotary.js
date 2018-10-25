@@ -35,10 +35,9 @@ describe('Bali Digital Notary™', function() {
     describe('Test Signing and Verification', function() {
 
         it('should digitally sign a document properly', function() {
-            var tag = new bali.Tag();
-            var version = new bali.Version('v2.3.4');
+            var documentCitation = notary.createCitation();
             var document = bali.parser.parseDocument(source);
-            var documentCitation = notary.notarizeDocument(tag, version, document);
+            documentCitation = notary.notarizeDocument(documentCitation, document);
             var isValid = notary.documentIsValid(notaryCertificate, document);
             expect(isValid).to.equal(true);
             var matches = notary.documentMatches(documentCitation, document);
@@ -61,16 +60,15 @@ describe('Bali Digital Notary™', function() {
     describe('Test Key Regeneration', function() {
 
         it('should regenerate a notary key properly', function() {
-            var tag = new bali.Tag();
-            var version = new bali.Version('v2.3.4');
+            var documentCitation = notary.createCitation();
             var document = bali.parser.parseDocument(source);
-            notary.notarizeDocument(tag, version, document);
+            documentCitation = notary.notarizeDocument(documentCitation, document);
 
             var newCertificate = notary.generateKeys();
             expect(notaryCertificate).to.exist;  // jshint ignore:line
 
             document = bali.parser.parseDocument(source);
-            var newDocumentCitation = notary.notarizeDocument(tag, version, document);
+            var newDocumentCitation = notary.notarizeDocument(documentCitation, document);
             isValid = notary.documentIsValid(notaryCertificate, document);
             expect(isValid).to.equal(false);
 

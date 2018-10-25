@@ -102,7 +102,7 @@ exports.notaryKey = function(testDirectory) {
             document.addNotarySeal(seal);
 
             // generate a citation to the notarized document
-            var citation = V1.cite(tag, version, document);
+            citation = V1.cite(tag, version, document);
 
             return citation;
         },
@@ -178,7 +178,7 @@ function loadCitation(filename) {
         var document = bali.parser.parseDocument(source);
         citation = document.documentContent;
     } else {
-        citation = V1.citationFromScratch();
+        citation = V1.citationFromAttributes();
         storeCitation(filename, citation);
     }
     return citation;
