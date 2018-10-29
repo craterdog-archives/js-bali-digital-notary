@@ -14,7 +14,7 @@
  * one (v1) security protocol implementation for the Bali Cloud Environment™.
  */
 var crypto = require('crypto');
-var bali = require('bali-document-notation');
+var bali = require('bali-document-framework');
 
 
 // ALGORITHMS FOR THIS VERSION OF THE PROTOCOL

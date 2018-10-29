@@ -25,7 +25,7 @@ var fs = require('fs');
 var config = require('os').homedir() + '/.bali/';
 var crypto = require('crypto');
 var ec_pem = require('ec-pem');
-var bali = require('bali-document-notation');
+var bali = require('bali-document-framework');
 var V1 = require('./V1');
 
 

@@ -18,7 +18,7 @@
  */
 var fs = require('fs');
 var homeDirectory = require('os').homedir() + '/.bali/';
-var bali = require('bali-document-notation');
+var bali = require('bali-document-framework');
 var V1 = require('./v1/V1');
 var V1Public = require('./v1/V1Public');
 var V1Private = require('./v1/V1Private');  // proxy to a hardware security module
