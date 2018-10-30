@@ -11,8 +11,7 @@
 var mocha = require('mocha');
 var expect = require('chai').expect;
 var bali = require('bali-document-framework');
-var notary = require('../src/BaliNotary').notaryKey('test/config/');
-var V1 = require('../src/v1/V1');
+var notary = require('../src/BaliNotary').api('test/config/');
 
 describe('Bali Digital Notary™', function() {
 

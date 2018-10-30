@@ -26,7 +26,7 @@ var config = require('os').homedir() + '/.bali/';
 var crypto = require('crypto');
 var ec_pem = require('ec-pem');
 var bali = require('bali-document-framework');
-var V1 = require('./V1');
+var V1Public = require('./V1Public');
 
 
 /**
@@ -38,7 +38,7 @@ var V1 = require('./V1');
  * @param {String} testDirectory An optional directory to use for local testing.
  * @returns {Object} A proxy to the software security module managing the private key.
  */
-exports.securityModule = function(tag, testDirectory) {
+exports.api = function(tag, testDirectory) {
     
     // read in the notary key attributes
     var currentVersion;     // the version of the notary key
@@ -60,7 +60,7 @@ exports.securityModule = function(tag, testDirectory) {
             source = fs.readFileSync(keyFilename).toString();
             var document = bali.parser.parseDocument(source);
             var protocol = document.getValue('$protocol');
-            if (!V1.PROTOCOL.equalTo(protocol)) {
+            if (V1Public.PROTOCOL !== protocol.toString()) {
                 throw new Error('NOTARY: The protocol for the test private key is not supported: ' + protocol);
             }
             if (!tag.equalTo(document.getValue('$tag'))) {
@@ -107,7 +107,7 @@ exports.securityModule = function(tag, testDirectory) {
          */
         toSource: function(indentation) {
             var securityModule = new bali.Catalog();
-            securityModule.setValue('$protocol', V1.PROTOCOL);
+            securityModule.setValue('$protocol', new bali.Version(V1Public.PROTOCOL));
             securityModule.setValue('$tag', tag);
             securityModule.setValue('$version', currentVersion);
             securityModule.setValue('$privateKey', new bali.Binary(privateKey));
@@ -146,7 +146,7 @@ exports.securityModule = function(tag, testDirectory) {
             var isRegeneration = !!privateKey;
 
             // generate a new public-private key pair
-            var curve = crypto.createECDH(V1.CURVE);
+            var curve = crypto.createECDH(V1Public.CURVE);
             curve.generateKeys();
             currentVersion = currentVersion ? 'v' + (Number(currentVersion.toSource().slice(1)) + 1) : 'v1';
             currentVersion = new bali.Version(currentVersion);
@@ -154,7 +154,7 @@ exports.securityModule = function(tag, testDirectory) {
 
             // generate the new public notary certificate
             notaryCertificate = new bali.Catalog();
-            notaryCertificate.setValue('$protocol', V1.PROTOCOL);
+            notaryCertificate.setValue('$protocol', new bali.Version(V1Public.PROTOCOL));
             notaryCertificate.setValue('$tag', tag);
             notaryCertificate.setValue('$version', currentVersion);
             notaryCertificate.setValue('$publicKey', new bali.Binary(publicKey));
@@ -162,20 +162,20 @@ exports.securityModule = function(tag, testDirectory) {
             var source = notaryCertificate.toSource();
             if (isRegeneration) {
                 // sign the certificate with the old private key
-                var previousReference = V1.referenceFromCitation(certificateCitation).toSource();
+                var previousReference = V1Public.referenceFromCitation(certificateCitation).toSource();
                 source = previousReference + '\n' + source + '\n' + previousReference;
                 source += ' ' + this.sign(source);
             }
 
             // sign the certificate with the new private key
             privateKey = curve.getPrivateKey();
-            var newCitation = V1.citationFromAttributes(tag, currentVersion);  // no digest since it is self-referential
-            var newReference = V1.referenceFromCitation(newCitation).toSource();
+            var newCitation = V1Public.citationFromAttributes(tag, currentVersion);  // no digest since it is self-referential
+            var newReference = V1Public.referenceFromCitation(newCitation).toSource();
             source += '\n' + newReference;
             source += ' ' + this.sign(source) + '\n';
 
             // generate a citation for the new certificate
-            certificateCitation = V1.cite(tag, currentVersion, source);
+            certificateCitation = V1Public.cite(tag, currentVersion, source);
 
             // save the state of this notary key and certificate in the local configuration
             try {
@@ -222,10 +222,10 @@ exports.securityModule = function(tag, testDirectory) {
          * @returns {Binary} A base 32 encoded digital signature of the message.
          */
         sign: function(message) {
-            var curve = crypto.createECDH(V1.CURVE);
+            var curve = crypto.createECDH(V1Public.CURVE);
             curve.setPrivateKey(privateKey);
-            var pem = ec_pem(curve, V1.CURVE);
-            var signer = crypto.createSign(V1.SIGNATURE);
+            var pem = ec_pem(curve, V1Public.CURVE);
+            var signer = crypto.createSign(V1Public.SIGNATURE);
             signer.update(message);
             var signature = signer.sign(pem.encodePrivateKey());
             var binary = new bali.Binary(signature);
@@ -241,7 +241,7 @@ exports.securityModule = function(tag, testDirectory) {
          */
         decrypt: function(aem) {
             var protocol = aem.getValue('$protocol');
-            if (!V1.PROTOCOL.equalTo(protocol)) {
+            if (V1Public.PROTOCOL !== protocol.toString()) {
                 throw new Error('NOTARY: The protocol for decrypting a message is not supported: ' + protocol);
             }
             var iv = aem.getValue('$iv').getBuffer();
@@ -250,12 +250,12 @@ exports.securityModule = function(tag, testDirectory) {
             var ciphertext = aem.getValue('$ciphertext').getBuffer();
 
             // decrypt the 32-byte symmetric key
-            var curve = crypto.createECDH(V1.CURVE);
+            var curve = crypto.createECDH(V1Public.CURVE);
             curve.setPrivateKey(privateKey);
             var symmetricKey = curve.computeSecret(seed).slice(0, 32);  // take only first 32 bytes
 
             // decrypt the ciphertext using the symmetric key
-            var decipher = crypto.createDecipheriv(V1.CIPHER, symmetricKey, iv);
+            var decipher = crypto.createDecipheriv(V1Public.CIPHER, symmetricKey, iv);
             decipher.setAuthTag(auth);
             var message = decipher.update(ciphertext, undefined, 'utf8');
             message += decipher.final('utf8');

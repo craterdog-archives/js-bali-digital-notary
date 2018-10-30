@@ -9,4 +9,4 @@
  ************************************************************************/
 'use strict';
 
-exports.notaryKey = require('./src/BaliNotary').notaryKey;
+exports.api = require('./src/BaliNotary').api;

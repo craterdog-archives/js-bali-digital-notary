@@ -19,12 +19,12 @@
 
 /**
  * This function returns a proxy object that implements the API for the hardware security module
- * (notary key) associated with the specified unique tag.
+ * (notary private key) associated with the specified unique tag.
  * 
  * @param {String} tag A unique tag identifying a specifice hardware security module.
  * @returns {Object} A proxy object to the hardware security module managing the private key.
  */
-exports.securityModule = function(tag) {
+exports.api = function(tag) {
     
     return {
 
