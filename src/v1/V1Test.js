@@ -63,7 +63,7 @@ exports.api = function(tag, testDirectory) {
             if (V1Public.PROTOCOL !== protocol.toString()) {
                 throw new Error('NOTARY: The protocol for the test private key is not supported: ' + protocol);
             }
-            if (!tag.equalTo(document.getValue('$tag'))) {
+            if (!tag.isEqualTo(document.getValue('$tag'))) {
                 throw new Error('NOTARY: The tag for the test private key is incorrect: ' + tag);
             }
             currentVersion = document.getValue('$version');

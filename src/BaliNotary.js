@@ -191,7 +191,7 @@ exports.api = function(testDirectory) {
             var protocol = documentCitation.getValue('$protocol');
             if (protocol.toString() === V1Public.PROTOCOL) {
                 var digest = V1Public.digest(document);
-                return digest.equalTo(documentCitation.getValue('$digest'));
+                return digest.isEqualTo(documentCitation.getValue('$digest'));
             } else {
                 throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
             }
@@ -212,7 +212,7 @@ exports.api = function(testDirectory) {
             if (protocol.toString() === V1Public.PROTOCOL) {
                 // strip off the last seal from the document
                 var seal = document.getLastSeal();
-                var stripped = document.unsealed();
+                var stripped = document.unsealedCopy();
 
                 // calculate the digest of the stripped document + certificate reference
                 var source = stripped.toSource();

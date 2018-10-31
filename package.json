@@ -28,7 +28,7 @@
     "mocha": "^5.2.0"
   },
   "dependencies": {
-    "bali-document-framework": "file:../js-bali-document-framework",
+    "bali-document-framework": "^1.0.0",
     "ec-pem": "^0.18.0"
   }
 }

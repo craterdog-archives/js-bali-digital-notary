@@ -22,7 +22,7 @@ describe('Bali Digital Notary™', function() {
     describe('Test Citations', function() {
 
         it('should validate the citation for the certificate', function() {
-            expect(notaryCertificate.equalTo(notary.getNotaryCertificate())).to.equal(true);
+            expect(notaryCertificate.isEqualTo(notary.getNotaryCertificate())).to.equal(true);
             var protocol = notaryCertificate.getValue('$protocol');
             expect(protocol.toSource()).to.equal('v1');
             var isValid = notary.documentMatches(certificateCitation, notaryCertificate);
