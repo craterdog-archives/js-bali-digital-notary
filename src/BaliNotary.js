@@ -36,7 +36,6 @@ var homeDirectory = require('os').homedir() + '/.bali/';
 var bali = require('bali-component-framework');
 var V1Public = require('./v1/V1Public');
 var Document = require('./Document').Document;
-var Seal = require('./Seal').Seal;
 
 
 /**
@@ -171,8 +170,7 @@ exports.api = function(testDirectory) {
             var digitalSignature = V1Private.sign(source);
 
             // append the notary seal to the document (modifies it in place)
-            var seal = new Seal(certificateReference, digitalSignature);
-            document.addNotarySeal(seal);
+            document.addNotarySeal(certificateReference, digitalSignature);
 
             // generate a citation to the notarized document
             documentCitation = V1Public.cite(tag, version, document);
@@ -219,11 +217,11 @@ exports.api = function(testDirectory) {
                 // calculate the digest of the stripped document + certificate reference
                 var source = stripped.toString();
                 // NOTE: the certificate reference must be included in the signed source!
-                source += seal.certificateReference.toString();
+                source += seal.getValue('$certificateReference');
 
                 // verify the digital signature using the public key from the notary certificate
                 var publicKey = certificate.getValue('$publicKey');
-                var digitalSignature = seal.digitalSignature;
+                var digitalSignature = seal.getValue('$digitalSignature');
                 var isValid = V1Public.verify(publicKey, source, digitalSignature);
                 return isValid;
             } else {

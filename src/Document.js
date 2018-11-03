@@ -13,7 +13,6 @@
  * This composite class captures the state and methods associated with a Bali document.
  */
 var bali = require('bali-component-framework');
-var Seal = require('./Seal').Seal;
 
 
 // PUBLIC FUNCTIONS
@@ -35,7 +34,7 @@ function Document(previousReference, documentContent) {
     }
     this.previousReference = previousReference;
     this.documentContent = documentContent;
-    this.notarySeals = [];
+    this.notarySeals = new bali.List();
     return this;
 }
 Document.prototype.constructor = Document;
@@ -43,7 +42,7 @@ exports.Document = Document;
 
 Document.DIVIDER = '\n-----\n';
 
-Document.fromSource = function(source) {
+Document.fromString = function(source) {
     var parts = source.split(Document.DIVIDER);
     var documentContent = bali.parser.parseComponent(parts[0]);
     var previousReference = (parts[1] === 'none') ? bali.Template.NONE : new bali.Reference(parts[1]);
@@ -53,7 +52,7 @@ Document.fromSource = function(source) {
         var index = seal.indexOf('\n');
         var certificateReference = new bali.Reference(seal.slice(0, index));
         var digitalSignature = new bali.Binary(seal.slice(index + 1));
-        document.addNotarySeal(new Seal(certificateReference, digitalSignature));
+        document.addNotarySeal(certificateReference, digitalSignature);
     }
     return document;
 };
@@ -66,11 +65,13 @@ Document.prototype.toString = function() {
     string += this.documentContent;
     string += Document.DIVIDER;
     string += this.previousReference;
-    this.notarySeals.forEach(function(seal) {
+    var iterator = this.notarySeals.getIterator();
+    while (iterator.hasNext()) {
+        var seal = iterator.getNext();
         string += Document.DIVIDER;
-        string += seal.certificateReference + '\n';
-        string += seal.digitalSignature;
-    });
+        string += seal.getValue('$certificateReference') + '\n';
+        string += seal.getValue('$digitalSignature');
+    }
     return string;
 };
 
@@ -84,7 +85,7 @@ Document.prototype.exactCopy = function() {
     var source = this.documentContent.toSource();
     var content = bali.parser.parseComponent(source);
     var copy = new Document(this.previousReference, content);
-    copy.notarySeals = this.notarySeals.slice();  // copy the array
+    copy.notarySeals = bali.List.fromCollection(this.notarySeals);
     return copy;
 };
 
@@ -96,7 +97,7 @@ Document.prototype.exactCopy = function() {
  */
 Document.prototype.unsealedCopy = function() {
     var copy = this.exactCopy();
-    copy.notarySeals.pop();  // remove the last notary seal
+    copy.notarySeals.removeItem(-1);  // remove the last notary seal
     return copy;
 };
 
@@ -135,7 +136,7 @@ Document.prototype.setPreviousReference = function(previousReference) {
  * @returns {Seal} The last notary seal.
  */
 Document.prototype.getLastSeal = function() {
-    var notarySeal = this.notarySeals.peek();
+    var notarySeal = this.notarySeals.getItem(-1);
     return notarySeal;
 };
 
@@ -143,10 +144,17 @@ Document.prototype.getLastSeal = function() {
 /**
  * This method appends a notary seal to the end of the document.
  * 
- * @param {Seal} notarySeal The new notary seal to be appended to the document.
+ * @param {String|Reference} certificateReference A reference to the certificate that can be
+ * used to verify the associated digital signature.
+ * @param {String|Binary} digitalSignature A base 32 encoded binary string containing the
+ * digital signature generated using the notary key associated with the notary certificate
+ * referenced by the certificate reference.
  */
-Document.prototype.addNotarySeal = function(notarySeal) {
-    this.notarySeals.push(notarySeal);
+Document.prototype.addNotarySeal = function(certificateReference, digitalSignature) {
+    var notarySeal = new bali.Catalog();
+    notarySeal.setValue('$certificateReference', certificateReference);
+    notarySeal.setValue('$digitalSignature', digitalSignature);
+    this.notarySeals.addItem(notarySeal);
 };
 
 

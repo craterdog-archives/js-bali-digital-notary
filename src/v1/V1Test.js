@@ -76,7 +76,7 @@ exports.api = function(tag, testDirectory) {
         if (fs.existsSync(certificateFilename)) {
             // read in the notary certificate information
             var certificateSource = fs.readFileSync(certificateFilename, 'utf8');
-            notaryCertificate = Document.fromSource(certificateSource);
+            notaryCertificate = Document.fromString(certificateSource);
         }
     } catch (e) {
         throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
@@ -190,7 +190,7 @@ exports.api = function(tag, testDirectory) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
             }
 
-            notaryCertificate = Document.fromSource(certificateSource);
+            notaryCertificate = Document.fromString(certificateSource);
             return notaryCertificate;
         },
 
