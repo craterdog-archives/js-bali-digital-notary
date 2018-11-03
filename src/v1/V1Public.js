@@ -16,7 +16,7 @@
  */
 var crypto = require('crypto');
 var ec_pem = require('ec-pem');
-var bali = require('bali-document-framework');
+var bali = require('bali-component-framework');
 
 
 // ALGORITHMS FOR THIS VERSION OF THE PROTOCOL

@@ -33,8 +33,10 @@
  */
 var fs = require('fs');
 var homeDirectory = require('os').homedir() + '/.bali/';
-var bali = require('bali-document-framework');
+var bali = require('bali-component-framework');
 var V1Public = require('./v1/V1Public');
+var Document = require('./Document').Document;
+var Seal = require('./Seal').Seal;
 
 
 /**
@@ -162,14 +164,14 @@ exports.api = function(testDirectory) {
                 throw new Error('NOTARY: The following notary key has not yet been generated: ' + notaryTag);
             }
             var certificateReference = V1Public.referenceFromCitation(certificateCitation);
-            var source = bali.formatter.formatComponent(document);
+            var source = document.toString();
             source += certificateReference;  // NOTE: the reference must be included in the signed source!
 
             // generate the digital signature
             var digitalSignature = V1Private.sign(source);
 
             // append the notary seal to the document (modifies it in place)
-            var seal = new bali.Seal(certificateReference, digitalSignature);
+            var seal = new Seal(certificateReference, digitalSignature);
             document.addNotarySeal(seal);
 
             // generate a citation to the notarized document
@@ -215,7 +217,7 @@ exports.api = function(testDirectory) {
                 var stripped = document.unsealedCopy();
 
                 // calculate the digest of the stripped document + certificate reference
-                var source = stripped.toSource();
+                var source = stripped.toString();
                 // NOTE: the certificate reference must be included in the signed source!
                 source += seal.certificateReference.toString();
 
@@ -291,9 +293,8 @@ function loadCitation(filename) {
     var source;
     var citation;
     if (fs.existsSync(filename)) {
-        source = fs.readFileSync(filename).toString();
-        var document = bali.parser.parseDocument(source);
-        citation = document.documentContent;
+        source = fs.readFileSync(filename, 'utf8');
+        citation = bali.parser.parseComponent(source);
     } else {
         citation = V1Public.citationFromAttributes();
         storeCitation(filename, citation);
@@ -305,7 +306,6 @@ function loadCitation(filename) {
  * This function stores the specified document citation into the specified file.
  */
 function storeCitation(filename, citation) {
-    var document = new bali.Document(undefined, citation);
-    var source = document.toSource();
-    fs.writeFileSync(filename, source, {mode: 384});  // -rw------- permissions
+    var source = citation.toString() + '\n';  // POSIX compliance
+    fs.writeFileSync(filename, source, {encoding: 'utf8', mode: 384});  // -rw------- permissions
 }
