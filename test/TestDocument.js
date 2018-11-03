@@ -12,13 +12,13 @@ var fs = require('fs');
 var mocha = require('mocha');
 var expect = require('chai').expect;
 var bali = require('bali-component-framework');
-var Document = require('../src/Document').Document;
+var NotarizedDocument = require('../src/NotarizedDocument').NotarizedDocument;
 
-describe('Bali Document Notation™', function() {
+describe('Bali Digital Notary™', function() {
     var file = 'test/source/document.bali';
     var source = fs.readFileSync(file, 'utf8');
     expect(source).to.exist;  // jshint ignore:line
-    var document = Document.fromString(source);
+    var document = NotarizedDocument.fromString(source);
 
     describe('Test Document Creation', function() {
 
@@ -41,7 +41,7 @@ describe('Bali Document Notation™', function() {
             expect(draft).to.exist;  // jshint ignore:line
             document.notarySeals = new bali.List();
             expect(draft.toString()).to.equal(document.toString());
-            document = Document.fromString(source);
+            document = NotarizedDocument.fromString(source);
         });
 
         it('should create an unsealed copy of a document', function() {

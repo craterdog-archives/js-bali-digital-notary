@@ -56,7 +56,7 @@ exports.digest = function(message) {
  * 
  * @param {Tag} tag The unique tag for the document.
  * @param {Version} version The current version of the document.
- * @param {String|Document} document The document to be cited.
+ * @param {String|NotarizedDocument} document The document to be cited.
  * @returns {Reference} A Bali reference citation for the document.
  */
 exports.cite = function(tag, version, document) {
@@ -154,7 +154,7 @@ exports.citationFromAttributes = function(tag, version, digest) {
  * @returns {Catalog} The resulting document citation.
  */
 exports.citationFromSource = function(source) {
-    var document = bali.parser.parseDocument(source);
+    var document = bali.parser.parseComponent(source);
     var protocol = document.getValue('$protocol');
     if (exports.PROTOCOL !== protocol.toString()) {
         throw new Error('NOTARY: The protocol for the citation is not supported: ' + protocol);

@@ -35,7 +35,7 @@ var fs = require('fs');
 var homeDirectory = require('os').homedir() + '/.bali/';
 var bali = require('bali-component-framework');
 var V1Public = require('./v1/V1Public');
-var Document = require('./Document').Document;
+var NotarizedDocument = require('./NotarizedDocument').NotarizedDocument;
 
 
 /**
@@ -71,7 +71,7 @@ exports.api = function(testDirectory) {
          * This method returns the the Bali document containing the public certificate for this
          * notary.
          * 
-         * @returns {Document} The Bali document containing the public certificate for this
+         * @returns {NotarizedDocument} The Bali document containing the public certificate for this
          * notary.
          */
         getNotaryCertificate: function() {
@@ -133,7 +133,7 @@ exports.api = function(testDirectory) {
          * certificate. The private notary key is generated on the hardware security module
          * and remains there. The associated public notary certificate is returned.
          * 
-         * @returns {Document} The new Bali document containing the public notary certificate
+         * @returns {NotarizedDocument} The new Bali document containing the public notary certificate
          * associated with the new private notary key.
          */
         generateKeys: function() {
@@ -150,7 +150,7 @@ exports.api = function(testDirectory) {
          * 
          * @param {Catalog} documentCitation A document citation referencing the document to
          * be notarized.
-         * @param {Document} document The document to be notarized.
+         * @param {NotarizedDocument} document The document to be notarized.
          * @returns {Catalog} The updated document citation referencing the notarized document.
          */
         notarizeDocument: function(documentCitation, document) {

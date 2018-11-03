@@ -27,7 +27,7 @@ var crypto = require('crypto');
 var ec_pem = require('ec-pem');
 var bali = require('bali-component-framework');
 var V1Public = require('./V1Public');
-var Document = require('../Document').Document;
+var NotarizedDocument = require('../NotarizedDocument').NotarizedDocument;
 
 
 /**
@@ -76,7 +76,7 @@ exports.api = function(tag, testDirectory) {
         if (fs.existsSync(certificateFilename)) {
             // read in the notary certificate information
             var certificateSource = fs.readFileSync(certificateFilename, 'utf8');
-            notaryCertificate = Document.fromString(certificateSource);
+            notaryCertificate = NotarizedDocument.fromString(certificateSource);
         }
     } catch (e) {
         throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
@@ -105,7 +105,7 @@ exports.api = function(tag, testDirectory) {
         /**
          * This method returns the notary certificate associated with this notary key.
          * 
-         * @returns {Document} The notary certificate associated with this notary key.
+         * @returns {NotarizedDocument} The notary certificate associated with this notary key.
          */
         certificate: function() {
             return notaryCertificate;
@@ -127,12 +127,12 @@ exports.api = function(tag, testDirectory) {
          * new notary key. It returns the new public notary certificate.
          * 
          * NOTE: Ideally, it would make more sense for most of this method to be moved to the
-         * <code>BaliNotary</code> class but can't be moved there because during regeneration
+         * <code>DigitalNotary</code> class but can't be moved there because during regeneration
          * both the old key and new key must sign the new certificate and the old key goes
          * away right after it signs it. So the complete certificate signing process must
          * happen in the security model.
          * 
-         * @returns {Document} The new notary certificate.
+         * @returns {NotarizedDocument} The new notary certificate.
          */
         generate: function() {
             var isRegeneration = !!privateKey;
@@ -155,16 +155,16 @@ exports.api = function(tag, testDirectory) {
             if (isRegeneration) {
                 var previousReference = V1Public.referenceFromCitation(certificateCitation).toString();
                 // append a reference to the previous version of the certificate
-                certificateSource += Document.DIVIDER + previousReference;
+                certificateSource += NotarizedDocument.DIVIDER + previousReference;
 
                 // append a reference to the certificate for the old private key
-                certificateSource += Document.DIVIDER + previousReference;
+                certificateSource += NotarizedDocument.DIVIDER + previousReference;
 
                 // sign the certificate with the old private key
                 certificateSource += '\n' + this.sign(certificateSource);
             } else {
                 // append a reference to the previous version of the certificate (none)
-                certificateSource += Document.DIVIDER + bali.Template.NONE;
+                certificateSource += NotarizedDocument.DIVIDER + bali.Template.NONE;
             }
 
             // create a reference to the certificate for the new private key
@@ -173,7 +173,7 @@ exports.api = function(tag, testDirectory) {
             var newReference = V1Public.referenceFromCitation(newCitation).toString();
 
             // append a reference to the certificate for the new private key
-            certificateSource += Document.DIVIDER + newReference;
+            certificateSource += NotarizedDocument.DIVIDER + newReference;
 
             // sign the certificate with the new private key
             certificateSource += '\n' + this.sign(certificateSource) + '\n';  // POSIX compliance
@@ -190,7 +190,7 @@ exports.api = function(tag, testDirectory) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
             }
 
-            notaryCertificate = Document.fromString(certificateSource);
+            notaryCertificate = NotarizedDocument.fromString(certificateSource);
             return notaryCertificate;
         },
 

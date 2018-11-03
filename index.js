@@ -9,4 +9,5 @@
  ************************************************************************/
 'use strict';
 
-exports.api = require('./src/BaliNotary').api;
+exports.api = require('./src/DigitalNotary').api;
+exports.NotarizedDocument = require('./src/NotarizedDocument').NotarizedDocument;
