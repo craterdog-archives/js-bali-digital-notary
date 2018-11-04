@@ -18,7 +18,7 @@ describe('Bali Digital Notary™', function() {
 
     var notaryCertificate = notary.generateKeys();
     var certificateCitation = notary.getNotaryCitation();
-    var source = '[$foo: "bar"]\n-----\nnone\n';  // POSIX compliant end of line
+    var source = '[$foo: "bar"]\n-----\nnone\n';  // add POSIX compliant end of line
 
     describe('Test Citations', function() {
 

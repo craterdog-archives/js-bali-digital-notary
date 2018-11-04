@@ -305,6 +305,6 @@ function loadCitation(filename) {
  * This function stores the specified document citation into the specified file.
  */
 function storeCitation(filename, citation) {
-    var source = citation.toString() + '\n';  // POSIX compliant end of line
+    var source = citation.toString() + '\n';  // add POSIX compliant end of line
     fs.writeFileSync(filename, source, {encoding: 'utf8', mode: 384});  // -rw------- permissions
 }

@@ -176,14 +176,14 @@ exports.api = function(tag, testDirectory) {
             certificateSource += NotarizedDocument.DIVIDER + newReference;
 
             // sign the certificate with the new private key
-            certificateSource += '\n' + this.sign(certificateSource) + '\n';  // POSIX compliant end of line
+            certificateSource += '\n' + this.sign(certificateSource) + '\n';  // add POSIX compliant end of line
 
             // generate a citation for the new certificate
             certificateCitation = V1Public.cite(tag, currentVersion, certificateSource);
 
             // save the state of this notary key and certificate in the local configuration
             try {
-                var keySource = this.toString() + '\n';  // POSIX compliant end of line
+                var keySource = this.toString() + '\n';  // add POSIX compliant end of line
                 fs.writeFileSync(keyFilename, keySource, {encoding: 'utf8', mode: 384});  // -rw------- permissions
                 fs.writeFileSync(certificateFilename, certificateSource, {encoding: 'utf8', mode: 384});  // -rw------- permissions
             } catch (e) {
