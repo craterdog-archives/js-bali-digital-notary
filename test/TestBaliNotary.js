@@ -18,14 +18,19 @@ describe('Bali Digital Notary™', function() {
 
     var notaryCertificate = notary.generateKeys();
     var certificateCitation = notary.getNotaryCitation();
-    var source = '[$foo: "bar"]\n-----\nnone';
+    var source = '[$foo: "bar"]\n-----\nnone\n';  // POSIX compliant end of line
 
     describe('Test Citations', function() {
 
-        it('should validate the citation for the certificate', function() {
+        it('should validate the certificate', function() {
             expect(notaryCertificate.documentContent.isEqualTo(notary.getNotaryCertificate().documentContent)).to.equal(true);
             var protocol = notaryCertificate.getValue('$protocol');
             expect(protocol.toSource()).to.equal('v1');
+            var isValid = notary.documentIsValid(notaryCertificate, notaryCertificate);
+            expect(isValid).to.equal(true);
+        });
+
+        it('should validate the citation for the certificate', function() {
             var isValid = notary.documentMatches(certificateCitation, notaryCertificate);
             expect(isValid).to.equal(true);
         });

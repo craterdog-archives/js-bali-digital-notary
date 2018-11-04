@@ -153,7 +153,7 @@ exports.api = function(tag, testDirectory) {
 
             var certificateSource = notaryCertificate.toString();
             if (isRegeneration) {
-                var previousReference = V1Public.referenceFromCitation(certificateCitation).toString();
+                var previousReference = V1Public.referenceFromCitation(certificateCitation);
                 // append a reference to the previous version of the certificate
                 certificateSource += NotarizedDocument.DIVIDER + previousReference;
 
@@ -170,20 +170,20 @@ exports.api = function(tag, testDirectory) {
             // create a reference to the certificate for the new private key
             privateKey = curve.getPrivateKey();
             var newCitation = V1Public.citationFromAttributes(tag, currentVersion);  // no digest since it is self-referential
-            var newReference = V1Public.referenceFromCitation(newCitation).toString();
+            var newReference = V1Public.referenceFromCitation(newCitation);
 
             // append a reference to the certificate for the new private key
             certificateSource += NotarizedDocument.DIVIDER + newReference;
 
             // sign the certificate with the new private key
-            certificateSource += '\n' + this.sign(certificateSource) + '\n';  // POSIX compliance
+            certificateSource += '\n' + this.sign(certificateSource) + '\n';  // POSIX compliant end of line
 
             // generate a citation for the new certificate
             certificateCitation = V1Public.cite(tag, currentVersion, certificateSource);
 
             // save the state of this notary key and certificate in the local configuration
             try {
-                var keySource = this.toString() + '\n';  // POSIX compliance
+                var keySource = this.toString() + '\n';  // POSIX compliant end of line
                 fs.writeFileSync(keyFilename, keySource, {encoding: 'utf8', mode: 384});  // -rw------- permissions
                 fs.writeFileSync(certificateFilename, certificateSource, {encoding: 'utf8', mode: 384});  // -rw------- permissions
             } catch (e) {

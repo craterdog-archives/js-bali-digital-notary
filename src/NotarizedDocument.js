@@ -43,6 +43,7 @@ exports.NotarizedDocument = NotarizedDocument;
 NotarizedDocument.DIVIDER = '\n-----\n';
 
 NotarizedDocument.fromString = function(source) {
+    source = source.slice(0, -1);  // remove the last POSIX compliant end of line
     var parts = source.split(NotarizedDocument.DIVIDER);
     var documentContent = bali.parser.parseComponent(parts[0]);
     var previousReference = (parts[1] === 'none') ? bali.Template.NONE : new bali.Reference(parts[1]);
@@ -72,6 +73,7 @@ NotarizedDocument.prototype.toString = function() {
         string += seal.getValue('$certificateReference') + '\n';
         string += seal.getValue('$digitalSignature');
     }
+    string += '\n';  // POSIX compliant end of line
     return string;
 };
 

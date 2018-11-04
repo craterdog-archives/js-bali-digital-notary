@@ -163,8 +163,9 @@ exports.api = function(testDirectory) {
                 throw new Error('NOTARY: The following notary key has not yet been generated: ' + notaryTag);
             }
             var certificateReference = V1Public.referenceFromCitation(certificateCitation);
-            var source = document.toString();
-            source += certificateReference;  // NOTE: the reference must be included in the signed source!
+            var source = document.toString().slice(0, -1);  // remove POSIX compliant end of line
+            // NOTE: the reference must be included in the signed source!
+            source += NotarizedDocument.DIVIDER + certificateReference;
 
             // generate the digital signature
             var digitalSignature = V1Private.sign(source);
@@ -215,9 +216,9 @@ exports.api = function(testDirectory) {
                 var stripped = document.unsealedCopy();
 
                 // calculate the digest of the stripped document + certificate reference
-                var source = stripped.toString();
+                var source = stripped.toString().slice(0, -1);  // remove POSIX compliant end of line
                 // NOTE: the certificate reference must be included in the signed source!
-                source += seal.getValue('$certificateReference');
+                source += NotarizedDocument.DIVIDER + seal.getValue('$certificateReference');
 
                 // verify the digital signature using the public key from the notary certificate
                 var publicKey = certificate.getValue('$publicKey');
@@ -304,6 +305,6 @@ function loadCitation(filename) {
  * This function stores the specified document citation into the specified file.
  */
 function storeCitation(filename, citation) {
-    var source = citation.toString() + '\n';  // POSIX compliance
+    var source = citation.toString() + '\n';  // POSIX compliant end of line
     fs.writeFileSync(filename, source, {encoding: 'utf8', mode: 384});  // -rw------- permissions
 }
