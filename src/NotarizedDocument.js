@@ -10,7 +10,22 @@
 'use strict';
 
 /**
- * This composite class captures the state and methods associated with a Bali document.
+ * This class captures the state and methods associated with a Bali notarized document.
+ * 
+ * All notarized documents have the following structure:
+ * <pre>
+ *   .-------------------------------------------------------------------------.
+ *   |                                                                         |
+ *   | (A) The Content of the Document (in Bali Document Notation™)            |
+ *   |                                                                         |
+ *   |-----                                                                    |
+ *   | (B) Document Citation to Previous Version of this Document (or 'none')  |
+ *   |-----                                                                    |.
+ *   | (C) A Document Citation to the Public Notary Certificate of Signer      | \
+ *   |                                                                         |  - Notary Seal
+ *   | (D) A Digital Signature of Parts A, B, and C                            | /
+ *   '-------------------------------------------------------------------------''
+ * </pre>
  */
 var bali = require('bali-component-framework');
 

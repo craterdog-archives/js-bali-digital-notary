@@ -15,21 +15,6 @@
  * purposes within the Bali Cloud Environment™. If a test directory is specified,
  * it will be created and used as the location of the local key store. Otherwise, a
  * proxy to a hardware security module will be used for all private key operations.
- * 
- * All notarized documents have the following structure:
- * <pre>
- *   ---------------------------------------------------------------------------
- *   |  (A) Optional Document Citation to Previous Version of this Document    |
- *   ---------------------------------------------------------------------------
- *   |                                                                         |
- *   |        (B) The Content of the Document (Bali Document Notation™)        |
- *   |                                                                         |
- *   ---------------------------------------------------------------------------.
- *   |   (C) A Document Citation to the Public Notary Certificate of Signer    | \
- *   ---------------------------------------------------------------------------  ) Notary Seal
- *   |              (D) A Digital Signature of Parts A, B, and C               | /
- *   ---------------------------------------------------------------------------'
- * </pre>
  */
 var fs = require('fs');
 var homeDirectory = require('os').homedir() + '/.bali/';
