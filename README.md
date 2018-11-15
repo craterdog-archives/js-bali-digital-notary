@@ -6,7 +6,7 @@ This project provides a JavaScript version of the digital notary classes for the
 ![Pyramid](https://raw.githubusercontent.com/craterdog-bali/bali-project-documentation/master/images/Bali%20Pyramid%20-%20Digital%20Notary.png)
 
 _**WARNING**_
-_This project is still in its early stages and the classes and interfaces to the classes are likely to change. Nevertheless, the project in its current state should work well as a digital notarization package.
+_This project is still in its early stages and the classes and interfaces to the classes are likely to change. Nevertheless, the project in its current state should work well as a digital notarization package._
 
 ### Quick Links
 For more information on this project click on the following links:
@@ -16,8 +16,10 @@ For more information on this project click on the following links:
  * [project documentation](https://github.com/craterdog-bali/bali-project-documentation/wiki)
 
 ### Highlighted Components
- * **NotarizeDocument** - a class that defines the structure of a notarized document.
  * **DigitalNotary** - a singleton object that acts as a proxy to the hardware security module.
+ * **NotarizeDocument** - a class that defines the structure of a notarized document.
+
+![Notarized Document](https://raw.githubusercontent.com/craterdog-bali/bali-project-documentation/master/images/Notarized%20Document.png)
 
 ### Getting Started
 To install this NodeJS package:
