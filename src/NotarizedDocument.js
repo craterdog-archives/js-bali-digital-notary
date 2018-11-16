@@ -99,7 +99,7 @@ NotarizedDocument.prototype.toString = function() {
  * @returns {NotarizedDocument} A deep copy of the document.
  */
 NotarizedDocument.prototype.exactCopy = function() {
-    var source = this.documentContent.toSource();
+    var source = this.documentContent.toString();
     var content = bali.parser.parseComponent(source);
     var copy = new NotarizedDocument(this.previousReference, content);
     copy.notarySeals = bali.List.fromCollection(this.notarySeals);
@@ -127,7 +127,7 @@ NotarizedDocument.prototype.unsealedCopy = function() {
  * @returns {NotarizedDocument} A draft copy of the document.
  */
 NotarizedDocument.prototype.draftCopy = function(previousReference) {
-    var source = this.documentContent.toSource();
+    var source = this.documentContent.toString();
     var content = bali.parser.parseComponent(source);
     var draft = new NotarizedDocument(previousReference, content);
     return draft;

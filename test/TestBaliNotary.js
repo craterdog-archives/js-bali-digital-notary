@@ -25,7 +25,7 @@ describe('Bali Digital Notary™', function() {
         it('should validate the certificate', function() {
             expect(notaryCertificate.documentContent.isEqualTo(notary.getNotaryCertificate().documentContent)).to.equal(true);
             var protocol = notaryCertificate.getValue('$protocol');
-            expect(protocol.toSource()).to.equal('v1');
+            expect(protocol.toString()).to.equal('v1');
             var isValid = notary.documentIsValid(notaryCertificate, notaryCertificate);
             expect(isValid).to.equal(true);
         });

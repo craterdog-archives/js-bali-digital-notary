@@ -1,6 +1,6 @@
 {
   "name": "bali-digital-notary",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "description": "This library provides JavaScript based digital notary capability for the Bali Cloud Environment™.",
   "repository": {
     "type": "git",
@@ -32,7 +32,7 @@
     "mocha": "^5.2.0"
   },
   "dependencies": {
-    "bali-component-framework": "^1.0.2",
+    "bali-component-framework": "^1.2.0",
     "ec-pem": "^0.18.0"
   }
 }

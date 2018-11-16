@@ -32,10 +32,6 @@ exports.api = function(tag) {
             throw new Error('NOTARY: The following method has not yet been implemented: toString()');
         },
 
-        toSource: function(indentation) {
-            throw new Error('NOTARY: The following method has not yet been implemented: toSource(indentation)');
-        },
-
         certificate: function() {
             throw new Error('NOTARY: The following method has not yet been implemented: certificate()');
         },

@@ -176,7 +176,7 @@ exports.citationFromSource = function(source) {
  * @returns {Catalog} The resulting document citation.
  */
 exports.citationFromReference = function(reference) {
-    reference = reference.toSource();
+    reference = reference.toString();
     var source = reference.slice(6, -1);  // remove '<bali:' and '>' wrapper
     var citation = bali.parser.parseComponent(source);
     return citation;
@@ -196,7 +196,7 @@ exports.referenceFromCitation = function(citation) {
     reference = reference.replace(/%protocol/, citation.getValue('$protocol'));
     reference = reference.replace(/%tag/, citation.getValue('$tag'));
     reference = reference.replace(/%version/, citation.getValue('$version'));
-    reference = reference.replace(/%digest/, citation.getValue('$digest').toSource().replace(/\s+/g, ''));
+    reference = reference.replace(/%digest/, citation.getValue('$digest').toString().replace(/\s+/g, ''));
     reference = new bali.Reference(reference);
     return reference;
 };
