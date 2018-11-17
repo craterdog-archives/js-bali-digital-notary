@@ -17,7 +17,7 @@ For more information on this project click on the following links:
 
 ### Highlighted Components
  * **DigitalNotary** - a singleton object that acts as a proxy to the hardware security module.
- * **NotarizeDocument** - a class that defines the structure of a notarized document.
+ * **NotarizedDocument** - a class that defines the structure of a notarized document.
 
 ![Notarized Document](https://raw.githubusercontent.com/craterdog-bali/bali-project-documentation/master/images/NotarizedDocument.png)
 
