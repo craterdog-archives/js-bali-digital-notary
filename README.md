@@ -22,7 +22,7 @@ npm install bali-digital-notary
 ```
 Then add the following line to your NodeJS modules:
 ```
-var bali = require('bali-digital-notary);
+var notary = require('bali-digital-notary);
 ```
 
 Check out the example code [here](https://github.com/craterdog-bali/js-bali-digital-notary/wiki/examples).
