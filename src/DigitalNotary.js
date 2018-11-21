@@ -170,7 +170,7 @@ exports.api = function(testDirectory) {
          * 
          * @param {Catalog} documentCitation A document citation allegedly referring to the
          * specified document.
-         * @param {Document} document The document to be tested.
+         * @param {NotarizedDocument} document The document to be tested.
          * @returns {Boolean} Whether or not the documentCitation matches the specified document.
          */
         documentMatches: function(documentCitation, document) {
@@ -187,9 +187,9 @@ exports.api = function(testDirectory) {
          * This method determines whether or not the notary seal on the specified document
          * is valid.
          * 
-         * @param {Document} certificate A document containing the public notary seal for
+         * @param {NotarizedDocument} certificate A document containing the public notary seal for
          * the private notary key that allegedly notarized the specified document.
-         * @param {Document} document The document to be tested.
+         * @param {NotarizedDocument} document The document to be tested.
          * @returns {Boolean} Whether or not the notary seal on the document is valid.
          */
         documentIsValid: function(certificate, document) {
@@ -278,7 +278,7 @@ function loadCitation(filename) {
     var citation;
     if (fs.existsSync(filename)) {
         source = fs.readFileSync(filename, 'utf8');
-        citation = bali.parser.parseComponent(source);
+        citation = bali.parser.parseDocument(source);
     } else {
         citation = V1Public.citationFromAttributes();
         storeCitation(filename, citation);

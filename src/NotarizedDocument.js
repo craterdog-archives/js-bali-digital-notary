@@ -60,7 +60,7 @@ NotarizedDocument.DIVIDER = '\n-----\n';
 NotarizedDocument.fromString = function(source) {
     source = source.slice(0, -1);  // remove POSIX compliant end of line
     var parts = source.split(NotarizedDocument.DIVIDER);
-    var documentContent = bali.parser.parseComponent(parts[0]);
+    var documentContent = bali.parser.parseDocument(parts[0]);
     var previousReference = (parts[1] === 'none') ? bali.Template.NONE : new bali.Reference(parts[1]);
     var document = new NotarizedDocument(previousReference, documentContent);
     for (var i = 2; i < parts.length; i++) {
@@ -100,7 +100,7 @@ NotarizedDocument.prototype.toString = function() {
  */
 NotarizedDocument.prototype.exactCopy = function() {
     var source = this.documentContent.toString();
-    var content = bali.parser.parseComponent(source);
+    var content = bali.parser.parseDocument(source);
     var copy = new NotarizedDocument(this.previousReference, content);
     copy.notarySeals = bali.List.fromCollection(this.notarySeals);
     return copy;
@@ -128,7 +128,7 @@ NotarizedDocument.prototype.unsealedCopy = function() {
  */
 NotarizedDocument.prototype.draftCopy = function(previousReference) {
     var source = this.documentContent.toString();
-    var content = bali.parser.parseComponent(source);
+    var content = bali.parser.parseDocument(source);
     var draft = new NotarizedDocument(previousReference, content);
     return draft;
 };

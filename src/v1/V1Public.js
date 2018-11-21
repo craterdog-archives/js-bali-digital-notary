@@ -154,7 +154,7 @@ exports.citationFromAttributes = function(tag, version, digest) {
  * @returns {Catalog} The resulting document citation.
  */
 exports.citationFromSource = function(source) {
-    var document = bali.parser.parseComponent(source);
+    var document = bali.parser.parseDocument(source);
     var protocol = document.getValue('$protocol');
     if (exports.PROTOCOL !== protocol.toString()) {
         throw new Error('NOTARY: The protocol for the citation is not supported: ' + protocol);
@@ -178,7 +178,7 @@ exports.citationFromSource = function(source) {
 exports.citationFromReference = function(reference) {
     reference = reference.toString();
     var source = reference.slice(6, -1);  // remove '<bali:' and '>' wrapper
-    var citation = bali.parser.parseComponent(source);
+    var citation = bali.parser.parseDocument(source);
     return citation;
 };
 

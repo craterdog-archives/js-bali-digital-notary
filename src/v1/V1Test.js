@@ -58,7 +58,7 @@ exports.api = function(tag, testDirectory) {
         if (fs.existsSync(keyFilename)) {
             // read in the notary key information
             var keySource = fs.readFileSync(keyFilename, 'utf8');
-            var catalog = bali.parser.parseComponent(keySource);
+            var catalog = bali.parser.parseDocument(keySource);
             var protocol = catalog.getValue('$protocol');
             if (V1Public.PROTOCOL !== protocol.toString()) {
                 throw new Error('NOTARY: The protocol for the test private key is not supported: ' + protocol);
