@@ -151,46 +151,43 @@ exports.api = function(tag, testDirectory) {
             notaryCertificate.setValue('$version', currentVersion);
             notaryCertificate.setValue('$publicKey', new bali.Binary(publicKey));
 
-            var certificateSource = notaryCertificate.toString();
-            if (isRegeneration) {
-                var previousReference = V1Public.referenceFromCitation(certificateCitation);
-                // append a reference to the previous version of the certificate
-                certificateSource += NotarizedDocument.DIVIDER + previousReference;
-
-                // append a reference to the certificate for the old private key
-                certificateSource += NotarizedDocument.DIVIDER + previousReference;
-
-                // sign the certificate with the old private key
-                certificateSource += '\n' + this.sign(certificateSource);
-            } else {
-                // append a reference to the previous version of the certificate (none)
-                certificateSource += NotarizedDocument.DIVIDER + bali.Template.NONE;
-            }
-
             // create a reference to the certificate for the new private key
             privateKey = curve.getPrivateKey();
             var newCitation = V1Public.citationFromAttributes(tag, currentVersion);  // no digest since it is self-referential
             var newReference = V1Public.referenceFromCitation(newCitation);
 
-            // append a reference to the certificate for the new private key
-            certificateSource += NotarizedDocument.DIVIDER + newReference;
+            var certificateSource = '';
+            if (isRegeneration) {
+                // sign with the old key
+                var certificateReference = V1Public.referenceFromCitation(certificateCitation);
+                certificateSource += certificateReference + '\n';
+                certificateSource += certificateReference + '\n';  // previous version is the old certificate
+                certificateSource += notaryCertificate;
+                certificateSource = this.sign(certificateSource) + '\n' + certificateSource;
+            } else {
+                // sign with the new key
+                certificateSource += newReference + '\n';
+                certificateSource += bali.Template.NONE + '\n';  // there is no previous version
+                certificateSource += notaryCertificate;
+                certificateSource = this.sign(certificateSource) + '\n' + certificateSource;
+            }
 
-            // sign the certificate with the new private key
-            certificateSource += '\n' + this.sign(certificateSource) + '\n';  // add POSIX compliant end of line
+            // cache the new notary certificate
+            notaryCertificate = NotarizedDocument.fromString(certificateSource);
 
-            // generate a citation for the new certificate
+            // cache the new certificate citation
             certificateCitation = V1Public.cite(tag, currentVersion, certificateSource);
 
             // save the state of this notary key and certificate in the local configuration
             try {
-                var keySource = this.toString() + '\n';  // add POSIX compliant end of line
+                var keySource = this.toString() + '\n';  // add POSIX compliant <EOL>
+                certificateSource += '\n';  // add POSIX compliant <EOL>
                 fs.writeFileSync(keyFilename, keySource, {encoding: 'utf8', mode: 384});  // -rw------- permissions
                 fs.writeFileSync(certificateFilename, certificateSource, {encoding: 'utf8', mode: 384});  // -rw------- permissions
             } catch (e) {
                 throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
             }
 
-            notaryCertificate = NotarizedDocument.fromString(certificateSource);
             return notaryCertificate;
         },
 

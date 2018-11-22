@@ -135,33 +135,25 @@ exports.api = function(testDirectory) {
          * 
          * @param {Catalog} documentCitation A document citation referencing the document to
          * be notarized.
-         * @param {NotarizedDocument} document The document to be notarized.
-         * @returns {Catalog} The updated document citation referencing the notarized document.
+         * @param {String} document The document to be notarized.
+         * @param {Reference} previousReference A reference to the previous version of the document.
+         * @returns {NotarizedDocument} The notarized document.
          */
-        notarizeDocument: function(documentCitation, document) {
-            var tag = documentCitation.getValue('$tag');
-            var version = documentCitation.getValue('$version');
-
-            // prepare the document source for signing
+        notarizeDocument: function(documentCitation, document, previousReference) {
+            previousReference = previousReference || bali.Template.NONE;
             var certificateCitation = V1Private.citation();
             if (!certificateCitation) {
                 throw new Error('NOTARY: The following notary key has not yet been generated: ' + notaryTag);
             }
             var certificateReference = V1Public.referenceFromCitation(certificateCitation);
-            var source = document.toString().slice(0, -1);  // remove POSIX compliant end of line
-            // NOTE: the reference must be included in the signed source!
-            source += NotarizedDocument.DIVIDER + certificateReference;
-
-            // generate the digital signature
-            var digitalSignature = V1Private.sign(source);
-
-            // append the notary seal to the document (modifies it in place)
-            document.addNotarySeal(certificateReference, digitalSignature);
-
-            // generate a citation to the notarized document
-            documentCitation = V1Public.cite(tag, version, document);
-
-            return documentCitation;
+            var source = '';
+            source += certificateReference + '\n';
+            source += previousReference + '\n';
+            source += document;
+            source = V1Private.sign(source) + '\n' + source;
+            var notarizedDocument = NotarizedDocument.fromString(source);
+            documentCitation.setValue('$digest', V1Public.digest(notarizedDocument));
+            return notarizedDocument;
         },
 
         /**
@@ -187,27 +179,26 @@ exports.api = function(testDirectory) {
          * This method determines whether or not the notary seal on the specified document
          * is valid.
          * 
-         * @param {NotarizedDocument} certificate A document containing the public notary seal for
-         * the private notary key that allegedly notarized the specified document.
+         * @param {NotarizedDocument} certificate A document containing the public certificate
+         * for the private notary key that allegedly notarized the specified document.
          * @param {NotarizedDocument} document The document to be tested.
          * @returns {Boolean} Whether or not the notary seal on the document is valid.
          */
         documentIsValid: function(certificate, document) {
             // check to see if the document's seal is valid
+            certificate = bali.parser.parseDocument(certificate.content);
             var protocol = certificate.getValue('$protocol');
             if (protocol.toString() === V1Public.PROTOCOL) {
-                // strip off the last seal from the document
-                var seal = document.getLastSeal();
-                var stripped = document.unsealedCopy();
 
-                // calculate the digest of the stripped document + certificate reference
-                var source = stripped.toString().slice(0, -1);  // remove POSIX compliant end of line
-                // NOTE: the certificate reference must be included in the signed source!
-                source += NotarizedDocument.DIVIDER + seal.getValue('$certificateReference');
+                // strip off the digital signature from the beginning of the notarized document
+                var source = '';
+                source += document.certificateReference + '\n';
+                source += document.previousReference + '\n';
+                source += document.content;
 
                 // verify the digital signature using the public key from the notary certificate
                 var publicKey = certificate.getValue('$publicKey');
-                var digitalSignature = seal.getValue('$digitalSignature');
+                var digitalSignature = document.digitalSignature;
                 var isValid = V1Public.verify(publicKey, source, digitalSignature);
                 return isValid;
             } else {
@@ -222,7 +213,7 @@ exports.api = function(testDirectory) {
          * message (AEM) containing the ciphertext and other required attributes needed to
          * decrypt the message.
          * 
-         * @param {Document} certificate A document containing the public notary certificate for
+         * @param {NotarizedDocument} certificate A document containing the public certificate for
          * the intended recipient of the encrypted message.
          * @param {String} message The message to be encrypted using the specified public notary
          * certificate.
@@ -230,6 +221,7 @@ exports.api = function(testDirectory) {
          * and other required attributes for the specified message.
          */
         encryptMessage: function(certificate, message) {
+            certificate = bali.parser.parseDocument(certificate.content);
             var protocol = certificate.getValue('$protocol');
             var publicKey = certificate.getValue('$publicKey');
             if (protocol.toString() === V1Public.PROTOCOL) {

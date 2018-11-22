@@ -56,7 +56,7 @@ exports.digest = function(message) {
  * 
  * @param {Tag} tag The unique tag for the document.
  * @param {Version} version The current version of the document.
- * @param {String|NotarizedDocument} document The document to be cited.
+ * @param {String} document The document to be cited.
  * @returns {Reference} A Bali reference citation for the document.
  */
 exports.cite = function(tag, version, document) {

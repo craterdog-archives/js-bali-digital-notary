@@ -10,21 +10,19 @@
 'use strict';
 
 /**
- * This class captures the state and methods associated with a Bali notarized document.
+ * This class captures the state and methods associated with a notarized document.
  * 
  * All notarized documents have the following structure:
  * <pre>
- *   .-------------------------------------------------------------------------.
- *   |                                                                         |
- *   | (A) The Content of the Document (in Bali Document Notation™)            |
- *   |                                                                         |
- *   |-----                                                                    |
- *   | (B) Document Citation to Previous Version of this Document (or 'none')  |
- *   |-----                                                                    |.
- *   | (C) A Document Citation to the Public Notary Certificate of Signer      | \
- *   |                                                                         |  - Notary Seal
- *   | (D) A Digital Signature of Parts A, B, and C                            | /
- *   '-------------------------------------------------------------------------''
+ *   .---------------------------------------------------------------------------..
+ *   | (A) A Digital Signature of Parts B, C, and D                              | \
+ *   | (B) A Citation Reference to the Public Certificate of the Signer (A)      |  Notary Seal
+ *   | (C) A Citation Reference to Previous Version of the Document (or 'none')  | /
+ *   |---------------------------------------------------------------------------|'
+ *   |                                                                           |
+ *   | (D) The Content of the Document                                           |
+ *   |                                                                           |
+ *   '---------------------------------------------------------------------------'
  * </pre>
  */
 var bali = require('bali-component-framework');
@@ -33,42 +31,47 @@ var bali = require('bali-component-framework');
 // PUBLIC FUNCTIONS
 
 /**
- * This constructor creates a new Bali document using the specified optional previous
- * version reference and the content of the document. The new document is not yet
- * notarized with any digital signatures.
+ * This constructor creates a new notarized document using the specified parameters.
  * 
- * @param {String|Reference} previousReference An optional reference to the previous version of the
- * document.
- * @param {Component} documentContent The content of the document.
- * @returns {NotarizedDocument} The new Bali document.
+ * @param {String} content The content of the document.
+ * @param {Reference} previousReference A reference to the previous version of the document.
+ * @param {Reference} certificateReference A reference to the public certificate for the
+ * notary key that notarized the document.
+ * @param {Binary} digitalSignature A base 32 encoded binary string containing the digital
+ * signature of the document.
+ * @returns {NotarizedDocument} The new notarized document.
  */
-function NotarizedDocument(previousReference, documentContent) {
-    previousReference = previousReference || bali.Template.NONE;
-    if (previousReference.constructor.name === 'String') {
-        previousReference = new bali.Reference(previousReference);
-    }
+function NotarizedDocument(content, previousReference, certificateReference, digitalSignature) {
+    this.content = content.toString();  // force anything else to be a string
+    this.certificateReference = certificateReference;
     this.previousReference = previousReference;
-    this.documentContent = documentContent;
-    this.notarySeals = new bali.List();
+    this.digitalSignature = digitalSignature;
     return this;
 }
 NotarizedDocument.prototype.constructor = NotarizedDocument;
 exports.NotarizedDocument = NotarizedDocument;
 
-NotarizedDocument.DIVIDER = '\n-----\n';
-
-NotarizedDocument.fromString = function(source) {
-    source = source.slice(0, -1);  // remove POSIX compliant end of line
-    var parts = source.split(NotarizedDocument.DIVIDER);
-    var documentContent = bali.parser.parseDocument(parts[0]);
-    var previousReference = (parts[1] === 'none') ? bali.Template.NONE : new bali.Reference(parts[1]);
-    var document = new NotarizedDocument(previousReference, documentContent);
-    for (var i = 2; i < parts.length; i++) {
-        var seal = parts[i];
-        var index = seal.indexOf('\n');
-        var certificateReference = new bali.Reference(seal.slice(0, index));
-        var digitalSignature = new bali.Binary(seal.slice(index + 1));
-        document.addNotarySeal(certificateReference, digitalSignature);
+NotarizedDocument.fromString = function(string) {
+    var document;
+    try {
+        var lines = string.split('\n');
+        var binary = lines[0];
+        for (var i = 1; i < 6; i++) {
+            binary += '\n' + lines[i];
+        }
+        var digitalSignature = new bali.Binary(binary);
+        var certificateReference = new bali.Reference(lines[6]);
+        var previousReference = bali.Template.NONE;
+        if (lines[7] !== 'none') {
+            previousReference = new bali.Reference(lines[7]);
+        }
+        var content = lines[8];
+        for (var j = 9; j < lines.length; j++) {
+            content += '\n' + lines[j];
+        }
+        document = new NotarizedDocument(content, previousReference, certificateReference, digitalSignature);
+    } catch (e) {
+        throw new Error('DOCUMENT: An invalid notarized document string was found: ' + string);
     }
     return document;
 };
@@ -78,137 +81,9 @@ NotarizedDocument.fromString = function(source) {
 
 NotarizedDocument.prototype.toString = function() {
     var string = '';
-    string += this.documentContent;
-    string += NotarizedDocument.DIVIDER;
-    string += this.previousReference;
-    var iterator = this.notarySeals.getIterator();
-    while (iterator.hasNext()) {
-        var seal = iterator.getNext();
-        string += NotarizedDocument.DIVIDER;
-        string += seal.getValue('$certificateReference') + '\n';
-        string += seal.getValue('$digitalSignature');
-    }
-    string += '\n';  // add POSIX compliant end of line
+    string += this.digitalSignature + '\n';
+    string += this.certificateReference + '\n';
+    string += this.previousReference + '\n';
+    string += this.content;
     return string;
-};
-
-
-/**
- * This function returns a (deep) copy of the document.
- * 
- * @returns {NotarizedDocument} A deep copy of the document.
- */
-NotarizedDocument.prototype.exactCopy = function() {
-    var source = this.documentContent.toString();
-    var content = bali.parser.parseDocument(source);
-    var copy = new NotarizedDocument(this.previousReference, content);
-    copy.notarySeals = bali.List.fromCollection(this.notarySeals);
-    return copy;
-};
-
-
-/**
- * This function returns a copy of the document without its last notary seal.
- * 
- * @returns {NotarizedDocument} A copy of the document without the last seal.
- */
-NotarizedDocument.prototype.unsealedCopy = function() {
-    var copy = this.exactCopy();
-    copy.notarySeals.removeItem(-1);  // remove the last notary seal
-    return copy;
-};
-
-
-/**
- * This function returns a draft copy of the document. The previous version reference
- * and seals from the original document have been removed from the draft copy.
- * 
- * @param {String|Reference} previousReference A reference to the document.
- * @returns {NotarizedDocument} A draft copy of the document.
- */
-NotarizedDocument.prototype.draftCopy = function(previousReference) {
-    var source = this.documentContent.toString();
-    var content = bali.parser.parseDocument(source);
-    var draft = new NotarizedDocument(previousReference, content);
-    return draft;
-};
-
-
-/**
- * This method sets the reference to the previous version of the document.
- * 
- * @param {String|Reference} previousReference The reference to the previous version of the document.
- */
-NotarizedDocument.prototype.setPreviousReference = function(previousReference) {
-    if (previousReference.constructor.name === 'String') {
-        previousReference = new bali.Reference(previousReference);
-    }
-    this.previousReference = previousReference;
-};
-
-
-/**
- * This method returns the last notary seal on the document.
- * 
- * @returns {Seal} The last notary seal.
- */
-NotarizedDocument.prototype.getLastSeal = function() {
-    var notarySeal = this.notarySeals.getItem(-1);
-    return notarySeal;
-};
-
-
-/**
- * This method appends a notary seal to the end of the document.
- * 
- * @param {String|Reference} certificateReference A reference to the certificate that can be
- * used to verify the associated digital signature.
- * @param {String|Binary} digitalSignature A base 32 encoded binary string containing the
- * digital signature generated using the notary key associated with the notary certificate
- * referenced by the certificate reference.
- */
-NotarizedDocument.prototype.addNotarySeal = function(certificateReference, digitalSignature) {
-    var notarySeal = new bali.Catalog();
-    notarySeal.setValue('$certificateReference', certificateReference);
-    notarySeal.setValue('$digitalSignature', digitalSignature);
-    this.notarySeals.addItem(notarySeal);
-};
-
-
-/**
- * This function retrieves from a document the value associated with the
- * specified key.
- * 
- * @param {String|Number|Boolean|Component} key The key for the desired value.
- * @returns {Component} The value associated with the key.
- */
-NotarizedDocument.prototype.getValue = function(key) {
-    return this.documentContent.getValue(key);
-};
-
-
-/**
- * This function sets in a document a value associated with the
- * specified key.
- * 
- * @param {String|Number|Boolean|Component} key The key for the new value.
- * @param {String|Component} value The value to be associated with the key.
- * @returns {Component} The old value associated with the key.
- */
-NotarizedDocument.prototype.setValue = function(key, value) {
-    var oldValue = this.documentContent.setValue(key, value);
-    return oldValue;
-};
-
-
-/**
- * This function removes from a document the value associated with the
- * specified key.
- * 
- * @param {String|Number|Boolean|Component} key The key for the value to be removed.
- * @returns {Component} The value associated with the key.
- */
-NotarizedDocument.prototype.removeValue = function(key) {
-    var oldValue = this.documentContent.removeValue(key);
-    return oldValue;
 };
