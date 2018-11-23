@@ -160,7 +160,8 @@ exports.api = function(testDirectory) {
             source = V1Private.sign(source) + '\n' + source;
             // construct the notarized document
             var notarizedDocument = NotarizedDocument.fromString(source);
-            documentCitation.setValue('$digest', V1Public.digest(notarizedDocument));
+            // update the document citation with the new digest
+            documentCitation.setValue('$digest', V1Public.digest(source));
             return notarizedDocument;
         },
 
