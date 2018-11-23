@@ -16,21 +16,22 @@ var NotarizedDocument = require('../src/NotarizedDocument').NotarizedDocument;
 
 describe('Bali Digital Notary™', function() {
 
-    var notaryCertificate = notary.generateKeys();
+    var certificateDocument = notary.generateKeys();
+    var notaryCertificate = bali.parser.parseDocument(certificateDocument.content);
     var certificateCitation = notary.getNotaryCitation();
     var source = '[$foo: "bar"]';
 
     describe('Test Citations', function() {
 
         it('should validate the certificate', function() {
-            expect(notaryCertificate.content).to.equal(notary.getNotaryCertificate().content);
-            expect(notaryCertificate.content.includes('$protocol: v1')).to.equal(true);
-            var isValid = notary.documentIsValid(notaryCertificate, notaryCertificate);
+            expect(certificateDocument.toString()).to.equal(notary.getNotaryCertificate().toString());
+            expect(notaryCertificate.getValue('$protocol').toString()).to.equal('v1');
+            var isValid = notary.documentIsValid(notaryCertificate, certificateDocument);
             expect(isValid).to.equal(true);
         });
 
         it('should validate the citation for the certificate', function() {
-            var isValid = notary.documentMatches(certificateCitation, notaryCertificate);
+            var isValid = notary.documentMatches(certificateCitation, certificateDocument);
             expect(isValid).to.equal(true);
         });
 
@@ -66,14 +67,15 @@ describe('Bali Digital Notary™', function() {
             var documentCitation = notary.createCitation();
             var document = notary.notarizeDocument(documentCitation, source, bali.Template.NONE);
 
-            var newCertificate = notary.generateKeys();
-            expect(notaryCertificate).to.exist;  // jshint ignore:line
+            var newCertificateDocument = notary.generateKeys();
+            expect(newCertificateDocument).to.exist;  // jshint ignore:line
+            var newNotaryCertificate = bali.parser.parseDocument(newCertificateDocument.content);
 
             document = notary.notarizeDocument(documentCitation, source, bali.Template.NONE);
             isValid = notary.documentIsValid(notaryCertificate, document);
             expect(isValid).to.equal(false);
 
-            isValid = notary.documentIsValid(newCertificate, document);
+            isValid = notary.documentIsValid(newNotaryCertificate, document);
             expect(isValid).to.equal(true);
 
             var matches = notary.documentMatches(documentCitation, document);

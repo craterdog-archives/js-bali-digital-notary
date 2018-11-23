@@ -188,23 +188,20 @@ exports.api = function(testDirectory) {
          * This method determines whether or not the notary seal on the specified document
          * is valid.
          * 
-         * @param {NotarizedDocument} certificate A notarized document containing the public
-         * certificate for the private notary key that allegedly notarized the specified document.
+         * @param {Catalog} certificate A catalog containing the public notary key for the
+         * private notary key that allegedly notarized the specified document.
          * @param {NotarizedDocument} document The notarized document to be tested.
          * @returns {Boolean} Whether or not the notary seal on the document is valid.
          */
         documentIsValid: function(certificate, document) {
             // check to see if the document's seal is valid
-            certificate = bali.parser.parseDocument(certificate.content);
             var protocol = certificate.getValue('$protocol');
             if (protocol.toString() === V1Public.PROTOCOL) {
-
                 // extracting the digital signature from the beginning of the notarized document
                 var source = '';
                 source += document.certificateReference + '\n';
                 source += document.previousReference + '\n';
                 source += document.content;
-
                 // verify the digital signature using the public key from the notary certificate
                 var publicKey = certificate.getValue('$publicKey');
                 var digitalSignature = document.digitalSignature;
@@ -222,15 +219,14 @@ exports.api = function(testDirectory) {
          * message (AEM) containing the ciphertext and other required attributes needed to
          * decrypt the message.
          * 
-         * @param {NotarizedDocument} certificate A notarized document containing the public
-         * certificate for the intended recipient of the encrypted message.
+         * @param {Catalog} certificate A catalog containing the public notary key for the
+         * intended recipient of the encrypted message.
          * @param {String} message The plaintext message to be encrypted using the specified
          * public notary certificate.
          * @returns {Catalog} An authenticated encrypted message (AEM) containing the ciphertext
          * and other required attributes for the specified message.
          */
         encryptMessage: function(certificate, message) {
-            certificate = bali.parser.parseDocument(certificate.content);
             var protocol = certificate.getValue('$protocol');
             var publicKey = certificate.getValue('$publicKey');
             if (protocol.toString() === V1Public.PROTOCOL) {
