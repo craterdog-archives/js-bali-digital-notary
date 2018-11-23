@@ -17,7 +17,7 @@
  * proxy to a hardware security module will be used for all private key operations.
  */
 var fs = require('fs');
-var homeDirectory = require('os').homedir() + '/.bali/';
+var configDirectory = require('os').homedir() + '/.bali/';  // default configuration directory
 var bali = require('bali-component-framework');
 var V1Public = require('./v1/V1Public');
 var NotarizedDocument = require('./NotarizedDocument').NotarizedDocument;
@@ -34,51 +34,53 @@ var NotarizedDocument = require('./NotarizedDocument').NotarizedDocument;
 exports.api = function(testDirectory) {
 
     // create the config directory if necessary
-    if (testDirectory) homeDirectory = testDirectory;
-    if (!fs.existsSync(homeDirectory)) fs.mkdirSync(homeDirectory, 448);  // drwx------ permissions
+    if (testDirectory) configDirectory = testDirectory;
+    if (!fs.existsSync(configDirectory)) fs.mkdirSync(configDirectory, 448);  // drwx------ permissions
 
     // load the account citation
-    var filename = homeDirectory + 'Citation.bali';
+    var filename = configDirectory + 'Citation.bali';
     var certificateCitation = loadCitation(filename);
 
     // connect to the private hardware security module for the account
     var notaryTag = certificateCitation.getValue('$tag');
     var V1Private;
     if (testDirectory) {
+        // use a test software security module instead
         V1Private = require('./v1/V1Test').api(notaryTag, testDirectory);
     } else {
+        // use a proxy to a hardware security module
         V1Private = require('./v1/V1Proxy').api(notaryTag);
     }
 
     return {
 
         /**
-         * This method returns the the Bali document containing the public certificate for this
-         * notary.
+         * This method returns a Bali Notarized Document™ containing the public certificate for
+         * this digital notary.
          * 
-         * @returns {NotarizedDocument} The Bali document containing the public certificate for this
-         * notary.
+         * @returns {NotarizedDocument} The notarized document containing the public certificate
+         * for this digital notary.
          */
         getNotaryCertificate: function() {
             return V1Private.certificate();
         },
 
         /**
-         * This method returns a document citation referencing the Bali document containing
-         * the public certificate for this notary.
+         * This method returns a document citation referencing the Bali Notarized Document™
+         * containing the public certificate for this digital notary.
          * 
-         * @returns {Catalog} A document citation referencing the Bali document containing
-         * the public certificate for this notary.
+         * @returns {Catalog} A document citation referencing the document containing the
+         * public certificate for this digital notary.
          */
         getNotaryCitation: function() {
             return V1Private.citation();
         },
 
         /**
-         * This method extracts from the specified Bali reference the encoded certificate
-         * citation.
+         * This method extracts from the specified Bali reference the certificate citation
+         * encoded using the Bali Document Notation™.
          * 
-         * @param {Reference} reference A Bali reference containing an encoded document
+         * @param {Reference} reference A reference containing the encoded document
          * citation.
          * @returns {Catalog} The document citation that was encoded in the specified reference.
          */
@@ -88,8 +90,8 @@ exports.api = function(testDirectory) {
 
         /**
          * This method creates a new document citation containing the specified document tag,
-         * version, and (optional) digest of the document. If the document does not yet exist
-         * no digest is needed.
+         * version, and (optionally) a digest of the document. If the document does not yet
+         * exist, no digest is required (or even possible).
          * 
          * @param {Tag} tag The unique tag that identifies the document.
          * @param {Version} version The current version of the document.
@@ -106,20 +108,22 @@ exports.api = function(testDirectory) {
          * document citation.
          * 
          * @param {Catalog} citation The document citation to be used to create the reference.
-         * @returns {Reference} A new reference to the document referred to by the document
-         * citation.
+         * @returns {Reference} A new reference to the document with the document citation
+         * attributes encoded in it using the Bali Document Notation™.
          */
         createReference: function(citation) {
             return V1Public.referenceFromCitation(citation);
         },
 
         /**
-         * This method (re)generates the private notary key and its associated public notary
+         * This method (re)generates a private notary key and its associated public notary
          * certificate. The private notary key is generated on the hardware security module
-         * and remains there. The associated public notary certificate is returned.
+         * and remains there. The associated public notary certificate is returned and a
+         * document citation for the certificate is stored in the local configuration
+         * directory.
          * 
-         * @returns {NotarizedDocument} The new Bali document containing the public notary certificate
-         * associated with the new private notary key.
+         * @returns {NotarizedDocument} A new Bali Notarized Document™ containing the public
+         * notary certificate associated with the new private notary key.
          */
         generateKeys: function() {
             var notaryCertificate = V1Private.generate();
@@ -130,14 +134,15 @@ exports.api = function(testDirectory) {
 
         /**
          * This method digitally notarizes the specified document using the private notary
-         * key inside the hardware security module. An updated document citation to the newly
-         * notarized document is returned.
+         * key maintained inside the hardware security module. The specified document citation
+         * is updated with the digest of the notarized document. The newly notarized document
+         * is returned.
          * 
          * @param {Catalog} documentCitation A document citation referencing the document to
          * be notarized.
          * @param {String} document The document to be notarized.
          * @param {Reference} previousReference A reference to the previous version of the document.
-         * @returns {NotarizedDocument} The notarized document.
+         * @returns {NotarizedDocument} The newly notarized document.
          */
         notarizeDocument: function(documentCitation, document, previousReference) {
             previousReference = previousReference || bali.Template.NONE;
@@ -146,19 +151,23 @@ exports.api = function(testDirectory) {
                 throw new Error('NOTARY: The following notary key has not yet been generated: ' + notaryTag);
             }
             var certificateReference = V1Public.referenceFromCitation(certificateCitation);
+            // assemble the full document source to be digitally signed
             var source = '';
             source += certificateReference + '\n';
             source += previousReference + '\n';
             source += document;
+            // prepend the digital signature to the document source
             source = V1Private.sign(source) + '\n' + source;
+            // construct the notarized document
             var notarizedDocument = NotarizedDocument.fromString(source);
             documentCitation.setValue('$digest', V1Public.digest(notarizedDocument));
             return notarizedDocument;
         },
 
         /**
-         * This method determines whether or not the documentCitation matches the specified
-         * document.
+         * This method determines whether or not the specified document citation matches
+         * the specified document. The citation only matches if its digest matches the
+         * digest of the document.
          * 
          * @param {Catalog} documentCitation A document citation allegedly referring to the
          * specified document.
@@ -179,9 +188,9 @@ exports.api = function(testDirectory) {
          * This method determines whether or not the notary seal on the specified document
          * is valid.
          * 
-         * @param {NotarizedDocument} certificate A document containing the public certificate
-         * for the private notary key that allegedly notarized the specified document.
-         * @param {NotarizedDocument} document The document to be tested.
+         * @param {NotarizedDocument} certificate A notarized document containing the public
+         * certificate for the private notary key that allegedly notarized the specified document.
+         * @param {NotarizedDocument} document The notarized document to be tested.
          * @returns {Boolean} Whether or not the notary seal on the document is valid.
          */
         documentIsValid: function(certificate, document) {
@@ -190,7 +199,7 @@ exports.api = function(testDirectory) {
             var protocol = certificate.getValue('$protocol');
             if (protocol.toString() === V1Public.PROTOCOL) {
 
-                // strip off the digital signature from the beginning of the notarized document
+                // extracting the digital signature from the beginning of the notarized document
                 var source = '';
                 source += document.certificateReference + '\n';
                 source += document.previousReference + '\n';
@@ -213,10 +222,10 @@ exports.api = function(testDirectory) {
          * message (AEM) containing the ciphertext and other required attributes needed to
          * decrypt the message.
          * 
-         * @param {NotarizedDocument} certificate A document containing the public certificate for
-         * the intended recipient of the encrypted message.
-         * @param {String} message The message to be encrypted using the specified public notary
-         * certificate.
+         * @param {NotarizedDocument} certificate A notarized document containing the public
+         * certificate for the intended recipient of the encrypted message.
+         * @param {String} message The plaintext message to be encrypted using the specified
+         * public notary certificate.
          * @returns {Catalog} An authenticated encrypted message (AEM) containing the ciphertext
          * and other required attributes for the specified message.
          */
@@ -235,11 +244,11 @@ exports.api = function(testDirectory) {
         /**
          * This method uses the private notary key in the hardware security module to decrypt
          * the ciphertext residing in the specified authenticated encrypted message (AEM). THe
-         * result is the decrypted message.
+         * result is the decrypted plaintext message.
          * 
          * @param {Catalog} aem An authenticated encrypted message (AEM) containing the ciphertext
          * and other required attributes required to decrypt the message.
-         * @returns {String} The decrypted message.
+         * @returns {String} The decrypted plaintext message.
          */
         decryptMessage: function(aem) {
             if (!V1Private.citation()) {

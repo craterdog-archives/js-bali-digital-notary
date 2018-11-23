@@ -10,7 +10,7 @@
 'use strict';
 
 /**
- * This class captures the state and methods associated with a notarized document.
+ * This class captures the state and methods associated with a Bali Notarized Document™.
  * 
  * All notarized documents have the following structure:
  * <pre>
@@ -54,21 +54,26 @@ exports.NotarizedDocument = NotarizedDocument;
 NotarizedDocument.fromString = function(string) {
     var document;
     try {
+        // extract the digital signature (A)
         var lines = string.split('\n');
         var binary = lines[0];
         for (var i = 1; i < 6; i++) {
             binary += '\n' + lines[i];
         }
         var digitalSignature = new bali.Binary(binary);
+        // extract the public certificate reference (B)
         var certificateReference = new bali.Reference(lines[6]);
+        // extract the previous document reference (C)
         var previousReference = bali.Template.NONE;
         if (lines[7] !== 'none') {
             previousReference = new bali.Reference(lines[7]);
         }
+        // extract the document content (D)
         var content = lines[8];
         for (var j = 9; j < lines.length; j++) {
             content += '\n' + lines[j];
         }
+        // construct the notarized document
         document = new NotarizedDocument(content, previousReference, certificateReference, digitalSignature);
     } catch (e) {
         throw new Error('DOCUMENT: An invalid notarized document string was found: ' + string);

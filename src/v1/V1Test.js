@@ -22,7 +22,7 @@
  * actual HSM.
  */
 var fs = require('fs');
-var config = require('os').homedir() + '/.bali/';
+var config = require('os').homedir() + '/.bali/';  // default configuration directory
 var crypto = require('crypto');
 var ec_pem = require('ec-pem');
 var bali = require('bali-component-framework');
@@ -33,23 +33,23 @@ var NotarizedDocument = require('../NotarizedDocument').NotarizedDocument;
 /**
  * This function returns an object that implements the API for the software security module
  * (notary key) associated with the specified unique tag. The internal attributes for the
- * notary key are hidden from the code that is using the notary key.
+ * notary key are hidden from the code that is using the notary key, but it is NOT fool-proof.
  * 
  * @param {Tag} tag The unique tag for the software security module.
  * @param {String} testDirectory An optional directory to use for local testing.
- * @returns {Object} A proxy to the software security module managing the private key.
+ * @returns {Object} A proxy to the test software security module managing the private key.
  */
 exports.api = function(tag, testDirectory) {
     
     // read in the notary key attributes
-    var currentVersion;     // the version of the notary key
+    var currentVersion;     // the current version of the notary key
     var publicKey;   // the public key residing in the certificate in the cloud
-    var privateKey;  // the private key that is used for signing and decryption
+    var privateKey;  // the local private key that is used for signing and decryption
     var notaryCertificate; // the public notary certificate containing the public key
-    var certificateCitation;    // a reference citation to the public notary certificate
+    var certificateCitation;    // a document citation for the public notary certificate
     if (testDirectory) config = testDirectory;
     var keyFilename = config + 'NotaryKey.bali';
-    var certificateFilename = config + 'NotaryCertificate.bali';
+    var certificateFilename = config + 'NotaryCertificate.bdoc';
     try {
         // create the configuration directory if necessary
         if (!fs.existsSync(config)) fs.mkdirSync(config, 448);  // drwx------ permissions
@@ -197,9 +197,10 @@ exports.api = function(tag, testDirectory) {
          */
         forget: function() {
             currentVersion = undefined;
-            certificateCitation = undefined;
             publicKey = undefined;
             privateKey = undefined;
+            certificateCitation = undefined;
+            notaryCertificate = undefined;
             try {
                 if (fs.existsSync(keyFilename)) {
                     // remove the configuration file
@@ -215,9 +216,9 @@ exports.api = function(tag, testDirectory) {
         },
 
         /**
-         * This method generates a digital signature of the specified message using the notary
-         * key. The resulting digital signature is base 32 encoded and may be verified using the
-         * V1Public.verify() method and the corresponding public key.
+         * This method generates a digital signature of the specified message using the local
+         * notary key. The resulting digital signature is base 32 encoded and may be verified
+         * using the V1Public.verify() method and the corresponding public key.
          * 
          * @param {String} message The message to be digitally signed.
          * @returns {Binary} A base 32 encoded digital signature of the message.
@@ -234,8 +235,8 @@ exports.api = function(tag, testDirectory) {
         },
 
         /**
-         * This function uses the notary key to decrypt the specified authenticated encrypted
-         * message. The result is the decrypted message.
+         * This function uses the local notary key to decrypt the specified authenticated
+         * encrypted message (AEM). The result is the decrypted plaintext message.
          * 
          * @param {Catalog} aem The authenticated encrypted message to be decrypted.
          * @returns {String} The decrypted plaintext message.

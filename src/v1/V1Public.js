@@ -32,15 +32,15 @@ exports.CIPHER = 'aes-256-gcm';
 
 /**
  * This function returns a cryptographically secure base 32 encoded digital digest of
- * the specified message. The digest is a Bali binary string and will always be the same
- * for the same message.
+ * the specified message string. The digest is a Bali binary string and will always be
+ * the same for the same message.
  * 
- * @param {Object} message The message to be digested.
+ * @param {String} message The message to be digested.
  * @returns {Binary} A base 32 encoded digital digest of the message.
  */
 exports.digest = function(message) {
     var hasher = crypto.createHash(exports.DIGEST);
-    hasher.update(message.toString());
+    hasher.update(message.toString());  // force it to a string if it isn't already
     var digest = hasher.digest();
     digest = new bali.Binary(digest);
     return digest;
@@ -48,19 +48,19 @@ exports.digest = function(message) {
 
 
 /**
- * This function returns a reference citation for the specified document. The citation is
- * a Bali reference containing an encoded Bali catalog that includes the protocol version,
- * document tag and version number, and a digital digest of the document. It can be used
- * to retrieve the document from the Bali Cloud Environment™ and verify that the retrieved
- * document has not be modified since it was cited.
+ * This function returns a document citation for the specified document. The citation is
+ * a Bali catalog containing the security protocol version, document tag and version number,
+ * and a digital digest of the document string. It can be used to verify that when the
+ * document is later retrieved it has not be modified since it was cited.
  * 
  * @param {Tag} tag The unique tag for the document.
  * @param {Version} version The current version of the document.
  * @param {String} document The document to be cited.
- * @returns {Reference} A Bali reference citation for the document.
+ * @returns {Catalog} The document citation for the document.
  */
 exports.cite = function(tag, version, document) {
-    var digest = exports.digest(document);
+    document = document.toString();  // force it to be a string
+    var digest = exports.digest(document.toString());  // force it to be a string if it isn't
     var citation = exports.citationFromAttributes(tag, version, digest);
     return citation;
 };
@@ -78,6 +78,7 @@ exports.cite = function(tag, version, document) {
  */
 exports.verify = function(publicKey, message, signature) {
     signature = signature.getBuffer();
+    message = message.toString();  // force it to be a string
     publicKey = publicKey.getBuffer();
     var curve = crypto.createECDH(exports.CURVE);
     curve.setPublicKey(publicKey);
@@ -90,15 +91,16 @@ exports.verify = function(publicKey, message, signature) {
 
 /**
  * This function uses the specified base 32 encoded public key to encrypt the specified
- * plaintext message. The result is an authenticated encrypted message (AEM) object that
- * can only be decrypted using the associated private key.
+ * plaintext message. The result is an authenticated encrypted message (AEM) that can
+ * only be decrypted using the associated private key.
  * 
  * @param {Binary} publicKey The base 32 encoded public key to use for encryption.
  * @param {String} message The plaintext message to be encrypted.
- * @returns {Catalog} An authenticated encrypted message object.
+ * @returns {Catalog} An authenticated encrypted message.
  */
 exports.encrypt = function(publicKey, message) {
     publicKey = publicKey.getBuffer();
+    message = message.toString();  // force it to be a string
     // generate and encrypt a 32-byte symmetric key
     var curve = crypto.createECDH(exports.CURVE);
     curve.generateKeys();
@@ -148,21 +150,17 @@ exports.citationFromAttributes = function(tag, version, digest) {
 
 
 /**
- * This function creates a document citation based on the specified Bali source code.
+ * This function creates a document citation based on the specified Bali Document Notation™.
  * 
- * @param {String} source The Bali source code for the document citation. 
+ * @param {String} source The Bali Document Notation™ for the document citation. 
  * @returns {Catalog} The resulting document citation.
  */
 exports.citationFromSource = function(source) {
-    var document = bali.parser.parseDocument(source);
-    var protocol = document.getValue('$protocol');
+    var citation = bali.parser.parseDocument(source);
+    var protocol = citation.getValue('$protocol');
     if (exports.PROTOCOL !== protocol.toString()) {
         throw new Error('NOTARY: The protocol for the citation is not supported: ' + protocol);
     }
-    var tag = document.getValue('$tag');
-    var version = document.getValue('$version');
-    var digest = document.getValue('$digest');
-    var citation = exports.citationFromAttributes(tag, version, digest);
     return citation;
 };
 
@@ -170,15 +168,19 @@ exports.citationFromSource = function(source) {
 /**
  * This function creates a document citation based on the specified document reference.
  * The attributes for the document citation are encoded in the body of the document
- * reference.
+ * reference using the Bali Document Notation™.
  * 
- * @param {Reference} reference The Bali reference containing the citation attributes.
- * @returns {Catalog} The resulting document citation.
+ * @param {Reference} reference The Bali reference containing the encoded document citation.
+ * @returns {Catalog} The decoded document citation.
  */
 exports.citationFromReference = function(reference) {
     reference = reference.toString();
     var source = reference.slice(6, -1);  // remove '<bali:' and '>' wrapper
     var citation = bali.parser.parseDocument(source);
+    var protocol = citation.getValue('$protocol');
+    if (exports.PROTOCOL !== protocol.toString()) {
+        throw new Error('NOTARY: The protocol for the citation is not supported: ' + protocol);
+    }
     return citation;
 };
 
@@ -186,7 +188,7 @@ exports.citationFromReference = function(reference) {
 /**
  * This function creates a document reference based on the specified document citation.
  * The attributes for the document citation are encoded in the body of the new document
- * reference.
+ * reference using the Bali Document Notation™.
  * 
  * @param {Catalog} citation The document citation containing the citation attributes.
  * @returns {Reference} The resulting Bali reference containing the citation attributes.
