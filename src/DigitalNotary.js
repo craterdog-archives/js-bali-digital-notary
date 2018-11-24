@@ -12,9 +12,9 @@
 /*
  * This module uses the singleton pattern to provide an object that implements a
  * digital notary interface that is used for account identity and document notarization
- * purposes within the Bali Cloud Environment™. If a test directory is specified,
- * it will be created and used as the location of the local key store. Otherwise, a
- * proxy to a hardware security module will be used for all private key operations.
+ * purposes within the Bali Nebula™. If a test directory is specified, it will be
+ * created and used as the location of the local key store. Otherwise, a proxy
+ * to a hardware security module will be used for all private key operations.
  */
 var fs = require('fs');
 var configDirectory = require('os').homedir() + '/.bali/';  // default configuration directory

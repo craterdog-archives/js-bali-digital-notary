@@ -1,7 +1,7 @@
 ![Logo](https://raw.githubusercontent.com/craterdog-bali/bali-project-documentation/master/images/CraterDogLogo.png)
 
 ### Bali Digital Notary
-This project provides a JavaScript version of the digital notary classes for the [_Bali Cloud Environment™_](https://github.com/craterdog-bali/bali-project-documentation/wiki). It defines a format for digitally notarized documents and a digital notary proxy to a hardware security module (HSM) that handles all private key operations including generating public-private key pairs. It is designed to work with documents that were exported from components created using the [_Bali Component Framework™_](https://github.com/craterdog-bali/js-bali-component-framework/wiki) but will work with most string based documents.
+This project provides a JavaScript version of the digital notary classes for the [_Bali Nebula™_](https://github.com/craterdog-bali/bali-project-documentation/wiki). It defines a format for digitally notarized documents and a digital notary proxy to a hardware security module (HSM) that handles all private key operations including generating public-private key pairs. It is designed to work with documents that were exported from components created using the [_Bali Component Framework™_](https://github.com/craterdog-bali/js-bali-component-framework/wiki) but will work with most string based documents.
 
 ![Pyramid](https://raw.githubusercontent.com/craterdog-bali/js-bali-digital-notary/master/docs/images/BaliPyramid-DigitalNotary.png)
 
