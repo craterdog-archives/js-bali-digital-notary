@@ -13,7 +13,7 @@ module.exports = function(grunt) {
       files: [
         'Gruntfile.js',
         'src/**/*.js',
-        'test/*.js'
+        'test/**/*.js'
       ],
       options: {
         node: true
@@ -38,7 +38,7 @@ module.exports = function(grunt) {
           reporter: 'spec',
           timeout: 10000 
         },
-        src: ['test/*.js']
+        src: ['test/**/*.js']
       }
     },
 

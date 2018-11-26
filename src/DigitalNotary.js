@@ -115,6 +115,10 @@ exports.api = function(testDirectory) {
             return V1Public.referenceFromCitation(citation);
         },
 
+        parseDocument: function(string) {
+            return NotarizedDocument.fromString(string);
+        },
+
         /**
          * This method (re)generates a private notary key and its associated public notary
          * certificate. The private notary key is generated on the hardware security module
@@ -138,30 +142,30 @@ exports.api = function(testDirectory) {
          * is updated with the digest of the notarized document. The newly notarized document
          * is returned.
          * 
-         * @param {Catalog} documentCitation A document citation referencing the document to
+         * @param {Catalog} citation A document citation referencing the document to
          * be notarized.
          * @param {String} document The document to be notarized.
-         * @param {Reference} previousReference A reference to the previous version of the document.
+         * @param {Reference} previous A reference to the previous version of the document.
          * @returns {NotarizedDocument} The newly notarized document.
          */
-        notarizeDocument: function(documentCitation, document, previousReference) {
-            previousReference = previousReference || bali.Template.NONE;
+        notarizeDocument: function(citation, document, previous) {
+            previous = previous || bali.Template.NONE;
             var certificateCitation = V1Private.citation();
             if (!certificateCitation) {
                 throw new Error('NOTARY: The following notary key has not yet been generated: ' + notaryTag);
             }
-            var certificateReference = V1Public.referenceFromCitation(certificateCitation);
+            var certificate = V1Public.referenceFromCitation(certificateCitation);
             // assemble the full document source to be digitally signed
             var source = '';
-            source += certificateReference + '\n';
-            source += previousReference + '\n';
+            source += certificate + '\n';
+            source += previous + '\n';
             source += document;
             // prepend the digital signature to the document source
             source = V1Private.sign(source) + '\n' + source;
             // construct the notarized document
             var notarizedDocument = NotarizedDocument.fromString(source);
             // update the document citation with the new digest
-            documentCitation.setValue('$digest', V1Public.digest(source));
+            citation.setValue('$digest', V1Public.digest(source));
             return notarizedDocument;
         },
 
@@ -170,16 +174,16 @@ exports.api = function(testDirectory) {
          * the specified document. The citation only matches if its digest matches the
          * digest of the document.
          * 
-         * @param {Catalog} documentCitation A document citation allegedly referring to the
+         * @param {Catalog} citation A document citation allegedly referring to the
          * specified document.
          * @param {NotarizedDocument} document The document to be tested.
-         * @returns {Boolean} Whether or not the documentCitation matches the specified document.
+         * @returns {Boolean} Whether or not the citation matches the specified document.
          */
-        documentMatches: function(documentCitation, document) {
-            var protocol = documentCitation.getValue('$protocol');
+        documentMatches: function(citation, document) {
+            var protocol = citation.getValue('$protocol');
             if (protocol.toString() === V1Public.PROTOCOL) {
                 var digest = V1Public.digest(document);
-                return digest.isEqualTo(documentCitation.getValue('$digest'));
+                return digest.isEqualTo(citation.getValue('$digest'));
             } else {
                 throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
             }
@@ -200,13 +204,13 @@ exports.api = function(testDirectory) {
             if (protocol.toString() === V1Public.PROTOCOL) {
                 // extracting the digital signature from the beginning of the notarized document
                 var source = '';
-                source += document.certificateReference + '\n';
-                source += document.previousReference + '\n';
+                source += document.certificate + '\n';
+                source += document.previous + '\n';
                 source += document.content;
                 // verify the digital signature using the public key from the notary certificate
                 var publicKey = certificate.getValue('$publicKey');
-                var digitalSignature = document.digitalSignature;
-                var isValid = V1Public.verify(publicKey, source, digitalSignature);
+                var signature = document.signature;
+                var isValid = V1Public.verify(publicKey, source, signature);
                 return isValid;
             } else {
                 throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);

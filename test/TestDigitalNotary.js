@@ -12,7 +12,6 @@ var mocha = require('mocha');
 var expect = require('chai').expect;
 var bali = require('bali-component-framework');
 var notary = require('../src/DigitalNotary').api('test/config/');
-var NotarizedDocument = require('../src/NotarizedDocument').NotarizedDocument;
 
 describe('Bali Digital Notary™', function() {
 

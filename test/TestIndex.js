@@ -7,6 +7,19 @@
  * under the terms of The MIT License (MIT), as published by the Open   *
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
-'use strict';
 
-exports.api = require('./src/DigitalNotary').api;
+var mocha = require('mocha');
+var expect = require('chai').expect;
+
+describe('Bali Digital Notary™', function() {
+
+    describe('Test the require of the top level index.', function() {
+
+        it('should create the initial task context', function() {
+            var bali = require('../index.js');
+            expect(bali).to.exist;  // jshint ignore:line
+        });
+
+    });
+
+});

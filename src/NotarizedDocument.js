@@ -34,18 +34,18 @@ var bali = require('bali-component-framework');
  * This constructor creates a new notarized document using the specified parameters.
  * 
  * @param {String} content The content of the document.
- * @param {Reference} previousReference A reference to the previous version of the document.
- * @param {Reference} certificateReference A reference to the public certificate for the
+ * @param {Reference} previous A reference to the previous version of the document.
+ * @param {Reference} certificate A reference to the public certificate for the
  * notary key that notarized the document.
- * @param {Binary} digitalSignature A base 32 encoded binary string containing the digital
+ * @param {Binary} signature A base 32 encoded binary string containing the digital
  * signature of the document.
  * @returns {NotarizedDocument} The new notarized document.
  */
-function NotarizedDocument(content, previousReference, certificateReference, digitalSignature) {
+function NotarizedDocument(content, previous, certificate, signature) {
     this.content = content.toString();  // force anything else to be a string
-    this.certificateReference = certificateReference;
-    this.previousReference = previousReference;
-    this.digitalSignature = digitalSignature;
+    this.certificate = certificate;
+    this.previous = previous;
+    this.signature = signature;
     return this;
 }
 NotarizedDocument.prototype.constructor = NotarizedDocument;
@@ -60,13 +60,13 @@ NotarizedDocument.fromString = function(string) {
         for (var i = 1; i < 6; i++) {
             binary += '\n' + lines[i];
         }
-        var digitalSignature = new bali.Binary(binary);
+        var signature = new bali.Binary(binary);
         // extract the public certificate reference (B)
-        var certificateReference = new bali.Reference(lines[6]);
+        var certificate = new bali.Reference(lines[6]);
         // extract the previous document reference (C)
-        var previousReference = bali.Template.NONE;
+        var previous = bali.Template.NONE;
         if (lines[7] !== 'none') {
-            previousReference = new bali.Reference(lines[7]);
+            previous = new bali.Reference(lines[7]);
         }
         // extract the document content (D)
         var content = lines[8];
@@ -74,9 +74,9 @@ NotarizedDocument.fromString = function(string) {
             content += '\n' + lines[j];
         }
         // construct the notarized document
-        document = new NotarizedDocument(content, previousReference, certificateReference, digitalSignature);
+        document = new NotarizedDocument(content, previous, certificate, signature);
     } catch (e) {
-        throw new Error('DOCUMENT: An invalid notarized document string was found: ' + string);
+        throw new Error('NOTARY: An invalid notarized document string was found: ' + string);
     }
     return document;
 };
@@ -86,9 +86,9 @@ NotarizedDocument.fromString = function(string) {
 
 NotarizedDocument.prototype.toString = function() {
     var string = '';
-    string += this.digitalSignature + '\n';
-    string += this.certificateReference + '\n';
-    string += this.previousReference + '\n';
+    string += this.signature + '\n';
+    string += this.certificate + '\n';
+    string += this.previous + '\n';
     string += this.content;
     return string;
 };

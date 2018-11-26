@@ -22,7 +22,7 @@ describe('Bali Digital Notary™', function() {
 
     describe('Test Document Creation', function() {
 
-        it('should create a document from source', function() {
+        it('should parse and format a notarized document', function() {
             expect(document).to.exist;  // jshint ignore:line
             var formatted = document.toString();
             //fs.writeFileSync(file, formatted, 'utf8');
