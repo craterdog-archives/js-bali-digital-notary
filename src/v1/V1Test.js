@@ -167,7 +167,7 @@ exports.api = function(tag, testDirectory) {
             } else {
                 // sign with the new key
                 certificateSource += newReference + '\n';
-                certificateSource += bali.Template.NONE + '\n';  // there is no previous version
+                certificateSource += bali.Filter.NONE + '\n';  // there is no previous version
                 certificateSource += notaryCertificate;
                 certificateSource = this.sign(certificateSource) + '\n' + certificateSource;
             }

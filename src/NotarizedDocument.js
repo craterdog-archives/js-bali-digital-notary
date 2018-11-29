@@ -64,7 +64,7 @@ NotarizedDocument.fromString = function(string) {
         // extract the public certificate reference (B)
         var certificate = new bali.Reference(lines[6]);
         // extract the previous document reference (C)
-        var previous = bali.Template.NONE;
+        var previous = bali.Filter.NONE;
         if (lines[7] !== 'none') {
             previous = new bali.Reference(lines[7]);
         }
