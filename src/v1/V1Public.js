@@ -24,7 +24,7 @@ var bali = require('bali-component-framework');
 exports.PROTOCOL = 'v1';
 exports.CURVE = 'secp521r1';
 exports.DIGEST = 'sha512';
-exports.SIGNATURE = 'ecdsa-with-SHA1';
+exports.SIGNATURE = 'sha512';
 exports.CIPHER = 'aes-256-gcm';
 
 
