@@ -54,25 +54,24 @@ exports.NotarizedDocument = NotarizedDocument;
 NotarizedDocument.fromString = function(string) {
     var document;
     try {
-        // extract the digital signature (A)
         var lines = string.split('\n');
-        var binary = lines[0];
-        for (var i = 1; i < 6; i++) {
-            binary += '\n' + lines[i];
-        }
+
+        // extract the digital signature (A)
+        var binary = lines.slice(0, 4).join('\n');
         var signature = new bali.Binary(binary);
+
         // extract the public certificate reference (B)
-        var certificate = new bali.Reference(lines[6]);
+        var certificate = new bali.Reference(lines[4]);
+
         // extract the previous document reference (C)
         var previous = bali.Filter.NONE;
-        if (lines[7] !== 'none') {
-            previous = new bali.Reference(lines[7]);
+        if (lines[5] !== 'none') {
+            previous = new bali.Reference(lines[5]);
         }
+
         // extract the document content (D)
-        var content = lines[8];
-        for (var j = 9; j < lines.length; j++) {
-            content += '\n' + lines[j];
-        }
+        var content = lines.slice(6).join('\n');
+
         // construct the notarized document
         document = new NotarizedDocument(content, previous, certificate, signature);
     } catch (e) {

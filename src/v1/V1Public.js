@@ -22,7 +22,7 @@ var bali = require('bali-component-framework');
 // ALGORITHMS FOR THIS VERSION OF THE PROTOCOL
 
 exports.PROTOCOL = 'v1';
-exports.CURVE = 'secp521r1';
+exports.CURVE = 'prime256v1';  // AKA 'secp256r1'
 exports.DIGEST = 'sha512';
 exports.SIGNATURE = 'sha512';
 exports.CIPHER = 'aes-256-gcm';
