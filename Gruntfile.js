@@ -60,7 +60,7 @@ module.exports = function(grunt) {
         output: {
           path: path.resolve(__dirname, 'dist'),
           filename: 'lib-web.js',
-          library: 'bali'
+          library: 'notary'
         }
       },
       serverConfig: {
@@ -70,7 +70,7 @@ module.exports = function(grunt) {
         output: {
           path: path.resolve(__dirname, 'dist'),
           filename: 'lib-node.js',
-          library: 'bali'
+          library: 'notary'
         }
       }
     }
