@@ -16,11 +16,11 @@
  * created and used as the location of the local key store. Otherwise, a proxy
  * to a hardware security module will be used for all private key operations.
  */
-var fs = require('fs');
-var configDirectory = require('os').homedir() + '/.bali/';  // default configuration directory
-var bali = require('bali-component-framework');
-var V1Public = require('./v1/V1Public');
-var NotarizedDocument = require('./NotarizedDocument').NotarizedDocument;
+const fs = require('fs');
+const os = require('os');
+const bali = require('bali-component-framework');
+const V1Public = require('./v1/V1Public');
+const NotarizedDocument = require('./NotarizedDocument').NotarizedDocument;
 
 
 /**
@@ -34,7 +34,7 @@ var NotarizedDocument = require('./NotarizedDocument').NotarizedDocument;
 exports.api = function(testDirectory) {
 
     // create the config directory if necessary
-    if (testDirectory) configDirectory = testDirectory;
+    const configDirectory = testDirectory || os.homedir() + '/.bali/';
     if (!fs.existsSync(configDirectory)) fs.mkdirSync(configDirectory, 448);  // drwx------ permissions
 
     // load the account citation
@@ -43,14 +43,12 @@ exports.api = function(testDirectory) {
 
     // connect to the private hardware security module for the account
     var notaryTag = certificateCitation.getValue('$tag');
-    var V1Private;
-    if (testDirectory) {
+    const V1Private = testDirectory ? 
         // use a test software security module instead
-        V1Private = require('./v1/V1Test').api(notaryTag, testDirectory);
-    } else {
+        require('./v1/V1Test').api(notaryTag, testDirectory)
+        : 
         // use a proxy to a hardware security module
-        V1Private = require('./v1/V1Proxy').api(notaryTag);
-    }
+        require('./v1/V1Proxy').api(notaryTag);
 
     return {
 

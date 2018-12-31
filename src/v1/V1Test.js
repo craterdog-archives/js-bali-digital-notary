@@ -21,13 +21,13 @@
  * implements these operations as a software security module to allow testing without an
  * actual HSM.
  */
-var fs = require('fs');
-var config = require('os').homedir() + '/.bali/';  // default configuration directory
-var crypto = require('crypto');
-var ec_pem = require('ec-pem');
-var bali = require('bali-component-framework');
-var V1Public = require('./V1Public');
-var NotarizedDocument = require('../NotarizedDocument').NotarizedDocument;
+const fs = require('fs');
+const os = require('os');
+const crypto = require('crypto');
+const ec_pem = require('ec-pem');
+const bali = require('bali-component-framework');
+const V1Public = require('./V1Public');
+const NotarizedDocument = require('../NotarizedDocument').NotarizedDocument;
 
 
 /**
@@ -40,26 +40,28 @@ var NotarizedDocument = require('../NotarizedDocument').NotarizedDocument;
  * @returns {Object} A proxy to the test software security module managing the private key.
  */
 exports.api = function(tag, testDirectory) {
+
+    // create the config directory if necessary
+    const configDirectory = testDirectory || os.homedir() + '/.bali/';
+    if (!fs.existsSync(configDirectory)) fs.mkdirSync(configDirectory, 448);  // drwx------ permissions
+    const keyFilename = configDirectory + 'NotaryKey.bali';
+    const certificateFilename = configDirectory + 'NotaryCertificate.bdoc';
     
     // read in the notary key attributes
-    var currentVersion;     // the current version of the notary key
-    var publicKey;   // the public key residing in the certificate in the cloud
-    var privateKey;  // the local private key that is used for signing and decryption
-    var notaryCertificate; // the public notary certificate containing the public key
-    var certificateCitation;    // a document citation for the public notary certificate
-    if (testDirectory) config = testDirectory;
-    var keyFilename = config + 'NotaryKey.bali';
-    var certificateFilename = config + 'NotaryCertificate.bdoc';
+    var currentVersion;        // the current version of the notary key
+    var publicKey;             // the public key residing in the certificate in the cloud
+    var privateKey;            // the local private key that is used for signing and decryption
+    var notaryCertificate;     // the public notary certificate containing the public key
+    var certificateCitation;   // a document citation for the public notary certificate
     try {
-        // create the configuration directory if necessary
-        if (!fs.existsSync(config)) fs.mkdirSync(config, 448);  // drwx------ permissions
 
         // check for an existing notary key file
         if (fs.existsSync(keyFilename)) {
+
             // read in the notary key information
-            var keySource = fs.readFileSync(keyFilename, 'utf8');
-            var catalog = bali.parser.parseDocument(keySource);
-            var protocol = catalog.getValue('$protocol');
+            const keySource = fs.readFileSync(keyFilename, 'utf8');
+            const catalog = bali.parser.parseDocument(keySource);
+            const protocol = catalog.getValue('$protocol');
             if (V1Public.PROTOCOL !== protocol.toString()) {
                 throw new Error('NOTARY: The protocol for the test private key is not supported: ' + protocol);
             }
@@ -75,9 +77,10 @@ exports.api = function(tag, testDirectory) {
         // check for an existing notary certificate file
         if (fs.existsSync(certificateFilename)) {
             // read in the notary certificate information
-            var certificateSource = fs.readFileSync(certificateFilename, 'utf8');
+            const certificateSource = fs.readFileSync(certificateFilename, 'utf8');
             notaryCertificate = NotarizedDocument.fromString(certificateSource);
         }
+
     } catch (e) {
         throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
     }
@@ -92,7 +95,7 @@ exports.api = function(tag, testDirectory) {
          * @returns {String} A canonical Bali source code string for the private notary key.
          */
         toString: function() {
-            var catalog = new bali.Catalog();
+            const catalog = new bali.Catalog();
             catalog.setValue('$protocol', new bali.Version(V1Public.PROTOCOL));
             catalog.setValue('$tag', tag);
             catalog.setValue('$version', currentVersion);
@@ -135,10 +138,10 @@ exports.api = function(tag, testDirectory) {
          * @returns {NotarizedDocument} The new notary certificate.
          */
         generate: function() {
-            var isRegeneration = !!privateKey;
+            const isRegeneration = !!privateKey;
 
             // generate a new public-private key pair
-            var curve = crypto.createECDH(V1Public.CURVE);
+            const curve = crypto.createECDH(V1Public.CURVE);
             curve.generateKeys();
             currentVersion = currentVersion ? 'v' + (Number(currentVersion.toString().slice(1)) + 1) : 'v1';
             currentVersion = new bali.Version(currentVersion);
@@ -153,8 +156,8 @@ exports.api = function(tag, testDirectory) {
 
             // create a reference to the certificate for the new private key
             privateKey = curve.getPrivateKey();
-            var newCitation = V1Public.citationFromAttributes(tag, currentVersion);  // no digest since it is self-referential
-            var newReference = V1Public.referenceFromCitation(newCitation);
+            const newCitation = V1Public.citationFromAttributes(tag, currentVersion);  // no digest since it is self-referential
+            const newReference = V1Public.referenceFromCitation(newCitation);
 
             var certificateSource = '';
             if (isRegeneration) {
@@ -180,7 +183,7 @@ exports.api = function(tag, testDirectory) {
 
             // save the state of this notary key and certificate in the local configuration
             try {
-                var keySource = this.toString() + '\n';  // add POSIX compliant <EOL>
+                const keySource = this.toString() + '\n';  // add POSIX compliant <EOL>
                 certificateSource += '\n';  // add POSIX compliant <EOL>
                 fs.writeFileSync(keyFilename, keySource, {encoding: 'utf8', mode: 384});  // -rw------- permissions
                 fs.writeFileSync(certificateFilename, certificateSource, {encoding: 'utf8', mode: 384});  // -rw------- permissions
@@ -224,13 +227,13 @@ exports.api = function(tag, testDirectory) {
          * @returns {Binary} A base 32 encoded digital signature of the message.
          */
         sign: function(message) {
-            var curve = crypto.createECDH(V1Public.CURVE);
+            const curve = crypto.createECDH(V1Public.CURVE);
             curve.setPrivateKey(privateKey);
-            var pem = ec_pem(curve, V1Public.CURVE);
-            var signer = crypto.createSign(V1Public.SIGNATURE);
+            const pem = ec_pem(curve, V1Public.CURVE);
+            const signer = crypto.createSign(V1Public.SIGNATURE);
             signer.update(message);
-            var signature = signer.sign(pem.encodePrivateKey());
-            var binary = new bali.Binary(signature);
+            const signature = signer.sign(pem.encodePrivateKey());
+            const binary = new bali.Binary(signature);
             return binary;
         },
 
@@ -242,22 +245,22 @@ exports.api = function(tag, testDirectory) {
          * @returns {String} The decrypted plaintext message.
          */
         decrypt: function(aem) {
-            var protocol = aem.getValue('$protocol');
+            const protocol = aem.getValue('$protocol');
             if (V1Public.PROTOCOL !== protocol.toString()) {
                 throw new Error('NOTARY: The protocol for decrypting a message is not supported: ' + protocol);
             }
-            var iv = aem.getValue('$iv').getBuffer();
-            var auth = aem.getValue('$auth').getBuffer();
-            var seed = aem.getValue('$seed').getBuffer();
-            var ciphertext = aem.getValue('$ciphertext').getBuffer();
+            const iv = aem.getValue('$iv').getBuffer();
+            const auth = aem.getValue('$auth').getBuffer();
+            const seed = aem.getValue('$seed').getBuffer();
+            const ciphertext = aem.getValue('$ciphertext').getBuffer();
 
             // decrypt the 32-byte symmetric key
-            var curve = crypto.createECDH(V1Public.CURVE);
+            const curve = crypto.createECDH(V1Public.CURVE);
             curve.setPrivateKey(privateKey);
-            var symmetricKey = curve.computeSecret(seed).slice(0, 32);  // take only first 32 bytes
+            const symmetricKey = curve.computeSecret(seed).slice(0, 32);  // take only first 32 bytes
 
             // decrypt the ciphertext using the symmetric key
-            var decipher = crypto.createDecipheriv(V1Public.CIPHER, symmetricKey, iv);
+            const decipher = crypto.createDecipheriv(V1Public.CIPHER, symmetricKey, iv);
             decipher.setAuthTag(auth);
             var message = decipher.update(ciphertext, undefined, 'utf8');
             message += decipher.final('utf8');

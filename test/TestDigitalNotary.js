@@ -8,10 +8,10 @@
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
 
-var mocha = require('mocha');
-var expect = require('chai').expect;
-var bali = require('bali-component-framework');
-var notary = require('../src/DigitalNotary').api('test/config/');
+const mocha = require('mocha');
+const expect = require('chai').expect;
+const bali = require('bali-component-framework');
+const notary = require('../src/DigitalNotary').api('test/config/');
 
 describe('Bali Digital Notary™', function() {
 

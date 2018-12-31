@@ -14,9 +14,9 @@
  * public key. The public key is associated with a private key that is maintained
  * within a hardware security module (HSM).
  */
-var crypto = require('crypto');
-var ec_pem = require('ec-pem');
-var bali = require('bali-component-framework');
+const crypto = require('crypto');
+const ec_pem = require('ec-pem');
+const bali = require('bali-component-framework');
 
 
 // ALGORITHMS FOR THIS VERSION OF THE PROTOCOL
@@ -39,11 +39,11 @@ exports.CIPHER = 'aes-256-gcm';
  * @returns {Binary} A base 32 encoded digital digest of the message.
  */
 exports.digest = function(message) {
-    var hasher = crypto.createHash(exports.DIGEST);
+    const hasher = crypto.createHash(exports.DIGEST);
     hasher.update(message.toString());  // force it to a string if it isn't already
-    var digest = hasher.digest();
-    digest = new bali.Binary(digest);
-    return digest;
+    const digest = hasher.digest();
+    const binary = new bali.Binary(digest);
+    return binary;
 };
 
 
@@ -60,8 +60,8 @@ exports.digest = function(message) {
  */
 exports.cite = function(tag, version, document) {
     document = document.toString();  // force it to be a string
-    var digest = exports.digest(document.toString());  // force it to be a string if it isn't
-    var citation = exports.citationFromAttributes(tag, version, digest);
+    const digest = exports.digest(document.toString());  // force it to be a string if it isn't
+    const citation = exports.citationFromAttributes(tag, version, digest);
     return citation;
 };
 
@@ -80,10 +80,10 @@ exports.verify = function(publicKey, message, signature) {
     signature = signature.getBuffer();
     message = message.toString();  // force it to be a string
     publicKey = publicKey.getBuffer();
-    var curve = crypto.createECDH(exports.CURVE);
+    const curve = crypto.createECDH(exports.CURVE);
     curve.setPublicKey(publicKey);
-    var pem = ec_pem(curve, exports.CURVE);
-    var verifier = crypto.createVerify(exports.SIGNATURE);
+    const pem = ec_pem(curve, exports.CURVE);
+    const verifier = crypto.createVerify(exports.SIGNATURE);
     verifier.update(message);
     return verifier.verify(pem.encodePublicKey(), signature);
 };
@@ -102,20 +102,20 @@ exports.encrypt = function(publicKey, message) {
     publicKey = publicKey.getBuffer();
     message = message.toString();  // force it to be a string
     // generate and encrypt a 32-byte symmetric key
-    var curve = crypto.createECDH(exports.CURVE);
+    const curve = crypto.createECDH(exports.CURVE);
     curve.generateKeys();
-    var seed = curve.getPublicKey();  // use the new public key as the seed
-    var symmetricKey = curve.computeSecret(publicKey).slice(0, 32);  // take only first 32 bytes
+    const seed = curve.getPublicKey();  // use the new public key as the seed
+    const symmetricKey = curve.computeSecret(publicKey).slice(0, 32);  // take only first 32 bytes
 
     // encrypt the message using the symmetric key
-    var iv = crypto.randomBytes(12);
-    var cipher = crypto.createCipheriv(exports.CIPHER, symmetricKey, iv);
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv(exports.CIPHER, symmetricKey, iv);
     var ciphertext = cipher.update(message, 'utf8');
     ciphertext = Buffer.concat([ciphertext, cipher.final()]);
-    var auth = cipher.getAuthTag();
+    const auth = cipher.getAuthTag();
 
     // construct the authenticated encrypted message (AEM)
-    var aem = new bali.Catalog();
+    const aem = new bali.Catalog();
     aem.setValue('$protocol', new bali.Version(exports.PROTOCOL));
     aem.setValue('$iv', new bali.Binary(iv));
     aem.setValue('$auth', new bali.Binary(auth));
@@ -136,11 +136,11 @@ exports.encrypt = function(publicKey, message) {
  * @returns {Catalog} A new document citation.
  */
 exports.citationFromAttributes = function(tag, version, digest) {
-    var protocol = new bali.Version(exports.PROTOCOL);
+    const protocol = new bali.Version(exports.PROTOCOL);
     tag = tag || new bali.Tag();
     version = version || new bali.Version('v1');
     digest = digest || bali.Filter.NONE;
-    var citation = new bali.Catalog();
+    const citation = new bali.Catalog();
     citation.setValue('$protocol', protocol);
     citation.setValue('$tag', tag);
     citation.setValue('$version', version);
@@ -156,8 +156,8 @@ exports.citationFromAttributes = function(tag, version, digest) {
  * @returns {Catalog} The resulting document citation.
  */
 exports.citationFromSource = function(source) {
-    var citation = bali.parser.parseDocument(source);
-    var protocol = citation.getValue('$protocol');
+    const citation = bali.parser.parseDocument(source);
+    const protocol = citation.getValue('$protocol');
     if (exports.PROTOCOL !== protocol.toString()) {
         throw new Error('NOTARY: The protocol for the citation is not supported: ' + protocol);
     }
@@ -175,9 +175,9 @@ exports.citationFromSource = function(source) {
  */
 exports.citationFromReference = function(reference) {
     reference = reference.toString();
-    var source = reference.slice(6, -1);  // remove '<bali:' and '>' wrapper
-    var citation = bali.parser.parseDocument(source);
-    var protocol = citation.getValue('$protocol');
+    const source = reference.slice(6, -1);  // remove '<bali:' and '>' wrapper
+    const citation = bali.parser.parseDocument(source);
+    const protocol = citation.getValue('$protocol');
     if (exports.PROTOCOL !== protocol.toString()) {
         throw new Error('NOTARY: The protocol for the citation is not supported: ' + protocol);
     }

@@ -25,7 +25,7 @@
  *   '---------------------------------------------------------------------------'
  * </pre>
  */
-var bali = require('bali-component-framework');
+const bali = require('bali-component-framework');
 
 
 // PUBLIC FUNCTIONS

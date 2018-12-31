@@ -1,5 +1,8 @@
 'use strict';
 
+const path = require('path');
+const childProcess = require('child_process');
+
 // wrapper function for grunt configuration
 module.exports = function(grunt) {
 
@@ -16,7 +19,8 @@ module.exports = function(grunt) {
         'test/**/*.js'
       ],
       options: {
-        node: true
+        node: true,
+        esversion: 6
       }
     },
 
@@ -38,32 +42,35 @@ module.exports = function(grunt) {
           reporter: 'spec',
           timeout: 10000 
         },
-        src: ['test/**/*.js']
-      }
-    },
-
-    // grunt-contrib-concat plugin configuration (file concatenation)
-    concat: {
-      options: {
-        separator: '\n'
-      },
-      dist: {
-        // concatenate the source files and place the result in destination
         src: [
-          'src/**/*.js'
-        ],
-        dest: 'dist/<%= pkg.name %>.js'
+          'test/**/*.js'
+        ]
       }
     },
 
-    // grunt-contrib-uglify plugin configuration (removes whitespace)
-    uglify: {
-      options: {
-        banner: '/*! <%= pkg.name %> <%= grunt.template.today("yyyy-mm-dd") %> */\n'
+    // grunt-webpack plugin configuration (concatenates and removes whitespace)
+    webpack: {
+      clientConfig: {
+        target: 'web',
+        mode: 'development',
+        node: {
+          fs: "empty"  // required work-around for webpack bug
+        },
+        entry: './index.js',
+        output: {
+          path: path.resolve(__dirname, 'dist'),
+          filename: 'lib-web.js',
+          library: 'bali'
+        }
       },
-      dist: {
-        files: {
-          'dist/<%= pkg.name %>.min.js': ['<%= concat.dist.dest %>']
+      serverConfig: {
+        target: 'node',
+        mode: 'development',
+        entry: './index.js',
+        output: {
+          path: path.resolve(__dirname, 'dist'),
+          filename: 'lib-node.js',
+          library: 'bali'
         }
       }
     }
@@ -73,10 +80,10 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-clean');
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-mocha-test');
-  grunt.loadNpmTasks('grunt-contrib-concat');
-  grunt.loadNpmTasks('grunt-contrib-uglify');
+  grunt.loadNpmTasks('grunt-webpack');
 
-  grunt.registerTask('build', 'Build the library.', ['clean:build', 'jshint', 'mochaTest', 'concat', 'uglify']);
-  grunt.registerTask('default', 'The default task.', ['build']);
+  grunt.registerTask('build', 'Build the module.', ['clean:build', 'jshint', 'mochaTest']);
+  grunt.registerTask('package', 'Package the libraries.', ['clean:build', 'jshint', 'mochaTest', 'webpack']);
+  grunt.registerTask('default', 'Default targets.', ['build']);
 
 };
