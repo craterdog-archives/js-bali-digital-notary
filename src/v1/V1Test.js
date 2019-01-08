@@ -69,8 +69,8 @@ exports.api = function(tag, testDirectory) {
                 throw new Error('NOTARY: The tag for the test private key is incorrect: ' + tag);
             }
             currentVersion = catalog.getValue('$version');
-            publicKey = catalog.getValue('$publicKey').getBuffer();
-            privateKey = catalog.getValue('$privateKey').getBuffer();
+            publicKey = catalog.getValue('$publicKey').value;
+            privateKey = catalog.getValue('$privateKey').value;
             certificateCitation = catalog.getValue('$citation');
         }
 
@@ -96,7 +96,7 @@ exports.api = function(tag, testDirectory) {
          */
         toString: function() {
             const catalog = new bali.Catalog();
-            catalog.setValue('$protocol', new bali.Version(V1Public.PROTOCOL));
+            catalog.setValue('$protocol', bali.Version.from(V1Public.PROTOCOL));
             catalog.setValue('$tag', tag);
             catalog.setValue('$version', currentVersion);
             catalog.setValue('$publicKey', new bali.Binary(publicKey));
@@ -144,12 +144,12 @@ exports.api = function(tag, testDirectory) {
             const curve = crypto.createECDH(V1Public.CURVE);
             curve.generateKeys();
             currentVersion = currentVersion ? 'v' + (Number(currentVersion.toString().slice(1)) + 1) : 'v1';
-            currentVersion = new bali.Version(currentVersion);
+            currentVersion = bali.Version.from(currentVersion);
             publicKey = curve.getPublicKey();
 
             // generate the new public notary certificate
             notaryCertificate = new bali.Catalog();
-            notaryCertificate.setValue('$protocol', new bali.Version(V1Public.PROTOCOL));
+            notaryCertificate.setValue('$protocol', bali.Version.from(V1Public.PROTOCOL));
             notaryCertificate.setValue('$tag', tag);
             notaryCertificate.setValue('$version', currentVersion);
             notaryCertificate.setValue('$publicKey', new bali.Binary(publicKey));
@@ -170,7 +170,7 @@ exports.api = function(tag, testDirectory) {
             } else {
                 // sign with the new key
                 certificateSource += newReference + '\n';
-                certificateSource += bali.Filter.NONE + '\n';  // there is no previous version
+                certificateSource += bali.Pattern.from('none') + '\n';  // there is no previous version
                 certificateSource += notaryCertificate;
                 certificateSource = this.sign(certificateSource) + '\n' + certificateSource;
             }
@@ -249,10 +249,10 @@ exports.api = function(tag, testDirectory) {
             if (V1Public.PROTOCOL !== protocol.toString()) {
                 throw new Error('NOTARY: The protocol for decrypting a message is not supported: ' + protocol);
             }
-            const iv = aem.getValue('$iv').getBuffer();
-            const auth = aem.getValue('$auth').getBuffer();
-            const seed = aem.getValue('$seed').getBuffer();
-            const ciphertext = aem.getValue('$ciphertext').getBuffer();
+            const iv = aem.getValue('$iv').value;
+            const auth = aem.getValue('$auth').value;
+            const seed = aem.getValue('$seed').value;
+            const ciphertext = aem.getValue('$ciphertext').value;
 
             // decrypt the 32-byte symmetric key
             const curve = crypto.createECDH(V1Public.CURVE);

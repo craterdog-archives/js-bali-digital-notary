@@ -147,7 +147,7 @@ exports.api = function(testDirectory) {
          * @returns {NotarizedDocument} The newly notarized document.
          */
         notarizeDocument: function(citation, document, previous) {
-            previous = previous || bali.Filter.NONE;
+            previous = previous || bali.Pattern.from('none');
             var certificateCitation = V1Private.citation();
             if (!certificateCitation) {
                 throw new Error('NOTARY: The following notary key has not yet been generated: ' + notaryTag);

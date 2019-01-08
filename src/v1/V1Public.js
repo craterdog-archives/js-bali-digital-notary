@@ -77,9 +77,9 @@ exports.cite = function(tag, version, document) {
  * @returns {Boolean} Whether or not the digital signature is valid.
  */
 exports.verify = function(publicKey, message, signature) {
-    signature = signature.getBuffer();
+    signature = signature.value;
     message = message.toString();  // force it to be a string
-    publicKey = publicKey.getBuffer();
+    publicKey = publicKey.value;
     const curve = crypto.createECDH(exports.CURVE);
     curve.setPublicKey(publicKey);
     const pem = ec_pem(curve, exports.CURVE);
@@ -99,7 +99,7 @@ exports.verify = function(publicKey, message, signature) {
  * @returns {Catalog} An authenticated encrypted message.
  */
 exports.encrypt = function(publicKey, message) {
-    publicKey = publicKey.getBuffer();
+    publicKey = publicKey.value;
     message = message.toString();  // force it to be a string
     // generate and encrypt a 32-byte symmetric key
     const curve = crypto.createECDH(exports.CURVE);
@@ -116,7 +116,7 @@ exports.encrypt = function(publicKey, message) {
 
     // construct the authenticated encrypted message (AEM)
     const aem = new bali.Catalog();
-    aem.setValue('$protocol', new bali.Version(exports.PROTOCOL));
+    aem.setValue('$protocol', bali.Version.from(exports.PROTOCOL));
     aem.setValue('$iv', new bali.Binary(iv));
     aem.setValue('$auth', new bali.Binary(auth));
     aem.setValue('$seed', new bali.Binary(seed));
@@ -136,10 +136,10 @@ exports.encrypt = function(publicKey, message) {
  * @returns {Catalog} A new document citation.
  */
 exports.citationFromAttributes = function(tag, version, digest) {
-    const protocol = new bali.Version(exports.PROTOCOL);
+    const protocol = bali.Version.from(exports.PROTOCOL);
     tag = tag || new bali.Tag();
-    version = version || new bali.Version('v1');
-    digest = digest || bali.Filter.NONE;
+    version = version || bali.Version.from('v1');
+    digest = digest || bali.Pattern.from('none');
     const citation = new bali.Catalog();
     citation.setValue('$protocol', protocol);
     citation.setValue('$tag', tag);
@@ -199,6 +199,6 @@ exports.referenceFromCitation = function(citation) {
     reference = reference.replace(/%tag/, citation.getValue('$tag'));
     reference = reference.replace(/%version/, citation.getValue('$version'));
     reference = reference.replace(/%digest/, citation.getValue('$digest').toString().replace(/\s+/g, ''));
-    reference = new bali.Reference(reference);
+    reference = bali.Reference.from(reference);
     return reference;
 };
