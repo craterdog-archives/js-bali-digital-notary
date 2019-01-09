@@ -58,15 +58,15 @@ NotarizedDocument.fromString = function(string) {
 
         // extract the digital signature (A)
         var binary = lines.slice(0, 4).join('\n');
-        var signature = bali.Binary.from(binary);
+        var signature = bali.Binary.fromLiteral(binary);
 
         // extract the public certificate reference (B)
-        var certificate = bali.Reference.from(lines[4]);
+        var certificate = bali.Reference.fromLiteral(lines[4]);
 
         // extract the previous document reference (C)
-        var previous = bali.Pattern.from('none');
+        var previous = bali.Pattern.fromLiteral('none');
         if (lines[5] !== 'none') {
-            previous = bali.Reference.from(lines[5]);
+            previous = bali.Reference.fromLiteral(lines[5]);
         }
 
         // extract the document content (D)

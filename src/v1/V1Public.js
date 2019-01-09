@@ -116,7 +116,7 @@ exports.encrypt = function(publicKey, message) {
 
     // construct the authenticated encrypted message (AEM)
     const aem = new bali.Catalog();
-    aem.setValue('$protocol', bali.Version.from(exports.PROTOCOL));
+    aem.setValue('$protocol', bali.Version.fromLiteral(exports.PROTOCOL));
     aem.setValue('$iv', new bali.Binary(iv));
     aem.setValue('$auth', new bali.Binary(auth));
     aem.setValue('$seed', new bali.Binary(seed));
@@ -136,10 +136,10 @@ exports.encrypt = function(publicKey, message) {
  * @returns {Catalog} A new document citation.
  */
 exports.citationFromAttributes = function(tag, version, digest) {
-    const protocol = bali.Version.from(exports.PROTOCOL);
+    const protocol = bali.Version.fromLiteral(exports.PROTOCOL);
     tag = tag || new bali.Tag();
-    version = version || bali.Version.from('v1');
-    digest = digest || bali.Pattern.from('none');
+    version = version || bali.Version.fromLiteral('v1');
+    digest = digest || bali.Pattern.fromLiteral('none');
     const citation = new bali.Catalog();
     citation.setValue('$protocol', protocol);
     citation.setValue('$tag', tag);
@@ -199,6 +199,6 @@ exports.referenceFromCitation = function(citation) {
     reference = reference.replace(/%tag/, citation.getValue('$tag'));
     reference = reference.replace(/%version/, citation.getValue('$version'));
     reference = reference.replace(/%digest/, citation.getValue('$digest').toString().replace(/\s+/g, ''));
-    reference = bali.Reference.from(reference);
+    reference = bali.Reference.fromLiteral(reference);
     return reference;
 };

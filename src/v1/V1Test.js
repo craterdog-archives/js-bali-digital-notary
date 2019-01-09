@@ -96,7 +96,7 @@ exports.api = function(tag, testDirectory) {
          */
         toString: function() {
             const catalog = new bali.Catalog();
-            catalog.setValue('$protocol', bali.Version.from(V1Public.PROTOCOL));
+            catalog.setValue('$protocol', bali.Version.fromLiteral(V1Public.PROTOCOL));
             catalog.setValue('$tag', tag);
             catalog.setValue('$version', currentVersion);
             catalog.setValue('$publicKey', new bali.Binary(publicKey));
@@ -144,12 +144,12 @@ exports.api = function(tag, testDirectory) {
             const curve = crypto.createECDH(V1Public.CURVE);
             curve.generateKeys();
             currentVersion = currentVersion ? 'v' + (Number(currentVersion.toString().slice(1)) + 1) : 'v1';
-            currentVersion = bali.Version.from(currentVersion);
+            currentVersion = bali.Version.fromLiteral(currentVersion);
             publicKey = curve.getPublicKey();
 
             // generate the new public notary certificate
             notaryCertificate = new bali.Catalog();
-            notaryCertificate.setValue('$protocol', bali.Version.from(V1Public.PROTOCOL));
+            notaryCertificate.setValue('$protocol', bali.Version.fromLiteral(V1Public.PROTOCOL));
             notaryCertificate.setValue('$tag', tag);
             notaryCertificate.setValue('$version', currentVersion);
             notaryCertificate.setValue('$publicKey', new bali.Binary(publicKey));
@@ -170,7 +170,7 @@ exports.api = function(tag, testDirectory) {
             } else {
                 // sign with the new key
                 certificateSource += newReference + '\n';
-                certificateSource += bali.Pattern.from('none') + '\n';  // there is no previous version
+                certificateSource += bali.Pattern.fromLiteral('none') + '\n';  // there is no previous version
                 certificateSource += notaryCertificate;
                 certificateSource = this.sign(certificateSource) + '\n' + certificateSource;
             }
