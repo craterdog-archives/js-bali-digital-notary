@@ -19,7 +19,8 @@
 const fs = require('fs');
 const os = require('os');
 const bali = require('bali-component-framework');
-const V1Public = require('./v1/V1Public');
+const version = require('./v1');
+const publicAPI = version.v1Public;
 const NotarizedDocument = require('./NotarizedDocument').NotarizedDocument;
 
 
@@ -43,12 +44,11 @@ exports.api = function(testDirectory) {
 
     // connect to the private hardware security module for the account
     var notaryTag = certificateCitation.getValue('$tag');
-    const V1Private = testDirectory ? 
-        // use a test software security module instead
-        require('./v1/V1Test').api(notaryTag, testDirectory)
-        : 
-        // use a proxy to a hardware security module
-        require('./v1/V1Proxy').api(notaryTag);
+    const privateAPI = testDirectory ? 
+        // use a test software security module (SSM)
+        version.v1Test.api(notaryTag, testDirectory) : 
+        // or, use a proxy to a hardware security module (HSM)
+        version.v1Proxy.api(notaryTag);
 
     return {
 
@@ -60,7 +60,7 @@ exports.api = function(testDirectory) {
          * for this digital notary.
          */
         getNotaryCertificate: function() {
-            return V1Private.certificate();
+            return privateAPI.certificate();
         },
 
         /**
@@ -71,7 +71,7 @@ exports.api = function(testDirectory) {
          * public certificate for this digital notary.
          */
         getNotaryCitation: function() {
-            return V1Private.citation();
+            return privateAPI.citation();
         },
 
         /**
@@ -83,7 +83,7 @@ exports.api = function(testDirectory) {
          * @returns {Catalog} The document citation that was encoded in the specified reference.
          */
         extractCitation: function(reference) {
-            return V1Public.citationFromReference(reference);
+            return publicAPI.citationFromReference(reference);
         },
 
         /**
@@ -98,7 +98,7 @@ exports.api = function(testDirectory) {
          * @returns {Catalog} A new document citation for the document.
          */
         createCitation: function(tag, version, digest) {
-            return V1Public.citationFromAttributes(tag, version, digest);
+            return publicAPI.citationFromAttributes(tag, version, digest);
         },
 
         /**
@@ -110,7 +110,7 @@ exports.api = function(testDirectory) {
          * attributes encoded in it using the Bali Document Notation™.
          */
         createReference: function(citation) {
-            return V1Public.referenceFromCitation(citation);
+            return publicAPI.referenceFromCitation(citation);
         },
 
         parseDocument: function(string) {
@@ -128,8 +128,8 @@ exports.api = function(testDirectory) {
          * notary certificate associated with the new private notary key.
          */
         generateKeys: function() {
-            var notaryCertificate = V1Private.generate();
-            var certificateCitation = V1Private.citation();
+            var notaryCertificate = privateAPI.generate();
+            var certificateCitation = privateAPI.citation();
             storeCitation(filename, certificateCitation);
             return notaryCertificate;
         },
@@ -148,22 +148,22 @@ exports.api = function(testDirectory) {
          */
         notarizeDocument: function(citation, document, previous) {
             previous = previous || bali.Pattern.fromLiteral('none');
-            var certificateCitation = V1Private.citation();
+            var certificateCitation = privateAPI.citation();
             if (!certificateCitation) {
                 throw new Error('NOTARY: The following notary key has not yet been generated: ' + notaryTag);
             }
-            var certificate = V1Public.referenceFromCitation(certificateCitation);
+            var certificate = publicAPI.referenceFromCitation(certificateCitation);
             // assemble the full document source to be digitally signed
             var source = '';
             source += certificate + '\n';
             source += previous + '\n';
             source += document;
             // prepend the digital signature to the document source
-            source = V1Private.sign(source) + '\n' + source;
+            source = privateAPI.sign(source) + '\n' + source;
             // construct the notarized document
             var notarizedDocument = NotarizedDocument.fromString(source);
             // update the document citation with the new digest
-            citation.setValue('$digest', V1Public.digest(source));
+            citation.setValue('$digest', publicAPI.digest(source));
             return notarizedDocument;
         },
 
@@ -179,8 +179,8 @@ exports.api = function(testDirectory) {
          */
         documentMatches: function(citation, document) {
             var protocol = citation.getValue('$protocol');
-            if (protocol.toString() === V1Public.PROTOCOL) {
-                var digest = V1Public.digest(document);
+            if (protocol.toString() === publicAPI.PROTOCOL) {
+                var digest = publicAPI.digest(document);
                 return digest.isEqualTo(citation.getValue('$digest'));
             } else {
                 throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
@@ -199,7 +199,7 @@ exports.api = function(testDirectory) {
         documentIsValid: function(certificate, document) {
             // check to see if the document's seal is valid
             var protocol = certificate.getValue('$protocol');
-            if (protocol.toString() === V1Public.PROTOCOL) {
+            if (protocol.toString() === publicAPI.PROTOCOL) {
                 // extracting the digital signature from the beginning of the notarized document
                 var source = '';
                 source += document.certificate + '\n';
@@ -208,7 +208,7 @@ exports.api = function(testDirectory) {
                 // verify the digital signature using the public key from the notary certificate
                 var publicKey = certificate.getValue('$publicKey');
                 var signature = document.signature;
-                var isValid = V1Public.verify(publicKey, source, signature);
+                var isValid = publicAPI.verify(publicKey, source, signature);
                 return isValid;
             } else {
                 throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
@@ -232,8 +232,8 @@ exports.api = function(testDirectory) {
         encryptMessage: function(certificate, message) {
             var protocol = certificate.getValue('$protocol');
             var publicKey = certificate.getValue('$publicKey');
-            if (protocol.toString() === V1Public.PROTOCOL) {
-                var aem = V1Public.encrypt(publicKey, message);
+            if (protocol.toString() === publicAPI.PROTOCOL) {
+                var aem = publicAPI.encrypt(publicKey, message);
                 return aem;
             } else {
                 throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
@@ -250,12 +250,12 @@ exports.api = function(testDirectory) {
          * @returns {String} The decrypted plaintext message.
          */
         decryptMessage: function(aem) {
-            if (!V1Private.citation()) {
+            if (!privateAPI.citation()) {
                 throw new Error('NOTARY: The notary key has not yet been generated.');
             }
             var protocol = aem.getValue('$protocol');
-            if (protocol.toString() === V1Public.PROTOCOL) {
-                var message = V1Private.decrypt(aem);
+            if (protocol.toString() === publicAPI.PROTOCOL) {
+                var message = privateAPI.decrypt(aem);
                 return message;
             } else {
                 throw new Error('NOTARY: The specified protocol version is not supported: ' + protocol);
@@ -280,7 +280,7 @@ function loadCitation(filename) {
         source = fs.readFileSync(filename, 'utf8');
         citation = bali.parser.parseDocument(source);
     } else {
-        citation = V1Public.citationFromAttributes();
+        citation = publicAPI.citationFromAttributes();
         storeCitation(filename, citation);
     }
     return citation;

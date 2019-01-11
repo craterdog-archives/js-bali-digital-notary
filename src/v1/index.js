@@ -9,5 +9,6 @@
  ************************************************************************/
 'use strict';
 
-exports.NotarizedDocument = require('./src/NotarizedDocument').NotarizedDocument;
-exports.api = require('./src/DigitalNotary').api;
+exports.v1Public = require('./V1Public');
+exports.v1Proxy = require('./V1Proxy');
+exports.v1Test = require('./V1Test');
