@@ -26,8 +26,8 @@ const os = require('os');
 const crypto = require('crypto');
 const ec_pem = require('ec-pem');
 const bali = require('bali-component-framework');
-const V1Public = require('./V1Public');
 const NotarizedDocument = require('../NotarizedDocument').NotarizedDocument;
+const v1Public = require('./V1Public');
 
 
 /**
@@ -62,7 +62,7 @@ exports.api = function(tag, testDirectory) {
             const keySource = fs.readFileSync(keyFilename, 'utf8');
             const catalog = bali.parser.parseDocument(keySource);
             const protocol = catalog.getValue('$protocol');
-            if (V1Public.PROTOCOL !== protocol.toString()) {
+            if (v1Public.PROTOCOL !== protocol.toString()) {
                 throw new Error('NOTARY: The protocol for the test private key is not supported: ' + protocol);
             }
             if (!tag.isEqualTo(catalog.getValue('$tag'))) {
@@ -96,7 +96,7 @@ exports.api = function(tag, testDirectory) {
          */
         toString: function() {
             const catalog = new bali.Catalog();
-            catalog.setValue('$protocol', bali.Version.fromLiteral(V1Public.PROTOCOL));
+            catalog.setValue('$protocol', bali.Version.fromLiteral(v1Public.PROTOCOL));
             catalog.setValue('$tag', tag);
             catalog.setValue('$version', currentVersion);
             catalog.setValue('$publicKey', new bali.Binary(publicKey));
@@ -141,7 +141,7 @@ exports.api = function(tag, testDirectory) {
             const isRegeneration = !!privateKey;
 
             // generate a new public-private key pair
-            const curve = crypto.createECDH(V1Public.CURVE);
+            const curve = crypto.createECDH(v1Public.CURVE);
             curve.generateKeys();
             currentVersion = currentVersion ? 'v' + (Number(currentVersion.toString().slice(1)) + 1) : 'v1';
             currentVersion = bali.Version.fromLiteral(currentVersion);
@@ -149,20 +149,20 @@ exports.api = function(tag, testDirectory) {
 
             // generate the new public notary certificate
             notaryCertificate = new bali.Catalog();
-            notaryCertificate.setValue('$protocol', bali.Version.fromLiteral(V1Public.PROTOCOL));
+            notaryCertificate.setValue('$protocol', bali.Version.fromLiteral(v1Public.PROTOCOL));
             notaryCertificate.setValue('$tag', tag);
             notaryCertificate.setValue('$version', currentVersion);
             notaryCertificate.setValue('$publicKey', new bali.Binary(publicKey));
 
             // create a reference to the certificate for the new private key
             privateKey = curve.getPrivateKey();
-            const newCitation = V1Public.citationFromAttributes(tag, currentVersion);  // no digest since it is self-referential
-            const newReference = V1Public.referenceFromCitation(newCitation);
+            const newCitation = v1Public.citationFromAttributes(tag, currentVersion);  // no digest since it is self-referential
+            const newReference = v1Public.referenceFromCitation(newCitation);
 
             var certificateSource = '';
             if (isRegeneration) {
                 // sign with the old key
-                var certificateReference = V1Public.referenceFromCitation(certificateCitation);
+                var certificateReference = v1Public.referenceFromCitation(certificateCitation);
                 certificateSource += certificateReference + '\n';
                 certificateSource += certificateReference + '\n';  // previous version is the old certificate
                 certificateSource += notaryCertificate;
@@ -179,7 +179,7 @@ exports.api = function(tag, testDirectory) {
             notaryCertificate = NotarizedDocument.fromString(certificateSource);
 
             // cache the new certificate citation
-            certificateCitation = V1Public.cite(tag, currentVersion, certificateSource);
+            certificateCitation = v1Public.cite(tag, currentVersion, certificateSource);
 
             // save the state of this notary key and certificate in the local configuration
             try {
@@ -221,16 +221,16 @@ exports.api = function(tag, testDirectory) {
         /**
          * This method generates a digital signature of the specified message using the local
          * notary key. The resulting digital signature is base 32 encoded and may be verified
-         * using the V1Public.verify() method and the corresponding public key.
+         * using the v1Public.verify() method and the corresponding public key.
          * 
          * @param {String} message The message to be digitally signed.
          * @returns {Binary} A base 32 encoded digital signature of the message.
          */
         sign: function(message) {
-            const curve = crypto.createECDH(V1Public.CURVE);
+            const curve = crypto.createECDH(v1Public.CURVE);
             curve.setPrivateKey(privateKey);
-            const pem = ec_pem(curve, V1Public.CURVE);
-            const signer = crypto.createSign(V1Public.SIGNATURE);
+            const pem = ec_pem(curve, v1Public.CURVE);
+            const signer = crypto.createSign(v1Public.SIGNATURE);
             signer.update(message);
             const signature = signer.sign(pem.encodePrivateKey());
             const binary = new bali.Binary(signature);
@@ -246,7 +246,7 @@ exports.api = function(tag, testDirectory) {
          */
         decrypt: function(aem) {
             const protocol = aem.getValue('$protocol');
-            if (V1Public.PROTOCOL !== protocol.toString()) {
+            if (v1Public.PROTOCOL !== protocol.toString()) {
                 throw new Error('NOTARY: The protocol for decrypting a message is not supported: ' + protocol);
             }
             const iv = aem.getValue('$iv').value;
@@ -255,12 +255,12 @@ exports.api = function(tag, testDirectory) {
             const ciphertext = aem.getValue('$ciphertext').value;
 
             // decrypt the 32-byte symmetric key
-            const curve = crypto.createECDH(V1Public.CURVE);
+            const curve = crypto.createECDH(v1Public.CURVE);
             curve.setPrivateKey(privateKey);
             const symmetricKey = curve.computeSecret(seed).slice(0, 32);  // take only first 32 bytes
 
             // decrypt the ciphertext using the symmetric key
-            const decipher = crypto.createDecipheriv(V1Public.CIPHER, symmetricKey, iv);
+            const decipher = crypto.createDecipheriv(v1Public.CIPHER, symmetricKey, iv);
             decipher.setAuthTag(auth);
             var message = decipher.update(ciphertext, undefined, 'utf8');
             message += decipher.final('utf8');

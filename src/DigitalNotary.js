@@ -19,9 +19,9 @@
 const fs = require('fs');
 const os = require('os');
 const bali = require('bali-component-framework');
+const NotarizedDocument = require('./NotarizedDocument').NotarizedDocument;
 const version = require('./v1');
 const publicAPI = version.v1Public;
-const NotarizedDocument = require('./NotarizedDocument').NotarizedDocument;
 
 
 /**
