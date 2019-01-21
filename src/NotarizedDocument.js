@@ -75,7 +75,12 @@ NotarizedDocument.fromString = function(string) {
         // construct the notarized document
         document = new NotarizedDocument(content, previous, certificate, signature);
     } catch (e) {
-        throw new Error('NOTARY: An invalid notarized document string was found: ' + string);
+        const attributes = bali.Catalog.fromSequential({
+            $exception: '$invalidDocument',
+            $document: string,
+            $message: 'The notarized document is invalid.'
+        });
+        throw new bali.Exception(attributes);
     }
     return document;
 };

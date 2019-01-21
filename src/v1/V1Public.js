@@ -159,7 +159,12 @@ exports.citationFromSource = function(source) {
     const citation = bali.parser.parseDocument(source);
     const protocol = citation.getValue('$protocol');
     if (exports.PROTOCOL !== protocol.toString()) {
-        throw new Error('NOTARY: The protocol for the citation is not supported: ' + protocol);
+        const attributes = bali.Catalog.fromSequential({
+            $exception: '$unsupportedProtocol',
+            $protocol: protocol,
+            $message: 'The protocol for the citation is not supported.'
+        });
+        throw new bali.Exception(attributes);
     }
     return citation;
 };
@@ -179,7 +184,12 @@ exports.citationFromReference = function(reference) {
     const citation = bali.parser.parseDocument(source);
     const protocol = citation.getValue('$protocol');
     if (exports.PROTOCOL !== protocol.toString()) {
-        throw new Error('NOTARY: The protocol for the citation is not supported: ' + protocol);
+        const attributes = bali.Catalog.fromSequential({
+            $exception: '$unsupportedProtocol',
+            $protocol: protocol,
+            $message: 'The protocol for the citation is not supported.'
+        });
+        throw new bali.Exception(attributes);
     }
     return citation;
 };

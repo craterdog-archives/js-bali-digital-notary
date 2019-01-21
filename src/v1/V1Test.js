@@ -63,10 +63,20 @@ exports.api = function(tag, testDirectory) {
             const catalog = bali.parser.parseDocument(keySource);
             const protocol = catalog.getValue('$protocol');
             if (v1Public.PROTOCOL !== protocol.toString()) {
-                throw new Error('NOTARY: The protocol for the test private key is not supported: ' + protocol);
+                const attributes = bali.Catalog.fromSequential({
+                    $exception: '$unsupportedProtocol',
+                    $protocol: protocol,
+                    $message: 'The protocol for the notary key is not supported.'
+                });
+                throw new bali.Exception(attributes);
             }
             if (!tag.isEqualTo(catalog.getValue('$tag'))) {
-                throw new Error('NOTARY: The tag for the test private key is incorrect: ' + tag);
+                const attributes = bali.Catalog.fromSequential({
+                    $exception: '$invalidKey',
+                    $tag: tag,
+                    $message: 'The notary key is invalid.'
+                });
+                throw new bali.Exception(attributes);
             }
             currentVersion = catalog.getValue('$version');
             publicKey = catalog.getValue('$publicKey').value;
@@ -82,7 +92,12 @@ exports.api = function(tag, testDirectory) {
         }
 
     } catch (e) {
-        throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
+        const attributes = bali.Catalog.fromSequential({
+            $exception: '$directoryAccess',
+            $directory: configDirectory,
+            $message: 'The configuration directory could not be accessed.'
+        });
+        throw new bali.Exception(attributes);
     }
 
     // return the notary key
@@ -188,7 +203,12 @@ exports.api = function(tag, testDirectory) {
                 fs.writeFileSync(keyFilename, keySource, {encoding: 'utf8', mode: 384});  // -rw------- permissions
                 fs.writeFileSync(certificateFilename, certificateSource, {encoding: 'utf8', mode: 384});  // -rw------- permissions
             } catch (e) {
-                throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
+                const attributes = bali.Catalog.fromSequential({
+                    $exception: '$directoryAccess',
+                    $directory: configDirectory,
+                    $message: 'The configuration directory could not be accessed.'
+                });
+                throw new bali.Exception(attributes);
             }
 
             return notaryCertificate;
@@ -214,7 +234,12 @@ exports.api = function(tag, testDirectory) {
                     fs.unlinkSync(certificateFilename);
                 }
             } catch (e) {
-                throw new Error('NOTARY: The TEST filesystem is not currently accessible:\n' + e);
+                const attributes = bali.Catalog.fromSequential({
+                    $exception: '$directoryAccess',
+                    $directory: configDirectory,
+                    $message: 'The configuration directory could not be accessed.'
+                });
+                throw new bali.Exception(attributes);
             }
         },
 
@@ -247,7 +272,12 @@ exports.api = function(tag, testDirectory) {
         decrypt: function(aem) {
             const protocol = aem.getValue('$protocol');
             if (v1Public.PROTOCOL !== protocol.toString()) {
-                throw new Error('NOTARY: The protocol for decrypting a message is not supported: ' + protocol);
+                const attributes = bali.Catalog.fromSequential({
+                    $exception: '$unsupportedProtocol',
+                    $protocol: protocol,
+                    $message: 'The protocol for the encrypted message is not supported.'
+                });
+                throw new bali.Exception(attributes);
             }
             const iv = aem.getValue('$iv').value;
             const auth = aem.getValue('$auth').value;

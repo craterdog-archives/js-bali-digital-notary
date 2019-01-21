@@ -29,31 +29,31 @@ exports.api = function(tag) {
     return {
 
         toString: function() {
-            throw new Error('NOTARY: The following method has not yet been implemented: toString()');
+            throw new Error('BUG: The following method has not yet been implemented: toString()');
         },
 
         certificate: function() {
-            throw new Error('NOTARY: The following method has not yet been implemented: certificate()');
+            throw new Error('BUG: The following method has not yet been implemented: certificate()');
         },
 
         citation: function() {
-            throw new Error('NOTARY: The following method has not yet been implemented: citation()');
+            throw new Error('BUG: The following method has not yet been implemented: citation()');
         },
 
         generate: function() {
-            throw new Error('NOTARY: The following method has not yet been implemented: generate()');
+            throw new Error('BUG: The following method has not yet been implemented: generate()');
         },
 
         forget: function() {
-            throw new Error('NOTARY: The following method has not yet been implemented: forget()');
+            throw new Error('BUG: The following method has not yet been implemented: forget()');
         },
 
         sign: function(message) {
-            throw new Error('NOTARY: The following method has not yet been implemented: sign(message)');
+            throw new Error('BUG: The following method has not yet been implemented: sign(message)');
         },
 
         decrypt: function(aem) {
-            throw new Error('NOTARY: The following method has not yet been implemented: decrypt(aem)');
+            throw new Error('BUG: The following method has not yet been implemented: decrypt(aem)');
         }
     };
 };
