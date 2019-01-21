@@ -288,7 +288,10 @@ exports.api = function(testDirectory) {
                     $protocol: protocol,
                     $message: 'The protocol for the encrypted message is not supported.'
                 });
-                throw new bali.Exception(attributes);
+                console.log('attributes: ' + attributes);
+                const exception = new bali.Exception(attributes);
+                console.log('exception: ' + exception);
+                throw exception;
             }
         }
 
