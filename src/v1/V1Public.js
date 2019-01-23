@@ -156,7 +156,7 @@ exports.citationFromAttributes = function(tag, version, digest) {
  * @returns {Catalog} The resulting document citation.
  */
 exports.citationFromSource = function(source) {
-    const citation = bali.parser.parseDocument(source);
+    const citation = bali.parse(source);
     const protocol = citation.getValue('$protocol');
     if (exports.PROTOCOL !== protocol.toString()) {
         const attributes = bali.Catalog.fromSequential({
@@ -181,7 +181,7 @@ exports.citationFromSource = function(source) {
 exports.citationFromReference = function(reference) {
     reference = reference.toString();
     const source = reference.slice(6, -1);  // remove '<bali:' and '>' wrapper
-    const citation = bali.parser.parseDocument(source);
+    const citation = bali.parse(source);
     const protocol = citation.getValue('$protocol');
     if (exports.PROTOCOL !== protocol.toString()) {
         const attributes = bali.Catalog.fromSequential({

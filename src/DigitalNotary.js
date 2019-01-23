@@ -311,7 +311,7 @@ function loadCitation(filename) {
     var citation;
     if (fs.existsSync(filename)) {
         source = fs.readFileSync(filename, 'utf8');
-        citation = bali.parser.parseDocument(source);
+        citation = bali.parse(source);
     } else {
         citation = publicAPI.citationFromAttributes();
         storeCitation(filename, citation);

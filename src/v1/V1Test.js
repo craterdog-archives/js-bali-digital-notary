@@ -60,7 +60,7 @@ exports.api = function(tag, testDirectory) {
 
             // read in the notary key information
             const keySource = fs.readFileSync(keyFilename, 'utf8');
-            const catalog = bali.parser.parseDocument(keySource);
+            const catalog = bali.parse(keySource);
             const protocol = catalog.getValue('$protocol');
             if (v1Public.PROTOCOL !== protocol.toString()) {
                 const attributes = bali.Catalog.fromSequential({
