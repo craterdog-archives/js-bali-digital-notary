@@ -23,44 +23,47 @@ const NotarizedDocument = require('./NotarizedDocument').NotarizedDocument;
 const version = require('./v1');
 const publicAPI = version.v1Public;
 
+// This private constant sets the POSIX end of line character
+const EOL = '\n';
+
 
 /**
  * This function returns an object that implements the API for a digital notary.
  * 
  * @param {String} testDirectory The location of the test directory to be used for local
- * configuration storage. If not specified, the location of the configuration is in
- * '~/.bali/'.
+ * configuration storage. If not specified, the location of the configuration is in '~/.bali/'.
  * @returns {Object} An object that implements the API for a digital notary.
  */
 exports.api = function(testDirectory) {
 
-    // create the config directory if necessary
     const configDirectory = testDirectory || os.homedir() + '/.bali/';
-    if (!fs.existsSync(configDirectory)) fs.mkdirSync(configDirectory, 448);  // drwx------ permissions
-
-    // load the account citation
-    var filename = configDirectory + 'Citation.bali';
-    var certificateCitation = loadCitation(filename);
-
-    // connect to the private hardware security module for the account
-    var notaryTag = certificateCitation.getValue('$tag');
-    const privateAPI = testDirectory ? 
-        // use a test software security module (SSM)
-        version.v1Test.api(notaryTag, testDirectory) : 
-        // or, use a proxy to a hardware security module (HSM)
-        version.v1Proxy.api(notaryTag);
+    const configFilename = 'Citation.bali';
+    const notaryCitation = retrieveConfiguration(configDirectory, configFilename);
+    const notaryTag = notaryCitation.getValue('$tag');
+    const privateAPI = connectToHSM(notaryTag, testDirectory);
 
     return {
 
+        supportedVersions: function() {
+            var versions = bali.list([publicAPI.PROTOCOL]);
+            return versions;
+        },
+
         /**
-         * This method returns a Bali Notarized Document™ containing the public certificate for
-         * this digital notary.
+         * This method (re)generates a private notary key and its associated public notary
+         * certificate. The private notary key is generated on the hardware security module
+         * and remains there. The associated public notary certificate is returned and a
+         * document citation for the certificate is stored in the local configuration
+         * directory.
          * 
-         * @returns {NotarizedDocument} The notarized document containing the public certificate
-         * for this digital notary.
+         * @returns {NotarizedDocument} A new Bali Notarized Document™ containing the public
+         * notary certificate associated with the new private notary key.
          */
-        getNotaryCertificate: function() {
-            return privateAPI.certificate();
+        generateKeys: function() {
+            var notaryCertificate = privateAPI.generate();
+            var certificateCitation = privateAPI.citation();
+            storeConfiguration(configDirectory, configFilename, certificateCitation);
+            return notaryCertificate;
         },
 
         /**
@@ -70,20 +73,19 @@ exports.api = function(testDirectory) {
          * @returns {Catalog} A document citation referencing the document containing the
          * public certificate for this digital notary.
          */
-        getNotaryCitation: function() {
+        getCitation: function() {
             return privateAPI.citation();
         },
 
         /**
-         * This method extracts from the specified Bali reference the certificate citation
-         * encoded using the Bali Document Notation™.
+         * This method returns a Bali Notarized Document™ containing the public certificate for
+         * this digital notary.
          * 
-         * @param {Reference} reference A reference containing the encoded document
-         * citation.
-         * @returns {Catalog} The document citation that was encoded in the specified reference.
+         * @returns {NotarizedDocument} The notarized document containing the public certificate
+         * for this digital notary.
          */
-        extractCitation: function(reference) {
-            return publicAPI.citationFromReference(reference);
+        getCertificate: function() {
+            return privateAPI.certificate();
         },
 
         /**
@@ -113,25 +115,16 @@ exports.api = function(testDirectory) {
             return publicAPI.referenceFromCitation(citation);
         },
 
-        parseDocument: function(string) {
-            return NotarizedDocument.fromString(string);
-        },
-
         /**
-         * This method (re)generates a private notary key and its associated public notary
-         * certificate. The private notary key is generated on the hardware security module
-         * and remains there. The associated public notary certificate is returned and a
-         * document citation for the certificate is stored in the local configuration
-         * directory.
+         * This method extracts from the specified Bali reference the certificate citation
+         * encoded using the Bali Document Notation™.
          * 
-         * @returns {NotarizedDocument} A new Bali Notarized Document™ containing the public
-         * notary certificate associated with the new private notary key.
+         * @param {Reference} reference A reference containing the encoded document
+         * citation.
+         * @returns {Catalog} The document citation that was encoded in the specified reference.
          */
-        generateKeys: function() {
-            var notaryCertificate = privateAPI.generate();
-            var certificateCitation = privateAPI.citation();
-            storeCitation(filename, certificateCitation);
-            return notaryCertificate;
+        extractCitation: function(reference) {
+            return publicAPI.citationFromReference(reference);
         },
 
         /**
@@ -159,16 +152,27 @@ exports.api = function(testDirectory) {
             var certificate = publicAPI.referenceFromCitation(certificateCitation);
             // assemble the full document source to be digitally signed
             var source = '';
-            source += certificate + '\n';
-            source += previous + '\n';
+            source += certificate + EOL;
+            source += previous + EOL;
             source += document;
             // prepend the digital signature to the document source
-            source = privateAPI.sign(source) + '\n' + source;
+            source = privateAPI.sign(source) + EOL + source;
             // construct the notarized document
             var notarizedDocument = NotarizedDocument.fromString(source);
             // update the document citation with the new digest
             citation.setValue('$digest', publicAPI.digest(source));
             return notarizedDocument;
+        },
+
+        /**
+         * This method parses the source string for a notarized document and returns the
+         * corresponding document.
+         * 
+         * @param {String} source A string containing the source for the notarized document.
+         * @returns {NotarizedDocument}
+         */
+        parseDocument: function(source) {
+            return NotarizedDocument.fromString(source);
         },
 
         /**
@@ -210,8 +214,8 @@ exports.api = function(testDirectory) {
             if (protocol.toString() === publicAPI.PROTOCOL) {
                 // extracting the digital signature from the beginning of the notarized document
                 var source = '';
-                source += document.certificate + '\n';
-                source += document.previous + '\n';
+                source += document.certificate + EOL;
+                source += document.previous + EOL;
                 source += document.content;
                 // verify the digital signature using the public key from the notary certificate
                 var publicKey = certificate.getValue('$publicKey');
@@ -293,27 +297,75 @@ exports.api = function(testDirectory) {
 // PRIVATE FUNCTIONS
 
 /*
- * This function loads from the specified file a document citation. If the document citation
- * does not yet exist a new document citation with a new unique identifier tag is created and
- * stored in the file.
+ * This function stores the digital notary configuration citation in the specified
+ * configuration directory and filename.
  */
-function loadCitation(filename) {
-    var source;
-    var citation;
-    if (fs.existsSync(filename)) {
-        source = fs.readFileSync(filename, 'utf8');
-        citation = bali.parse(source);
-    } else {
-        citation = publicAPI.citationFromAttributes();
-        storeCitation(filename, citation);
+function storeConfiguration(configDirectory, configFilename, citation) {
+    try {
+        const configFile = configDirectory + configFilename;
+        const source = citation.toString() + EOL;  // add POSIX compliant end of line
+        fs.writeFileSync(configFile, source, {encoding: 'utf8', mode: 384});  // -rw------- permissions
+    } catch (e) {
+        throw bali.exception({
+            $exception: '$configurationAccess',
+            $directory: '"' + configDirectory + '"',
+            $filename: '"' + configFilename + '"',
+            $message: '"' + EOL + 'Unable to store the configuration file: ' + EOL + e + EOL + '"'
+        });
     }
-    return citation;
 }
 
 /*
- * This function stores the specified document citation into the specified file.
+ * This function loads the digital notary configuration citation from the specified
+ * configuration directory and filename.
  */
-function storeCitation(filename, citation) {
-    var source = citation.toString() + '\n';  // add POSIX compliant end of line
-    fs.writeFileSync(filename, source, {encoding: 'utf8', mode: 384});  // -rw------- permissions
+function retrieveConfiguration(configDirectory, configFilename) {
+    try {
+        // create the config directory if necessary
+        if (!fs.existsSync(configDirectory)) fs.mkdirSync(configDirectory, 448);  // drwx------ permissions
+
+        // load the account citation
+        const configFile = configDirectory + configFilename;
+        var source;
+        var certificateCitation;
+        if (fs.existsSync(configFile)) {
+            source = fs.readFileSync(configFile, 'utf8');
+            certificateCitation = bali.parse(source);
+        } else {
+            certificateCitation = publicAPI.citationFromAttributes();
+            source = certificateCitation.toString() + EOL;  // add POSIX compliant end of line
+            fs.writeFileSync(configFile, source, {encoding: 'utf8', mode: 384});  // -rw------- permissions
+        }
+        return certificateCitation;
+    } catch (e) {
+        throw bali.exception({
+            $exception: '$configurationAccess',
+            $directory: '"' + configDirectory + '"',
+            $filename: '"' + configFilename + '"',
+            $message: '"' + EOL + 'Unable to retrieve the current configuration file, or create a new one: ' + EOL + e + EOL + '"'
+        });
+    }
+}
+
+/*
+ * This function connects to a remote hardware security module which implements all API
+ * methods that utilize the private key.
+ */
+function connectToHSM(notaryTag, testDirectory) {
+    try {
+        // connect to the private hardware security module for the account
+        const privateAPI = testDirectory ? 
+            // use a test software security module (SSM)
+            version.v1Test.api(notaryTag, testDirectory) : 
+            // or, use a proxy to a hardware security module (HSM)
+            version.v1Proxy.api(notaryTag);
+        return privateAPI;
+    } catch (e) {
+        throw bali.exception({
+            $exception: '$hsmAccess',
+            $tag: notaryTag,
+            $testMode: testDirectory ? true : false,
+            $message: '"' + EOL + 'Unable to access the hardware security module (HSM): ' + EOL + e + EOL + '"'
+        });
+    }
 }

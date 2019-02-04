@@ -27,6 +27,9 @@
  */
 const bali = require('bali-component-framework');
 
+// This private constant sets the POSIX end of line character
+const EOL = '\n';
+
 
 // PUBLIC FUNCTIONS
 
@@ -54,10 +57,10 @@ exports.NotarizedDocument = NotarizedDocument;
 NotarizedDocument.fromString = function(string) {
     var document;
     try {
-        var lines = string.split('\n');
+        var lines = string.split(EOL);
 
         // extract the digital signature (A)
-        var binary = lines.slice(0, 4).join('\n');
+        var binary = lines.slice(0, 4).join(EOL);
         var signature = bali.parse(binary);
 
         // extract the public certificate reference (B)
@@ -70,15 +73,15 @@ NotarizedDocument.fromString = function(string) {
         }
 
         // extract the document content (D)
-        var content = lines.slice(6).join('\n');
+        var content = lines.slice(6).join(EOL);
 
         // construct the notarized document
         document = new NotarizedDocument(content, previous, certificate, signature);
     } catch (e) {
         throw bali.exception({
             $exception: '$invalidDocument',
-            $document: '"' + string + '"',
-            $message: '"The notarized document is invalid."'
+            $document: '"' + EOL + string + EOL + '"',  // force the document to be a text block
+            $message: '"' + EOL + 'The notarized document is invalid: ' + EOL + e + EOL + '"'
         });
     }
     return document;
@@ -89,9 +92,9 @@ NotarizedDocument.fromString = function(string) {
 
 NotarizedDocument.prototype.toString = function() {
     var string = '';
-    string += this.signature + '\n';
-    string += this.certificate + '\n';
-    string += this.previous + '\n';
+    string += this.signature + EOL;
+    string += this.certificate + EOL;
+    string += this.previous + EOL;
     string += this.content;
     return string;
 };

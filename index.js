@@ -9,5 +9,19 @@
  ************************************************************************/
 'use strict';
 
-exports.NotarizedDocument = require('./src/NotarizedDocument').NotarizedDocument;
-exports.api = require('./src/DigitalNotary').api;
+/**
+ * This function initializes the digital notary API. If a test directory
+ * is passed in as a parameter the test directory will be used to maintain
+ * the configuration file. Otherwise, the configuration file will be in the
+ * '~/.bali/' directory. When running in test mode, a local software security
+ * module will be used instead of a remote hardware security module (HSM)
+ * for all operations that utilize the private notary key.
+ * 
+ * @param {String} testDirectory The optional local directory to be used to 
+ * maintain the configuration information for the digital notary API.
+ * @returns {Object} A singleton object containing the initialized digital notary API.
+ */
+exports.api = function(testDirectory) {
+    const api = require('./src/DigitalNotary').api(testDirectory);
+    return api;
+};

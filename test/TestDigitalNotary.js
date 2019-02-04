@@ -11,19 +11,38 @@
 const mocha = require('mocha');
 const expect = require('chai').expect;
 const bali = require('bali-component-framework');
-const notary = require('../src/DigitalNotary').api('test/config/');
+const notary = require('../').api('test/config/');
 
 describe('Bali Digital Notary™', function() {
 
-    var certificateDocument = notary.generateKeys();
-    var notaryCertificate = bali.parse(certificateDocument.content);
-    var certificateCitation = notary.getNotaryCitation();
+    var certificateDocument;
+    var notaryCertificate;
+    var certificateCitation;
     var source = '[$foo: "bar"]';
 
-    describe('Test Citations', function() {
+    describe('Test Key Generation', function() {
+
+        it('should generate the keys', function() {
+            certificateDocument = notary.generateKeys();
+            expect(certificateDocument).to.exist;  // jshint ignore:line
+        });
+
+        it('should retrieve the notary certificate', function() {
+            notaryCertificate = bali.parse(certificateDocument.content);
+            expect(notaryCertificate).to.exist;  // jshint ignore:line
+        });
+
+        it('should retrieve the certificate citation', function() {
+            certificateCitation = notary.getCitation();
+            expect(certificateCitation).to.exist;  // jshint ignore:line
+        });
+
+    });
+
+    describe('Test Signing and Verification', function() {
 
         it('should validate the certificate', function() {
-            expect(certificateDocument.toString()).to.equal(notary.getNotaryCertificate().toString());
+            expect(certificateDocument.toString()).to.equal(notary.getCertificate().toString());
             expect(notaryCertificate.getValue('$protocol').toString()).to.equal('v1');
             var isValid = notary.documentIsValid(notaryCertificate, certificateDocument);
             expect(isValid).to.equal(true);
