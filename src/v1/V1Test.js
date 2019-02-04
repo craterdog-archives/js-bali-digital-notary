@@ -63,20 +63,20 @@ exports.api = function(tag, testDirectory) {
             const catalog = bali.parse(keySource);
             const protocol = catalog.getValue('$protocol');
             if (v1Public.PROTOCOL !== protocol.toString()) {
-                const attributes = bali.Catalog.fromSequential({
+                const attributes = {
                     $exception: '$unsupportedProtocol',
                     $protocol: protocol,
-                    $message: 'The protocol for the notary key is not supported.'
-                });
-                throw new bali.Exception(attributes);
+                    $message: '"The protocol for the notary key is not supported."'
+                };
+                throw bali.exception(attributes);
             }
             if (!tag.isEqualTo(catalog.getValue('$tag'))) {
-                const attributes = bali.Catalog.fromSequential({
+                const attributes = {
                     $exception: '$invalidKey',
                     $tag: tag,
-                    $message: 'The notary key is invalid.'
-                });
-                throw new bali.Exception(attributes);
+                    $message: '"The notary key is invalid."'
+                };
+                throw bali.exception(attributes);
             }
             currentVersion = catalog.getValue('$version');
             publicKey = catalog.getValue('$publicKey').value;
@@ -92,12 +92,12 @@ exports.api = function(tag, testDirectory) {
         }
 
     } catch (e) {
-        const attributes = bali.Catalog.fromSequential({
+        const attributes = {
             $exception: '$directoryAccess',
-            $directory: configDirectory,
-            $message: 'The configuration directory could not be accessed.'
-        });
-        throw new bali.Exception(attributes);
+            $directory: '"' + configDirectory + '"',
+            $message: '"The configuration directory could not be accessed."'
+        };
+        throw bali.exception(attributes);
     }
 
     // return the notary key
@@ -110,12 +110,12 @@ exports.api = function(tag, testDirectory) {
          * @returns {String} A canonical Bali source code string for the private notary key.
          */
         toString: function() {
-            const catalog = new bali.Catalog();
-            catalog.setValue('$protocol', bali.Version.fromLiteral(v1Public.PROTOCOL));
+            const catalog = bali.catalog();
+            catalog.setValue('$protocol', bali.parse(v1Public.PROTOCOL));
             catalog.setValue('$tag', tag);
             catalog.setValue('$version', currentVersion);
-            catalog.setValue('$publicKey', new bali.Binary(publicKey));
-            catalog.setValue('$privateKey', new bali.Binary(privateKey));
+            catalog.setValue('$publicKey', bali.binary(publicKey));
+            catalog.setValue('$privateKey', bali.binary(privateKey));
             catalog.setValue('$citation', certificateCitation);
             return catalog.toString();
         },
@@ -159,15 +159,15 @@ exports.api = function(tag, testDirectory) {
             const curve = crypto.createECDH(v1Public.CURVE);
             curve.generateKeys();
             currentVersion = currentVersion ? 'v' + (Number(currentVersion.toString().slice(1)) + 1) : 'v1';
-            currentVersion = bali.Version.fromLiteral(currentVersion);
+            currentVersion = bali.parse(currentVersion);
             publicKey = curve.getPublicKey();
 
             // generate the new public notary certificate
-            notaryCertificate = new bali.Catalog();
-            notaryCertificate.setValue('$protocol', bali.Version.fromLiteral(v1Public.PROTOCOL));
+            notaryCertificate = bali.catalog();
+            notaryCertificate.setValue('$protocol', bali.parse(v1Public.PROTOCOL));
             notaryCertificate.setValue('$tag', tag);
             notaryCertificate.setValue('$version', currentVersion);
-            notaryCertificate.setValue('$publicKey', new bali.Binary(publicKey));
+            notaryCertificate.setValue('$publicKey', bali.binary(publicKey));
 
             // create a reference to the certificate for the new private key
             privateKey = curve.getPrivateKey();
@@ -185,7 +185,7 @@ exports.api = function(tag, testDirectory) {
             } else {
                 // sign with the new key
                 certificateSource += newReference + '\n';
-                certificateSource += bali.Pattern.fromLiteral('none') + '\n';  // there is no previous version
+                certificateSource += bali.NONE + '\n';  // there is no previous version
                 certificateSource += notaryCertificate;
                 certificateSource = this.sign(certificateSource) + '\n' + certificateSource;
             }
@@ -203,12 +203,12 @@ exports.api = function(tag, testDirectory) {
                 fs.writeFileSync(keyFilename, keySource, {encoding: 'utf8', mode: 384});  // -rw------- permissions
                 fs.writeFileSync(certificateFilename, certificateSource, {encoding: 'utf8', mode: 384});  // -rw------- permissions
             } catch (e) {
-                const attributes = bali.Catalog.fromSequential({
+                const attributes = {
                     $exception: '$directoryAccess',
-                    $directory: configDirectory,
-                    $message: 'The configuration directory could not be accessed.'
-                });
-                throw new bali.Exception(attributes);
+                    $directory: '"' + configDirectory + '"',
+                    $message: '"The configuration directory could not be accessed."'
+                };
+                throw bali.exception(attributes);
             }
 
             return notaryCertificate;
@@ -234,12 +234,12 @@ exports.api = function(tag, testDirectory) {
                     fs.unlinkSync(certificateFilename);
                 }
             } catch (e) {
-                const attributes = bali.Catalog.fromSequential({
+                const attributes = {
                     $exception: '$directoryAccess',
-                    $directory: configDirectory,
-                    $message: 'The configuration directory could not be accessed.'
-                });
-                throw new bali.Exception(attributes);
+                    $directory: '"' + configDirectory + '"',
+                    $message: '"The configuration directory could not be accessed."'
+                };
+                throw bali.exception(attributes);
             }
         },
 
@@ -258,7 +258,7 @@ exports.api = function(tag, testDirectory) {
             const signer = crypto.createSign(v1Public.SIGNATURE);
             signer.update(message);
             const signature = signer.sign(pem.encodePrivateKey());
-            const binary = new bali.Binary(signature);
+            const binary = bali.binary(signature);
             return binary;
         },
 
@@ -272,12 +272,12 @@ exports.api = function(tag, testDirectory) {
         decrypt: function(aem) {
             const protocol = aem.getValue('$protocol');
             if (v1Public.PROTOCOL !== protocol.toString()) {
-                const attributes = bali.Catalog.fromSequential({
+                const attributes = {
                     $exception: '$unsupportedProtocol',
                     $protocol: protocol,
-                    $message: 'The protocol for the encrypted message is not supported.'
-                });
-                throw new bali.Exception(attributes);
+                    $message: '"The protocol for the encrypted message is not supported."'
+                };
+                throw bali.exception(attributes);
             }
             const iv = aem.getValue('$iv').value;
             const auth = aem.getValue('$auth').value;

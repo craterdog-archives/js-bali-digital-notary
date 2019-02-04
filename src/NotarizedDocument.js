@@ -58,15 +58,15 @@ NotarizedDocument.fromString = function(string) {
 
         // extract the digital signature (A)
         var binary = lines.slice(0, 4).join('\n');
-        var signature = bali.Binary.fromLiteral(binary);
+        var signature = bali.parse(binary);
 
         // extract the public certificate reference (B)
-        var certificate = bali.Reference.fromLiteral(lines[4]);
+        var certificate = bali.parse(lines[4]);
 
         // extract the previous document reference (C)
-        var previous = bali.Pattern.fromLiteral('none');
+        var previous = bali.NONE;
         if (lines[5] !== 'none') {
-            previous = bali.Reference.fromLiteral(lines[5]);
+            previous = bali.parse(lines[5]);
         }
 
         // extract the document content (D)
@@ -75,12 +75,11 @@ NotarizedDocument.fromString = function(string) {
         // construct the notarized document
         document = new NotarizedDocument(content, previous, certificate, signature);
     } catch (e) {
-        const attributes = bali.Catalog.fromSequential({
+        throw bali.exception({
             $exception: '$invalidDocument',
-            $document: string,
-            $message: 'The notarized document is invalid.'
+            $document: '"' + string + '"',
+            $message: '"The notarized document is invalid."'
         });
-        throw new bali.Exception(attributes);
     }
     return document;
 };

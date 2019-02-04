@@ -42,7 +42,7 @@ exports.digest = function(message) {
     const hasher = crypto.createHash(exports.DIGEST);
     hasher.update(message.toString());  // force it to a string if it isn't already
     const digest = hasher.digest();
-    const binary = new bali.Binary(digest);
+    const binary = bali.binary(digest);
     return binary;
 };
 
@@ -115,12 +115,12 @@ exports.encrypt = function(publicKey, message) {
     const auth = cipher.getAuthTag();
 
     // construct the authenticated encrypted message (AEM)
-    const aem = new bali.Catalog();
-    aem.setValue('$protocol', bali.Version.fromLiteral(exports.PROTOCOL));
-    aem.setValue('$iv', new bali.Binary(iv));
-    aem.setValue('$auth', new bali.Binary(auth));
-    aem.setValue('$seed', new bali.Binary(seed));
-    aem.setValue('$ciphertext', new bali.Binary(ciphertext));
+    const aem = bali.catalog();
+    aem.setValue('$protocol', bali.parse(exports.PROTOCOL));
+    aem.setValue('$iv', bali.binary(iv));
+    aem.setValue('$auth', bali.binary(auth));
+    aem.setValue('$seed', bali.binary(seed));
+    aem.setValue('$ciphertext', bali.binary(ciphertext));
 
     return aem;
 };
@@ -136,15 +136,16 @@ exports.encrypt = function(publicKey, message) {
  * @returns {Catalog} A new document citation.
  */
 exports.citationFromAttributes = function(tag, version, digest) {
-    const protocol = bali.Version.fromLiteral(exports.PROTOCOL);
-    tag = tag || new bali.Tag();
-    version = version || bali.Version.fromLiteral('v1');
-    digest = digest || bali.Pattern.fromLiteral('none');
-    const citation = new bali.Catalog();
-    citation.setValue('$protocol', protocol);
-    citation.setValue('$tag', tag);
-    citation.setValue('$version', version);
-    citation.setValue('$digest', digest);
+    const protocol = bali.parse(exports.PROTOCOL);
+    tag = tag || bali.tag();
+    version = version || bali.parse('v1');
+    digest = digest || bali.NONE;
+    const citation = bali.catalog({
+        $protocol: protocol,
+        $tag: tag,
+        $version: version,
+        $digest: digest
+    });
     return citation;
 };
 
@@ -159,12 +160,11 @@ exports.citationFromSource = function(source) {
     const citation = bali.parse(source);
     const protocol = citation.getValue('$protocol');
     if (exports.PROTOCOL !== protocol.toString()) {
-        const attributes = bali.Catalog.fromSequential({
+        throw bali.exception({
             $exception: '$unsupportedProtocol',
             $protocol: protocol,
-            $message: 'The protocol for the citation is not supported.'
+            $message: '"The protocol for the citation is not supported."'
         });
-        throw new bali.Exception(attributes);
     }
     return citation;
 };
@@ -184,12 +184,11 @@ exports.citationFromReference = function(reference) {
     const citation = bali.parse(source);
     const protocol = citation.getValue('$protocol');
     if (exports.PROTOCOL !== protocol.toString()) {
-        const attributes = bali.Catalog.fromSequential({
+        throw bali.exception({
             $exception: '$unsupportedProtocol',
             $protocol: protocol,
-            $message: 'The protocol for the citation is not supported.'
+            $message: '"The protocol for the citation is not supported."'
         });
-        throw new bali.Exception(attributes);
     }
     return citation;
 };
@@ -209,6 +208,6 @@ exports.referenceFromCitation = function(citation) {
     reference = reference.replace(/%tag/, citation.getValue('$tag'));
     reference = reference.replace(/%version/, citation.getValue('$version'));
     reference = reference.replace(/%digest/, citation.getValue('$digest').toString().replace(/\s+/g, ''));
-    reference = bali.Reference.fromLiteral(reference);
+    reference = bali.parse(reference);
     return reference;
 };

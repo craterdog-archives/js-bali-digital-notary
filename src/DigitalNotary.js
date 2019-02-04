@@ -147,15 +147,14 @@ exports.api = function(testDirectory) {
          * @returns {NotarizedDocument} The newly notarized document.
          */
         notarizeDocument: function(citation, document, previous) {
-            previous = previous || bali.Pattern.fromLiteral('none');
+            previous = previous || bali.NONE;
             var certificateCitation = privateAPI.citation();
             if (!certificateCitation) {
-                const attributes = bali.Catalog.fromSequential({
+                throw bali.exception({
                     $exception: '$missingKey',
                     $tag: privateAPI.tag,
-                    $message: 'The notary key is missing.'
+                    $message: '"The notary key is missing."'
                 });
-                throw new bali.Exception(attributes);
             }
             var certificate = publicAPI.referenceFromCitation(certificateCitation);
             // assemble the full document source to be digitally signed
@@ -188,12 +187,11 @@ exports.api = function(testDirectory) {
                 var digest = publicAPI.digest(document);
                 return digest.isEqualTo(citation.getValue('$digest'));
             } else {
-                const attributes = bali.Catalog.fromSequential({
+                throw bali.exception({
                     $exception: '$unsupportedProtocol',
                     $protocol: protocol,
-                    $message: 'The protocol for the citation is not supported.'
+                    $message: '"The protocol for the citation is not supported."'
                 });
-                throw new bali.Exception(attributes);
             }
         },
 
@@ -221,12 +219,11 @@ exports.api = function(testDirectory) {
                 var isValid = publicAPI.verify(publicKey, source, signature);
                 return isValid;
             } else {
-                const attributes = bali.Catalog.fromSequential({
+                throw bali.exception({
                     $exception: '$unsupportedProtocol',
                     $protocol: protocol,
-                    $message: 'The protocol for the notary certificate is not supported.'
+                    $message: '"The protocol for the notary certificate is not supported."'
                 });
-                throw new bali.Exception(attributes);
             }
         },
 
@@ -251,12 +248,11 @@ exports.api = function(testDirectory) {
                 var aem = publicAPI.encrypt(publicKey, message);
                 return aem;
             } else {
-                const attributes = bali.Catalog.fromSequential({
+                throw bali.exception({
                     $exception: '$unsupportedProtocol',
                     $protocol: protocol,
-                    $message: 'The protocol for the notary certificate is not supported.'
+                    $message: '"The protocol for the notary certificate is not supported."'
                 });
-                throw new bali.Exception(attributes);
             }
         },
 
@@ -271,27 +267,22 @@ exports.api = function(testDirectory) {
          */
         decryptMessage: function(aem) {
             if (!privateAPI.citation()) {
-                const attributes = bali.Catalog.fromSequential({
+                throw bali.exception({
                     $exception: '$missingKey',
                     $tag: notaryTag,
-                    $message: 'The notary key is missing.'
+                    $message: '"The notary key is missing."'
                 });
-                throw new bali.Exception(attributes);
             }
             var protocol = aem.getValue('$protocol');
             if (protocol.toString() === publicAPI.PROTOCOL) {
                 var message = privateAPI.decrypt(aem);
                 return message;
             } else {
-                const attributes = bali.Catalog.fromSequential({
+                throw bali.exception({
                     $exception: '$unsupportedProtocol',
                     $protocol: protocol,
-                    $message: 'The protocol for the encrypted message is not supported.'
+                    $message: '"The protocol for the encrypted message is not supported."'
                 });
-                console.log('attributes: ' + attributes);
-                const exception = new bali.Exception(attributes);
-                console.log('exception: ' + exception);
-                throw exception;
             }
         }
 
