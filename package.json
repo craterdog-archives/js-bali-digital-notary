@@ -32,7 +32,7 @@
     "webpack": "^4.28.2"
   },
   "dependencies": {
-    "bali-component-framework": "^1.9.0",
+    "bali-component-framework": "file:../js-bali-component-framework",
     "ec-pem": "^0.18.0"
   }
 }

@@ -79,8 +79,8 @@ exports.api = function(tag, testDirectory) {
                 throw bali.exception(attributes);
             }
             currentVersion = catalog.getValue('$version');
-            publicKey = catalog.getValue('$publicKey').value;
-            privateKey = catalog.getValue('$privateKey').value;
+            publicKey = catalog.getValue('$publicKey').getValue();
+            privateKey = catalog.getValue('$privateKey').getValue();
             certificateCitation = catalog.getValue('$citation');
         }
 
@@ -279,10 +279,10 @@ exports.api = function(tag, testDirectory) {
                 };
                 throw bali.exception(attributes);
             }
-            const iv = aem.getValue('$iv').value;
-            const auth = aem.getValue('$auth').value;
-            const seed = aem.getValue('$seed').value;
-            const ciphertext = aem.getValue('$ciphertext').value;
+            const iv = aem.getValue('$iv').getValue();
+            const auth = aem.getValue('$auth').getValue();
+            const seed = aem.getValue('$seed').getValue();
+            const ciphertext = aem.getValue('$ciphertext').getValue();
 
             // decrypt the 32-byte symmetric key
             const curve = crypto.createECDH(v1Public.CURVE);

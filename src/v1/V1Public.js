@@ -77,9 +77,9 @@ exports.cite = function(tag, version, document) {
  * @returns {Boolean} Whether or not the digital signature is valid.
  */
 exports.verify = function(publicKey, message, signature) {
-    signature = signature.value;
+    signature = signature.getValue();
     message = message.toString();  // force it to be a string
-    publicKey = publicKey.value;
+    publicKey = publicKey.getValue();
     const curve = crypto.createECDH(exports.CURVE);
     curve.setPublicKey(publicKey);
     const pem = ec_pem(curve, exports.CURVE);
@@ -99,7 +99,7 @@ exports.verify = function(publicKey, message, signature) {
  * @returns {Catalog} An authenticated encrypted message.
  */
 exports.encrypt = function(publicKey, message) {
-    publicKey = publicKey.value;
+    publicKey = publicKey.getValue();
     message = message.toString();  // force it to be a string
     // generate and encrypt a 32-byte symmetric key
     const curve = crypto.createECDH(exports.CURVE);
