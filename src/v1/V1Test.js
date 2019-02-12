@@ -63,20 +63,18 @@ exports.api = function(tag, testDirectory) {
             const catalog = bali.parse(keySource);
             const protocol = catalog.getValue('$protocol');
             if (v1Public.PROTOCOL !== protocol.toString()) {
-                const attributes = {
+                throw bali.exception({
                     $exception: '$unsupportedProtocol',
                     $protocol: protocol,
                     $message: '"The protocol for the notary key is not supported."'
-                };
-                throw bali.exception(attributes);
+                });
             }
             if (!tag.isEqualTo(catalog.getValue('$tag'))) {
-                const attributes = {
+                throw bali.exception({
                     $exception: '$invalidKey',
                     $tag: tag,
                     $message: '"The notary key is invalid."'
-                };
-                throw bali.exception(attributes);
+                });
             }
             currentVersion = catalog.getValue('$version');
             publicKey = catalog.getValue('$publicKey').getValue();
@@ -92,12 +90,11 @@ exports.api = function(tag, testDirectory) {
         }
 
     } catch (e) {
-        const attributes = {
+        throw bali.exception({
             $exception: '$directoryAccess',
             $directory: '"' + configDirectory + '"',
             $message: '"The configuration directory could not be accessed."'
-        };
-        throw bali.exception(attributes);
+        });
     }
 
     // return the notary key
@@ -203,12 +200,11 @@ exports.api = function(tag, testDirectory) {
                 fs.writeFileSync(keyFilename, keySource, {encoding: 'utf8', mode: 384});  // -rw------- permissions
                 fs.writeFileSync(certificateFilename, certificateSource, {encoding: 'utf8', mode: 384});  // -rw------- permissions
             } catch (e) {
-                const attributes = {
+                throw bali.exception({
                     $exception: '$directoryAccess',
                     $directory: '"' + configDirectory + '"',
                     $message: '"The configuration directory could not be accessed."'
-                };
-                throw bali.exception(attributes);
+                });
             }
 
             return notaryCertificate;
@@ -234,12 +230,11 @@ exports.api = function(tag, testDirectory) {
                     fs.unlinkSync(certificateFilename);
                 }
             } catch (e) {
-                const attributes = {
+                throw bali.exception({
                     $exception: '$directoryAccess',
                     $directory: '"' + configDirectory + '"',
                     $message: '"The configuration directory could not be accessed."'
-                };
-                throw bali.exception(attributes);
+                });
             }
         },
 
@@ -272,12 +267,11 @@ exports.api = function(tag, testDirectory) {
         decrypt: function(aem) {
             const protocol = aem.getValue('$protocol');
             if (v1Public.PROTOCOL !== protocol.toString()) {
-                const attributes = {
+                throw bali.exception({
                     $exception: '$unsupportedProtocol',
                     $protocol: protocol,
                     $message: '"The protocol for the encrypted message is not supported."'
-                };
-                throw bali.exception(attributes);
+                });
             }
             const iv = aem.getValue('$iv').getValue();
             const auth = aem.getValue('$auth').getValue();
