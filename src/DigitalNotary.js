@@ -89,33 +89,30 @@ exports.api = function(testDirectory) {
         },
 
         /**
-         * This method creates a new document citation containing the specified document tag,
-         * version, and (optionally) a digest of the document. If the document does not yet
-         * exist, no digest is required (or even possible).
-         * 
-         * @param {Tag} tag The unique tag that identifies the document.
-         * @param {Version} version The current version of the document.
-         * @param {Binary} digest A base 32 encoded binary digital digest of the entire
-         * contents of the document.
-         * @returns {Catalog} A new document citation for the document.
-         */
-        createCitation: function(tag, version, digest) {
-            return publicAPI.citationFromAttributes(tag, version, digest);
-        },
-
-        /**
          * This method digitally notarizes the specified document using the private notary
          * key maintained inside the hardware security module. The specified document citation
          * is updated with the digest of the notarized document. The newly notarized document
          * is returned.
          * 
-         * @param {String} document The document to be notarized.
-         * @param {Catalog} citation A document citation referencing the document to be notarized.
-         * @param {Catalog} previous A document citation to the previous version of the document.
-         * @returns {NotarizedDocument} The newly notarized document.
+         * @param {Component} component The component to be notarized.
+         * @param {Catalog} previous A document citation to the previous version of the notarized document.
+         * @returns {Object} An object containing the newly notarized document for the component and
+         * a document citation to the notarized document.
          */
-        notarizeDocument: function(document, citation, previous) {
+        notarizeComponent: function(component, previous) {
+            // force previous version to 'none' if necessary
             previous = previous || bali.NONE;
+
+            // setup the component parameters
+            const parameters = component.getParameters() || bali.parameters({});
+            const protocol = bali.parse(publicAPI.PROTOCOL);
+            parameters.setParameter('$protocol', protocol);
+            const tag = parameters.getParameter('$tag') || bali.tag();
+            parameters.setParameter('$tag', tag);
+            const version = parameters.getParameter('$version') || bali.version();
+            parameters.setParameter('$version', version);
+
+            // retrieve the notary certificate
             const certificate = privateAPI.citation();
             if (!certificate) {
                 throw bali.exception({
@@ -124,18 +121,29 @@ exports.api = function(testDirectory) {
                     $message: '"The notary key is missing."'
                 });
             }
-            // assemble the full document source to be digitally signed
+
+            // assemble the full component source to be digitally signed
             var source = '';
             source += certificate + EOL;
             source += previous + EOL;
-            source += document;
-            // prepend the digital signature to the document source
+            source += component;
+            if (!component.isParameterized()) source += parameters;
+
+            // prepend the digital signature to the component source
             source = privateAPI.sign(source) + EOL + source;
+
             // construct the notarized document
-            const notarizedDocument = NotarizedDocument.fromString(source);
-            // update the document citation with the new digest
-            citation.setValue('$digest', publicAPI.digest(source));
-            return notarizedDocument;
+            const document = NotarizedDocument.fromString(source);
+
+            // generate a document citation for the notarized document
+            const digest = publicAPI.digest(source);
+            const citation = publicAPI.citation(tag, version, digest);
+
+            // return both
+            return {
+                document: document,
+                citation: citation
+            };
         },
 
         /**
@@ -212,7 +220,7 @@ exports.api = function(testDirectory) {
          * message (AEM) containing the ciphertext and other required attributes needed to
          * decrypt the message.
          * 
-         * @param {String} message The plaintext message to be encrypted using the specified
+         * @param {Component} message The plaintext message to be encrypted using the specified
          * public notary certificate.
          * @param {Catalog} certificate A catalog containing the public notary key for the
          * intended recipient of the encrypted message.
@@ -241,7 +249,7 @@ exports.api = function(testDirectory) {
          * 
          * @param {Catalog} aem An authenticated encrypted message (AEM) containing the ciphertext
          * and other required attributes required to decrypt the message.
-         * @returns {String} The decrypted plaintext message.
+         * @returns {Component} The decrypted plaintext message.
          */
         decryptMessage: function(aem) {
             if (!privateAPI.citation()) {
@@ -306,7 +314,7 @@ function retrieveConfiguration(configDirectory, configFilename) {
             source = fs.readFileSync(configFile, 'utf8');
             certificateCitation = bali.parse(source);
         } else {
-            certificateCitation = publicAPI.citationFromAttributes();
+            certificateCitation = publicAPI.citation();
             source = certificateCitation.toString() + EOL;  // add POSIX compliant end of line
             fs.writeFileSync(configFile, source, {encoding: 'utf8', mode: 384});  // -rw------- permissions
         }

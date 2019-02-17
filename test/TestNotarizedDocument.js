@@ -24,7 +24,7 @@ describe('Bali Digital Notary™', function() {
 
         it('should parse and format a notarized document', function() {
             expect(document).to.exist;  // jshint ignore:line
-            var formatted = document.toString();
+            var formatted = document.toString() + '\n';  // add POSIX <EOL>
             //fs.writeFileSync(file, formatted, 'utf8');
             expect(formatted).to.equal(source);
         });

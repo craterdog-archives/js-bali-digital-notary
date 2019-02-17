@@ -36,7 +36,7 @@ const EOL = '\n';
 /**
  * This constructor creates a new notarized document using the specified parameters.
  * 
- * @param {String} content The content of the document.
+ * @param {Component} content The content of the document.
  * @param {Catalog} previous A document citation for the previous version of the document.
  * @param {Catalog} certificate A document citation for the public certificate for the
  * notary key that notarized the document.
@@ -45,7 +45,7 @@ const EOL = '\n';
  * @returns {NotarizedDocument} The new notarized document.
  */
 function NotarizedDocument(content, previous, certificate, signature) {
-    this.content = content.toString();  // force anything else to be a string
+    this.content = content;
     this.certificate = certificate;
     this.previous = previous;
     this.signature = signature;
@@ -71,7 +71,7 @@ NotarizedDocument.fromString = function(string) {
         index += previous.toString().length + 1;
 
         // extract the document content (D)
-        const content = string.slice(index);
+        const content = parse(string.slice(index));
 
         // construct the notarized document
         const document = new NotarizedDocument(content, previous, certificate, signature);

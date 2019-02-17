@@ -176,7 +176,7 @@ exports.api = function(tag, testDirectory) {
                 privateKey = curve.getPrivateKey();
             } else {
                 // sign with the new key
-                const newCitation = v1Public.citationFromAttributes(tag, currentVersion);  // no digest
+                const newCitation = v1Public.citation(tag, currentVersion);  // no digest
                 certificateSource += newCitation + '\n';  // citation for new certificate (self-signed)
                 certificateSource += bali.NONE + '\n';  // there is no previous version
                 certificateSource += notaryCertificate;
@@ -188,7 +188,8 @@ exports.api = function(tag, testDirectory) {
             notaryCertificate = NotarizedDocument.fromString(certificateSource);
 
             // cache the new certificate citation
-            certificateCitation = v1Public.cite(certificateSource, tag, currentVersion);
+            const digest = v1Public.digest(certificateSource);
+            certificateCitation = v1Public.citation(tag, currentVersion, digest);
 
             // save the state of this notary key and certificate in the local configuration
             try {
