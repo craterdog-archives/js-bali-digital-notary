@@ -104,52 +104,26 @@ exports.api = function(testDirectory) {
         },
 
         /**
-         * This method creates a new reference to the document referred to by the specified
-         * document citation.
-         * 
-         * @param {Catalog} citation The document citation to be used to create the reference.
-         * @returns {Reference} A new reference to the document with the document citation
-         * attributes encoded in it using the Bali Document Notation™.
-         */
-        createReference: function(citation) {
-            return publicAPI.referenceFromCitation(citation);
-        },
-
-        /**
-         * This method extracts from the specified Bali reference the certificate citation
-         * encoded using the Bali Document Notation™.
-         * 
-         * @param {Reference} reference A reference containing the encoded document
-         * citation.
-         * @returns {Catalog} The document citation that was encoded in the specified reference.
-         */
-        extractCitation: function(reference) {
-            return publicAPI.citationFromReference(reference);
-        },
-
-        /**
          * This method digitally notarizes the specified document using the private notary
          * key maintained inside the hardware security module. The specified document citation
          * is updated with the digest of the notarized document. The newly notarized document
          * is returned.
          * 
-         * @param {Catalog} citation A document citation referencing the document to
-         * be notarized.
          * @param {String} document The document to be notarized.
-         * @param {Reference} previous A reference to the previous version of the document.
+         * @param {Catalog} citation A document citation referencing the document to be notarized.
+         * @param {Catalog} previous A document citation to the previous version of the document.
          * @returns {NotarizedDocument} The newly notarized document.
          */
-        notarizeDocument: function(citation, document, previous) {
+        notarizeDocument: function(document, citation, previous) {
             previous = previous || bali.NONE;
-            var certificateCitation = privateAPI.citation();
-            if (!certificateCitation) {
+            const certificate = privateAPI.citation();
+            if (!certificate) {
                 throw bali.exception({
                     $exception: '$missingKey',
                     $tag: privateAPI.tag,
                     $message: '"The notary key is missing."'
                 });
             }
-            var certificate = publicAPI.referenceFromCitation(certificateCitation);
             // assemble the full document source to be digitally signed
             var source = '';
             source += certificate + EOL;
@@ -158,7 +132,7 @@ exports.api = function(testDirectory) {
             // prepend the digital signature to the document source
             source = privateAPI.sign(source) + EOL + source;
             // construct the notarized document
-            var notarizedDocument = NotarizedDocument.fromString(source);
+            const notarizedDocument = NotarizedDocument.fromString(source);
             // update the document citation with the new digest
             citation.setValue('$digest', publicAPI.digest(source));
             return notarizedDocument;
@@ -180,12 +154,12 @@ exports.api = function(testDirectory) {
          * the specified document. The citation only matches if its digest matches the
          * digest of the document.
          * 
+         * @param {NotarizedDocument} document The document to be tested.
          * @param {Catalog} citation A document citation allegedly referring to the
          * specified document.
-         * @param {NotarizedDocument} document The document to be tested.
          * @returns {Boolean} Whether or not the citation matches the specified document.
          */
-        documentMatches: function(citation, document) {
+        documentMatches: function(document, citation) {
             var protocol = citation.getValue('$protocol');
             if (protocol.toString() === publicAPI.PROTOCOL) {
                 var digest = publicAPI.digest(document);
@@ -203,12 +177,12 @@ exports.api = function(testDirectory) {
          * This method determines whether or not the notary seal on the specified document
          * is valid.
          * 
+         * @param {NotarizedDocument} document The notarized document to be tested.
          * @param {Catalog} certificate A catalog containing the public notary key for the
          * private notary key that allegedly notarized the specified document.
-         * @param {NotarizedDocument} document The notarized document to be tested.
          * @returns {Boolean} Whether or not the notary seal on the document is valid.
          */
-        documentIsValid: function(certificate, document) {
+        documentIsValid: function(document, certificate) {
             // check to see if the document's seal is valid
             var protocol = certificate.getValue('$protocol');
             if (protocol.toString() === publicAPI.PROTOCOL) {
@@ -220,7 +194,7 @@ exports.api = function(testDirectory) {
                 // verify the digital signature using the public key from the notary certificate
                 var publicKey = certificate.getValue('$publicKey');
                 var signature = document.signature;
-                var isValid = publicAPI.verify(publicKey, source, signature);
+                var isValid = publicAPI.verify(source, publicKey, signature);
                 return isValid;
             } else {
                 throw bali.exception({
@@ -238,18 +212,18 @@ exports.api = function(testDirectory) {
          * message (AEM) containing the ciphertext and other required attributes needed to
          * decrypt the message.
          * 
-         * @param {Catalog} certificate A catalog containing the public notary key for the
-         * intended recipient of the encrypted message.
          * @param {String} message The plaintext message to be encrypted using the specified
          * public notary certificate.
+         * @param {Catalog} certificate A catalog containing the public notary key for the
+         * intended recipient of the encrypted message.
          * @returns {Catalog} An authenticated encrypted message (AEM) containing the ciphertext
          * and other required attributes for the specified message.
          */
-        encryptMessage: function(certificate, message) {
+        encryptMessage: function(message, certificate) {
             var protocol = certificate.getValue('$protocol');
             var publicKey = certificate.getValue('$publicKey');
             if (protocol.toString() === publicAPI.PROTOCOL) {
-                var aem = publicAPI.encrypt(publicKey, message);
+                var aem = publicAPI.encrypt(message, publicKey);
                 return aem;
             } else {
                 throw bali.exception({

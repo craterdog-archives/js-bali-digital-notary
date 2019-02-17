@@ -166,24 +166,21 @@ exports.api = function(tag, testDirectory) {
             notaryCertificate.setValue('$version', currentVersion);
             notaryCertificate.setValue('$publicKey', bali.binary(publicKey));
 
-            // create a reference to the certificate for the new private key
-            privateKey = curve.getPrivateKey();
-            const newCitation = v1Public.citationFromAttributes(tag, currentVersion);  // no digest since it is self-referential
-            const newReference = v1Public.referenceFromCitation(newCitation);
-
             var certificateSource = '';
             if (isRegeneration) {
                 // sign with the old key
-                var certificateReference = v1Public.referenceFromCitation(certificateCitation);
-                certificateSource += certificateReference + '\n';
-                certificateSource += certificateReference + '\n';  // previous version is the old certificate
+                certificateSource += certificateCitation + '\n';  // citation for old certificate
+                certificateSource += certificateCitation + '\n';  // previous version is the old certificate
                 certificateSource += notaryCertificate;
                 certificateSource = this.sign(certificateSource) + '\n' + certificateSource;
+                privateKey = curve.getPrivateKey();
             } else {
                 // sign with the new key
-                certificateSource += newReference + '\n';
+                const newCitation = v1Public.citationFromAttributes(tag, currentVersion);  // no digest
+                certificateSource += newCitation + '\n';  // citation for new certificate (self-signed)
                 certificateSource += bali.NONE + '\n';  // there is no previous version
                 certificateSource += notaryCertificate;
+                privateKey = curve.getPrivateKey();
                 certificateSource = this.sign(certificateSource) + '\n' + certificateSource;
             }
 
@@ -191,7 +188,7 @@ exports.api = function(tag, testDirectory) {
             notaryCertificate = NotarizedDocument.fromString(certificateSource);
 
             // cache the new certificate citation
-            certificateCitation = v1Public.cite(tag, currentVersion, certificateSource);
+            certificateCitation = v1Public.cite(certificateSource, tag, currentVersion);
 
             // save the state of this notary key and certificate in the local configuration
             try {

@@ -53,12 +53,12 @@ exports.digest = function(message) {
  * and a digital digest of the document string. It can be used to verify that when the
  * document is later retrieved it has not be modified since it was cited.
  * 
+ * @param {String} document The document to be cited.
  * @param {Tag} tag The unique tag for the document.
  * @param {Version} version The current version of the document.
- * @param {String} document The document to be cited.
  * @returns {Catalog} The document citation for the document.
  */
-exports.cite = function(tag, version, document) {
+exports.cite = function(document, tag, version) {
     document = document.toString();  // force it to be a string
     const digest = exports.digest(document.toString());  // force it to be a string if it isn't
     const citation = exports.citationFromAttributes(tag, version, digest);
@@ -71,12 +71,12 @@ exports.cite = function(tag, version, document) {
  * or not the specified base 32 encoded digital signature was generated using the
  * corresponding private key on the specified message.
  * 
- * @param {Binary} publicKey The base 32 encoded public key.
  * @param {String} message The digitally signed message.
+ * @param {Binary} publicKey The base 32 encoded public key.
  * @param {Binary} signature The digital signature generated using the private key.
  * @returns {Boolean} Whether or not the digital signature is valid.
  */
-exports.verify = function(publicKey, message, signature) {
+exports.verify = function(message, publicKey, signature) {
     signature = signature.getValue();
     message = message.toString();  // force it to be a string
     publicKey = publicKey.getValue();
@@ -94,11 +94,11 @@ exports.verify = function(publicKey, message, signature) {
  * plaintext message. The result is an authenticated encrypted message (AEM) that can
  * only be decrypted using the associated private key.
  * 
- * @param {Binary} publicKey The base 32 encoded public key to use for encryption.
  * @param {String} message The plaintext message to be encrypted.
+ * @param {Binary} publicKey The base 32 encoded public key to use for encryption.
  * @returns {Catalog} An authenticated encrypted message.
  */
-exports.encrypt = function(publicKey, message) {
+exports.encrypt = function(message, publicKey) {
     publicKey = publicKey.getValue();
     message = message.toString();  // force it to be a string
     // generate and encrypt a 32-byte symmetric key
@@ -167,47 +167,4 @@ exports.citationFromSource = function(source) {
         });
     }
     return citation;
-};
-
-
-/**
- * This function creates a document citation based on the specified document reference.
- * The attributes for the document citation are encoded in the body of the document
- * reference using the Bali Document Notation™.
- * 
- * @param {Reference} reference The Bali reference containing the encoded document citation.
- * @returns {Catalog} The decoded document citation.
- */
-exports.citationFromReference = function(reference) {
-    reference = reference.toString();
-    const source = reference.slice(6, -1);  // remove '<bali:' and '>' wrapper
-    const citation = bali.parse(source);
-    const protocol = citation.getValue('$protocol');
-    if (exports.PROTOCOL !== protocol.toString()) {
-        throw bali.exception({
-            $exception: '$unsupportedProtocol',
-            $protocol: protocol,
-            $message: '"The protocol for the citation is not supported."'
-        });
-    }
-    return citation;
-};
-
-
-/**
- * This function creates a document reference based on the specified document citation.
- * The attributes for the document citation are encoded in the body of the new document
- * reference using the Bali Document Notation™.
- * 
- * @param {Catalog} citation The document citation containing the citation attributes.
- * @returns {Reference} The resulting Bali reference containing the citation attributes.
- */
-exports.referenceFromCitation = function(citation) {
-    var reference = '<bali:[$protocol:%protocol,$tag:%tag,$version:%version,$digest:%digest]>';
-    reference = reference.replace(/%protocol/, citation.getValue('$protocol'));
-    reference = reference.replace(/%tag/, citation.getValue('$tag'));
-    reference = reference.replace(/%version/, citation.getValue('$version'));
-    reference = reference.replace(/%digest/, citation.getValue('$digest').toString().replace(/\s+/g, ''));
-    reference = bali.parse(reference);
-    return reference;
 };

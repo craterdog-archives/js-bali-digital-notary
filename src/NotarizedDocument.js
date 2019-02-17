@@ -14,15 +14,15 @@
  * 
  * All notarized documents have the following structure:
  * <pre>
- *   .---------------------------------------------------------------------------..
- *   | (A) A Digital Signature of Parts B, C, and D                              | \
- *   | (B) A Citation Reference to the Public Certificate of the Signer (A)      |  Notary Seal
- *   | (C) A Citation Reference to Previous Version of the Document (or 'none')  | /
- *   |---------------------------------------------------------------------------|'
- *   |                                                                           |
- *   | (D) The Content of the Document                                           |
- *   |                                                                           |
- *   '---------------------------------------------------------------------------'
+ *   .-------------------------------------------------------------------------------..
+ *   | (A) The Digital Signature of Parts B, C, and D                                | \
+ *   | (B) A Document Citation for the Public Certificate of the Signer (A)          |  Notary Seal
+ *   | (C) A Document Citation for the Previous Version of the Document (or 'none')  | /
+ *   |-------------------------------------------------------------------------------|'
+ *   |                                                                               |
+ *   | (D) The Content of the Document                                               |
+ *   |                                                                               |
+ *   '-------------------------------------------------------------------------------'
  * </pre>
  */
 const bali = require('bali-component-framework');
@@ -37,8 +37,8 @@ const EOL = '\n';
  * This constructor creates a new notarized document using the specified parameters.
  * 
  * @param {String} content The content of the document.
- * @param {Reference} previous A reference to the previous version of the document.
- * @param {Reference} certificate A reference to the public certificate for the
+ * @param {Catalog} previous A document citation for the previous version of the document.
+ * @param {Catalog} certificate A document citation for the public certificate for the
  * notary key that notarized the document.
  * @param {Binary} signature A base 32 encoded binary string containing the digital
  * signature of the document.
@@ -55,28 +55,27 @@ NotarizedDocument.prototype.constructor = NotarizedDocument;
 exports.NotarizedDocument = NotarizedDocument;
 
 NotarizedDocument.fromString = function(string) {
-    var document;
     try {
-        var lines = string.split(EOL);
+        var index = 0;
 
         // extract the digital signature (A)
-        var binary = lines.slice(0, 4).join(EOL);
-        var signature = bali.parse(binary);
+        const signature = parse(string);
+        index += signature.toString().length + 1;
 
-        // extract the public certificate reference (B)
-        var certificate = bali.parse(lines[4]);
+        // extract the public certificate citation (B)
+        const certificate = parse(string.slice(index));
+        index += certificate.toString().length + 1;
 
-        // extract the previous document reference (C)
-        var previous = bali.NONE;
-        if (lines[5] !== 'none') {
-            previous = bali.parse(lines[5]);
-        }
+        // extract the previous document citation (C)
+        const previous = parse(string.slice(index));
+        index += previous.toString().length + 1;
 
         // extract the document content (D)
-        var content = lines.slice(6).join(EOL);
+        const content = string.slice(index);
 
         // construct the notarized document
-        document = new NotarizedDocument(content, previous, certificate, signature);
+        const document = new NotarizedDocument(content, previous, certificate, signature);
+        return document;
     } catch (e) {
         throw bali.exception({
             $exception: '$invalidDocument',
@@ -84,7 +83,6 @@ NotarizedDocument.fromString = function(string) {
             $message: '"' + EOL + 'The notarized document is invalid: ' + EOL + e + EOL + '"'
         });
     }
-    return document;
 };
 
 
@@ -97,4 +95,12 @@ NotarizedDocument.prototype.toString = function() {
     string += this.previous + EOL;
     string += this.content;
     return string;
+};
+
+
+// PRVIATE FUNCTIONS
+
+const parse = function(component) {
+    const parser = new bali.Parser();
+    return parser.parseComponent(component);
 };
