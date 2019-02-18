@@ -22,6 +22,11 @@ describe('Bali Digital Notary™', function() {
 
     describe('Test Key Generation', function() {
 
+        it('should support correct versions', function() {
+            const versions = notary.supportedVersions();
+            expect(versions.toString()).to.equal('[v1]');
+        });
+
         it('should generate the keys', function() {
             certificateDocument = notary.generateKeys();
             expect(certificateDocument).to.exist;  // jshint ignore:line
