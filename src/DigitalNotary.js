@@ -19,7 +19,6 @@
 const fs = require('fs');
 const os = require('os');
 const bali = require('bali-component-framework');
-const NotarizedDocument = require('./NotarizedDocument').NotarizedDocument;
 const version = require('./v1');
 const publicAPI = version.v1Public;
 
@@ -56,7 +55,7 @@ exports.api = function(testDirectory) {
          * document citation for the certificate is stored in the local configuration
          * directory.
          * 
-         * @returns {NotarizedDocument} A new Bali Notarized Document™ containing the public
+         * @returns {Catalog} A new Bali Notarized Document™ containing the public
          * notary certificate associated with the new private notary key.
          */
         generateKeys: function() {
@@ -81,7 +80,7 @@ exports.api = function(testDirectory) {
          * This method returns a Bali Notarized Document™ containing the public certificate for
          * this digital notary.
          * 
-         * @returns {NotarizedDocument} The notarized document containing the public certificate
+         * @returns {Catalog} The notarized document containing the public certificate
          * for this digital notary.
          */
         getCertificate: function() {
@@ -103,39 +102,39 @@ exports.api = function(testDirectory) {
             // force previous version to 'none' if necessary
             previous = previous || bali.NONE;
 
-            // setup the component parameters
+            // create the content with the component parameters
             const parameters = component.getParameters() || bali.parameters({});
             parameters.setParameter('$protocol', publicAPI.protocol);
             const tag = parameters.getParameter('$tag') || bali.tag();
             parameters.setParameter('$tag', tag);
             const version = parameters.getParameter('$version') || bali.version();
             parameters.setParameter('$version', version);
+            const content = bali.catalog(component, parameters);
 
             // retrieve the notary certificate
             const certificate = privateAPI.citation();
             if (!certificate) {
                 throw bali.exception({
                     $exception: '$missingKey',
-                    $tag: privateAPI.tag,
+                    $tag: notaryTag,
                     $message: '"The notary key is missing."'
                 });
             }
 
-            // assemble the full component source to be digitally signed
-            var source = '';
-            source += certificate + EOL;
-            source += previous + EOL;
-            source += component;
-            if (!component.isParameterized()) source += parameters;
-
-            // prepend the digital signature to the component source
-            source = privateAPI.sign(source) + EOL + source;
+            // assemble and sign the full component source
+            var source = content + EOL + previous + EOL + certificate;
+            const signature = privateAPI.sign(source);
 
             // construct the notarized document
-            const document = NotarizedDocument.fromString(source);
+            const document = bali.catalog({
+                $content: content,
+                $previous: previous,
+                $certificate: certificate,
+                $signature: signature
+            });
 
             // generate a document citation for the notarized document
-            const digest = publicAPI.digest(source);
+            const digest = publicAPI.digest(document);
             const citation = publicAPI.citation(tag, version, digest);
 
             // return both
@@ -146,22 +145,11 @@ exports.api = function(testDirectory) {
         },
 
         /**
-         * This method parses the source string for a notarized document and returns the
-         * corresponding document.
-         * 
-         * @param {String} source A string containing the source for the notarized document.
-         * @returns {NotarizedDocument}
-         */
-        parseDocument: function(source) {
-            return NotarizedDocument.fromString(source);
-        },
-
-        /**
          * This method determines whether or not the specified document citation matches
          * the specified document. The citation only matches if its digest matches the
          * digest of the document.
          * 
-         * @param {NotarizedDocument} document The document to be tested.
+         * @param {Catalog} document The document to be tested.
          * @param {Catalog} citation A document citation allegedly referring to the
          * specified document.
          * @returns {Boolean} Whether or not the citation matches the specified document.
@@ -183,13 +171,13 @@ exports.api = function(testDirectory) {
          * This method determines whether or not the notary seal on the specified document
          * is valid.
          * 
-         * @param {NotarizedDocument} document The notarized document to be tested.
+         * @param {Catalog} document The notarized document to be tested.
          * @param {Catalog} certificate A catalog containing the public notary key for the
          * private notary key that allegedly notarized the specified document.
          * @returns {Boolean} Whether or not the notary seal on the document is valid.
          */
         documentIsValid: function(document, certificate) {
-            const protocol = certificate.getValue('$protocol');
+            const protocol = certificate.getParameters().getParameter('$protocol');
             if (!publicAPI.protocol.isEqualTo(protocol)) {
                 throw bali.exception({
                     $exception: '$unsupportedProtocol',
@@ -197,12 +185,11 @@ exports.api = function(testDirectory) {
                     $message: '"The protocol for the notary certificate is not supported."'
                 });
             }
-            var source = '';
-            source += document.certificate + EOL;
-            source += document.previous + EOL;
-            source += document.content;
+            var source = document.getValue('$content') + EOL;
+            source += document.getValue('$previous') + EOL;
+            source += document.getValue('$certificate');
             var publicKey = certificate.getValue('$publicKey');
-            var signature = document.signature;
+            var signature = document.getValue('$signature');
             var isValid = publicAPI.verify(source, publicKey, signature);
             return isValid;
         },
@@ -222,7 +209,7 @@ exports.api = function(testDirectory) {
          * and other required attributes for the specified message.
          */
         encryptMessage: function(message, certificate) {
-            const protocol = certificate.getValue('$protocol');
+            const protocol = certificate.getParameters().getParameter('$protocol');
             if (!publicAPI.protocol.isEqualTo(protocol)) {
                 throw bali.exception({
                     $exception: '$unsupportedProtocol',
@@ -252,7 +239,7 @@ exports.api = function(testDirectory) {
                     $message: '"The notary key is missing."'
                 });
             }
-            var message = privateAPI.decrypt(aem);
+            var message = bali.parse(privateAPI.decrypt(aem));
             return message;
         }
 

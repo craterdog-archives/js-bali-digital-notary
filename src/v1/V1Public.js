@@ -34,15 +34,15 @@ exports.protocol = bali.parse(exports.PROTOCOL);
 
 /**
  * This function returns a cryptographically secure base 32 encoded digital digest of
- * the specified message component. The digest is a Bali binary string and will always be
+ * the specified message string. The digest is a Bali binary string and will always be
  * the same for the same message.
  * 
- * @param {Component} message The message to be digested.
+ * @param {String} message The message to be digested.
  * @returns {Binary} A base 32 encoded digital digest of the message.
  */
 exports.digest = function(message) {
     const hasher = crypto.createHash(exports.DIGEST);
-    hasher.update(message.toString());
+    hasher.update(message.toString());  // force it to a string if it isn't already
     const digest = hasher.digest();
     const binary = bali.binary(digest);
     return binary;
@@ -54,7 +54,7 @@ exports.digest = function(message) {
  * or not the specified base 32 encoded digital signature was generated using the
  * corresponding private key on the specified message.
  * 
- * @param {Component} message The digitally signed message.
+ * @param {String} message The digitally signed message.
  * @param {Binary} publicKey The base 32 encoded public key.
  * @param {Binary} signature The digital signature generated using the private key.
  * @returns {Boolean} Whether or not the digital signature is valid.
@@ -73,10 +73,10 @@ exports.verify = function(message, publicKey, signature) {
 
 /**
  * This function uses the specified base 32 encoded public key to encrypt the specified
- * message component. The result is an authenticated encrypted message (AEM) that can
+ * plaintext message. The result is an authenticated encrypted message (AEM) that can
  * only be decrypted using the associated private key.
  * 
- * @param {Component} message The message component to be encrypted.
+ * @param {String} message The plaintext message to be encrypted.
  * @param {Binary} publicKey The base 32 encoded public key to use for encryption.
  * @returns {Catalog} An authenticated encrypted message.
  */
@@ -91,7 +91,7 @@ exports.encrypt = function(message, publicKey) {
     // encrypt the message using the symmetric key
     const iv = crypto.randomBytes(12);
     const cipher = crypto.createCipheriv(exports.CIPHER, symmetricKey, iv);
-    var ciphertext = cipher.update(message.toString(), 'utf8');
+    var ciphertext = cipher.update(message.toString(), 'utf8');  // force it to a string if it isn't already
     ciphertext = Buffer.concat([ciphertext, cipher.final()]);
     const auth = cipher.getAuthTag();
 
