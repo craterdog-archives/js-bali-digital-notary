@@ -52,6 +52,7 @@ exports.api = function(tag, testDirectory) {
     
     // read in the notary key attributes
     var version;               // the current version of the notary key
+    var timestamp;             // the timestamp of when the key was generated
     var publicKey;             // the public key residing in the certificate in the cloud
     var privateKey;            // the local private key that is used for signing and decryption
     var notaryCertificate;     // the public notary certificate containing the public key
@@ -64,7 +65,7 @@ exports.api = function(tag, testDirectory) {
             // read in the notary key information
             const keySource = fs.readFileSync(keyFilename, 'utf8');
             const catalog = bali.parse(keySource);
-            const protocol = catalog.getValue('$protocol');
+            const protocol = catalog.getProperties().getProperty('$protocol');
             if (!v1Public.protocol.isEqualTo(protocol)) {
                 throw bali.exception({
                     $exception: '$unsupportedProtocol',
@@ -72,14 +73,15 @@ exports.api = function(tag, testDirectory) {
                     $message: '"The protocol for the notary key is not supported."'
                 });
             }
-            if (!tag.isEqualTo(catalog.getValue('$tag'))) {
+            if (!tag.isEqualTo(catalog.getProperties().getProperty('$tag'))) {
                 throw bali.exception({
                     $exception: '$invalidKey',
                     $tag: tag,
                     $message: '"The notary key is invalid."'
                 });
             }
-            version = catalog.getValue('$version');
+            version = catalog.getProperties().getProperty('$version');
+            timestamp = catalog.getValue('$timestamp').getValue();
             publicKey = catalog.getValue('$publicKey').getValue();
             privateKey = catalog.getValue('$privateKey').getValue();
             certificateCitation = catalog.getValue('$citation');
@@ -111,13 +113,15 @@ exports.api = function(tag, testDirectory) {
          */
         toString: function() {
             const catalog = bali.catalog({
-                $protocol: v1Public.protocol,
-                $tag: tag,
-                $version: version,
+                $timestamp: timestamp,
                 $publicKey: bali.binary(publicKey),
                 $privateKey: bali.binary(privateKey),
                 $citation: certificateCitation
-            });
+            }, bali.parameters({
+                $protocol: v1Public.protocol,
+                $tag: tag,
+                $version: version
+            }));
             return catalog.toString();
         },
 
@@ -160,11 +164,12 @@ exports.api = function(tag, testDirectory) {
             const curve = crypto.createECDH(v1Public.CURVE);
             curve.generateKeys();
             version = version ? bali.version.nextVersion(version) : bali.version();
+            timestamp = bali.moment();
             publicKey = curve.getPublicKey();
 
             // generate the new notary certificate
             const content = bali.catalog({
-                $timestamp: bali.moment(),
+                $timestamp: timestamp,
                 $publicKey: bali.binary(publicKey)
             }, bali.parameters({
                 $protocol: v1Public.protocol,
