@@ -70,10 +70,10 @@ describe('Bali Digital Notary™', function() {
     describe('Test Encryption and Decryption', function() {
 
         it('should encrypt and decrypt a message properly', function() {
-            var message = 'This is a test...';
+            var message = bali.parse('"This is a test..."');
             var encrypted = notary.encryptMessage(message, notaryCertificate);
             var decrypted = notary.decryptMessage(encrypted);
-            expect(decrypted).to.equal(message);
+            expect(decrypted.isEqualTo(message)).to.equal(true);
         });
 
     });

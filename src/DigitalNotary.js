@@ -45,7 +45,7 @@ exports.api = function(testDirectory) {
     return {
 
         supportedVersions: function() {
-            var versions = bali.list([publicAPI.PROTOCOL]);
+            var versions = bali.list([publicAPI.protocol]);
             return versions;
         },
 
@@ -105,8 +105,7 @@ exports.api = function(testDirectory) {
 
             // setup the component parameters
             const parameters = component.getParameters() || bali.parameters({});
-            const protocol = bali.parse(publicAPI.PROTOCOL);
-            parameters.setParameter('$protocol', protocol);
+            parameters.setParameter('$protocol', publicAPI.protocol);
             const tag = parameters.getParameter('$tag') || bali.tag();
             parameters.setParameter('$tag', tag);
             const version = parameters.getParameter('$version') || bali.version();
@@ -168,17 +167,16 @@ exports.api = function(testDirectory) {
          * @returns {Boolean} Whether or not the citation matches the specified document.
          */
         documentMatches: function(document, citation) {
-            var protocol = citation.getValue('$protocol');
-            if (protocol.toString() === publicAPI.PROTOCOL) {
-                var digest = publicAPI.digest(document);
-                return digest.isEqualTo(citation.getValue('$digest'));
-            } else {
+            const protocol = citation.getValue('$protocol');
+            if (!publicAPI.protocol.isEqualTo(protocol)) {
                 throw bali.exception({
                     $exception: '$unsupportedProtocol',
                     $protocol: protocol,
                     $message: '"The protocol for the citation is not supported."'
                 });
             }
+            var digest = publicAPI.digest(document);
+            return digest.isEqualTo(citation.getValue('$digest'));
         },
 
         /**
@@ -191,26 +189,22 @@ exports.api = function(testDirectory) {
          * @returns {Boolean} Whether or not the notary seal on the document is valid.
          */
         documentIsValid: function(document, certificate) {
-            // check to see if the document's seal is valid
-            var protocol = certificate.getValue('$protocol');
-            if (protocol.toString() === publicAPI.PROTOCOL) {
-                // extracting the digital signature from the beginning of the notarized document
-                var source = '';
-                source += document.certificate + EOL;
-                source += document.previous + EOL;
-                source += document.content;
-                // verify the digital signature using the public key from the notary certificate
-                var publicKey = certificate.getValue('$publicKey');
-                var signature = document.signature;
-                var isValid = publicAPI.verify(source, publicKey, signature);
-                return isValid;
-            } else {
+            const protocol = certificate.getValue('$protocol');
+            if (!publicAPI.protocol.isEqualTo(protocol)) {
                 throw bali.exception({
                     $exception: '$unsupportedProtocol',
                     $protocol: protocol,
                     $message: '"The protocol for the notary certificate is not supported."'
                 });
             }
+            var source = '';
+            source += document.certificate + EOL;
+            source += document.previous + EOL;
+            source += document.content;
+            var publicKey = certificate.getValue('$publicKey');
+            var signature = document.signature;
+            var isValid = publicAPI.verify(source, publicKey, signature);
+            return isValid;
         },
 
         /**
@@ -220,7 +214,7 @@ exports.api = function(testDirectory) {
          * message (AEM) containing the ciphertext and other required attributes needed to
          * decrypt the message.
          * 
-         * @param {Component} message The plaintext message to be encrypted using the specified
+         * @param {Component} message The message component to be encrypted using the specified
          * public notary certificate.
          * @param {Catalog} certificate A catalog containing the public notary key for the
          * intended recipient of the encrypted message.
@@ -228,28 +222,27 @@ exports.api = function(testDirectory) {
          * and other required attributes for the specified message.
          */
         encryptMessage: function(message, certificate) {
-            var protocol = certificate.getValue('$protocol');
-            var publicKey = certificate.getValue('$publicKey');
-            if (protocol.toString() === publicAPI.PROTOCOL) {
-                var aem = publicAPI.encrypt(message, publicKey);
-                return aem;
-            } else {
+            const protocol = certificate.getValue('$protocol');
+            if (!publicAPI.protocol.isEqualTo(protocol)) {
                 throw bali.exception({
                     $exception: '$unsupportedProtocol',
                     $protocol: protocol,
                     $message: '"The protocol for the notary certificate is not supported."'
                 });
             }
+            var publicKey = certificate.getValue('$publicKey');
+            var aem = publicAPI.encrypt(message, publicKey);
+            return aem;
         },
 
         /**
          * This method uses the private notary key in the hardware security module to decrypt
          * the ciphertext residing in the specified authenticated encrypted message (AEM). THe
-         * result is the decrypted plaintext message.
+         * result is the decrypted message component.
          * 
          * @param {Catalog} aem An authenticated encrypted message (AEM) containing the ciphertext
          * and other required attributes required to decrypt the message.
-         * @returns {Component} The decrypted plaintext message.
+         * @returns {Component} The decrypted message component.
          */
         decryptMessage: function(aem) {
             if (!privateAPI.citation()) {
@@ -259,17 +252,8 @@ exports.api = function(testDirectory) {
                     $message: '"The notary key is missing."'
                 });
             }
-            var protocol = aem.getValue('$protocol');
-            if (protocol.toString() === publicAPI.PROTOCOL) {
-                var message = privateAPI.decrypt(aem);
-                return message;
-            } else {
-                throw bali.exception({
-                    $exception: '$unsupportedProtocol',
-                    $protocol: protocol,
-                    $message: '"The protocol for the encrypted message is not supported."'
-                });
-            }
+            var message = privateAPI.decrypt(aem);
+            return message;
         }
 
     };

@@ -27,6 +27,8 @@ exports.DIGEST = 'sha512';
 exports.SIGNATURE = 'sha512';
 exports.CIPHER = 'aes-256-gcm';
 
+exports.protocol = bali.parse(exports.PROTOCOL);
+
 
 // FUNCTIONS
 
@@ -71,10 +73,10 @@ exports.verify = function(message, publicKey, signature) {
 
 /**
  * This function uses the specified base 32 encoded public key to encrypt the specified
- * plaintext message. The result is an authenticated encrypted message (AEM) that can
+ * message component. The result is an authenticated encrypted message (AEM) that can
  * only be decrypted using the associated private key.
  * 
- * @param {Component} message The plaintext message to be encrypted.
+ * @param {Component} message The message component to be encrypted.
  * @param {Binary} publicKey The base 32 encoded public key to use for encryption.
  * @returns {Catalog} An authenticated encrypted message.
  */
@@ -95,7 +97,7 @@ exports.encrypt = function(message, publicKey) {
 
     // construct the authenticated encrypted message (AEM)
     const aem = bali.catalog({
-        $protocol: bali.parse(exports.PROTOCOL),
+        $protocol: exports.protocol,
         $iv: bali.binary(iv),
         $auth: bali.binary(auth),
         $seed: bali.binary(seed),
@@ -116,7 +118,7 @@ exports.encrypt = function(message, publicKey) {
  * @returns {Catalog} A new document citation.
  */
 exports.citation = function(tag, version, digest) {
-    const protocol = bali.parse(exports.PROTOCOL);
+    const protocol = exports.protocol;
     tag = tag || bali.tag();
     version = version || bali.version();
     digest = digest || bali.NONE;
