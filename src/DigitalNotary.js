@@ -133,15 +133,22 @@ exports.api = function(testDirectory) {
                 $signature: signature
             });
 
-            // generate a document citation for the notarized document
+            return document;
+        },
+
+        /**
+         * This method generates a document citation for the specified document.
+         * 
+         * @param {Catalog} document The document to be cited.
+         * @returns {Catalog} A document citation for the document.
+         */
+        citeDocument: function(document) {
+            const parameters = document.getValue('$content').getParameters();
+            const tag = parameters.getParameter('$tag');
+            const version = parameters.getParameter('$version');
             const digest = publicAPI.digest(document);
             const citation = publicAPI.citation(tag, version, digest);
-
-            // return both
-            return {
-                document: document,
-                citation: citation
-            };
+            return citation;
         },
 
         /**

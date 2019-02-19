@@ -63,10 +63,11 @@ describe('Bali Digital Notary™', function() {
     describe('Test Signing and Verification', function() {
 
         it('should digitally sign a document properly', function() {
-            var result = notary.notarizeComponent(component);
-            var isValid = notary.documentIsValid(result.document, notaryCertificate);
+            var document = notary.notarizeComponent(component);
+            var citation = notary.citeDocument(document);
+            var isValid = notary.documentIsValid(document, notaryCertificate);
             expect(isValid).to.equal(true);
-            var matches = notary.documentMatches(result.document, result.citation);
+            var matches = notary.documentMatches(document, citation);
             expect(matches).to.equal(true);
         });
 
@@ -86,19 +87,19 @@ describe('Bali Digital Notary™', function() {
     describe('Test Key Regeneration', function() {
 
         it('should regenerate a notary key properly', function() {
-            var result = notary.notarizeComponent(component);
             var newCertificateDocument = notary.generateKeys();
             expect(newCertificateDocument).to.exist;  // jshint ignore:line
             var newNotaryCertificate = newCertificateDocument.getValue('$content');
 
-            result = notary.notarizeComponent(component);
-            isValid = notary.documentIsValid(result.document, notaryCertificate);
+            var document = notary.notarizeComponent(component);
+            var citation = notary.citeDocument(document);
+            isValid = notary.documentIsValid(document, notaryCertificate);
             expect(isValid).to.equal(false);
 
-            isValid = notary.documentIsValid(result.document, newNotaryCertificate);
+            isValid = notary.documentIsValid(document, newNotaryCertificate);
             expect(isValid).to.equal(true);
 
-            var matches = notary.documentMatches(result.document, result.citation);
+            var matches = notary.documentMatches(document, citation);
             expect(matches).to.equal(true);
             notaryCertificate = newNotaryCertificate;
         });
@@ -108,17 +109,15 @@ describe('Bali Digital Notary™', function() {
     describe('Test Multiple Notarizations', function() {
 
         it('should notarized a component twice properly', function() {
-            var result = notary.notarizeComponent(component);
-            var document = result.document;
-            var citation = result.citation;
+            var document = notary.notarizeComponent(component);
+            var citation = notary.citeDocument(document);
             var isValid = notary.documentIsValid(document, notaryCertificate);
             expect(isValid).to.equal(true);
             var matches = notary.documentMatches(document, citation);
             expect(matches).to.equal(true);
 
-            result = notary.notarizeComponent(document);
-            document = result.document;
-            citation = result.citation;
+            document = notary.notarizeComponent(document);
+            citation = notary.citeDocument(document);
             isValid = notary.documentIsValid(document, notaryCertificate);
             expect(isValid).to.equal(true);
             matches = notary.documentMatches(document, citation);
