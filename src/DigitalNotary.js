@@ -115,6 +115,8 @@ exports.api = function(testDirectory) {
             const certificate = privateAPI.citation();
             if (!certificate) {
                 throw bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$notarizeComponent',
                     $exception: '$missingKey',
                     $tag: notaryTag,
                     $message: '"The notary key is missing."'
@@ -165,6 +167,8 @@ exports.api = function(testDirectory) {
             const protocol = citation.getValue('$protocol');
             if (!publicAPI.protocol.isEqualTo(protocol)) {
                 throw bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$documentMatches',
                     $exception: '$unsupportedProtocol',
                     $protocol: protocol,
                     $message: '"The protocol for the citation is not supported."'
@@ -187,6 +191,8 @@ exports.api = function(testDirectory) {
             const protocol = certificate.getParameters().getParameter('$protocol');
             if (!publicAPI.protocol.isEqualTo(protocol)) {
                 throw bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$documentIsValid',
                     $exception: '$unsupportedProtocol',
                     $protocol: protocol,
                     $message: '"The protocol for the notary certificate is not supported."'
@@ -219,6 +225,8 @@ exports.api = function(testDirectory) {
             const protocol = certificate.getParameters().getParameter('$protocol');
             if (!publicAPI.protocol.isEqualTo(protocol)) {
                 throw bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$encryptMessage',
                     $exception: '$unsupportedProtocol',
                     $protocol: protocol,
                     $message: '"The protocol for the notary certificate is not supported."'
@@ -241,6 +249,8 @@ exports.api = function(testDirectory) {
         decryptMessage: function(aem) {
             if (!privateAPI.citation()) {
                 throw bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$decryptMessage',
                     $exception: '$missingKey',
                     $tag: notaryTag,
                     $message: '"The notary key is missing."'
@@ -267,6 +277,8 @@ function storeConfiguration(configDirectory, configFilename, citation) {
         fs.writeFileSync(configFile, source, {encoding: 'utf8', mode: 384});  // -rw------- permissions
     } catch (e) {
         throw bali.exception({
+            $module: '$DigitalNotary',
+            $function: '$generateKeys',
             $exception: '$configurationAccess',
             $directory: '"' + configDirectory + '"',
             $filename: '"' + configFilename + '"',
@@ -299,6 +311,8 @@ function retrieveConfiguration(configDirectory, configFilename) {
         return certificateCitation;
     } catch (e) {
         throw bali.exception({
+            $module: '$DigitalNotary',
+            $function: '$api',
             $exception: '$configurationAccess',
             $directory: '"' + configDirectory + '"',
             $filename: '"' + configFilename + '"',
@@ -322,6 +336,8 @@ function connectToHSM(notaryTag, testDirectory) {
         return privateAPI;
     } catch (e) {
         throw bali.exception({
+            $module: '$DigitalNotary',
+            $function: '$api',
             $exception: '$hsmAccess',
             $tag: notaryTag,
             $testMode: testDirectory ? true : false,

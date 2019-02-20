@@ -65,22 +65,26 @@ exports.api = function(tag, testDirectory) {
             // read in the notary key information
             const keySource = fs.readFileSync(keyFilename, 'utf8');
             const catalog = bali.parse(keySource);
-            const protocol = catalog.getProperties().getProperty('$protocol');
+            const protocol = catalog.getParameters().getParameter('$protocol');
             if (!v1Public.protocol.isEqualTo(protocol)) {
                 throw bali.exception({
+                    $module: '$V1Test',
+                    $function: '$api',
                     $exception: '$unsupportedProtocol',
                     $protocol: protocol,
                     $message: '"The protocol for the notary key is not supported."'
                 });
             }
-            if (!tag.isEqualTo(catalog.getProperties().getProperty('$tag'))) {
+            if (!tag.isEqualTo(catalog.getParameters().getParameter('$tag'))) {
                 throw bali.exception({
+                    $module: '$V1Test',
+                    $function: '$api',
                     $exception: '$invalidKey',
                     $tag: tag,
                     $message: '"The notary key is invalid."'
                 });
             }
-            version = catalog.getProperties().getProperty('$version');
+            version = catalog.getParameters().getParameter('$version');
             timestamp = catalog.getValue('$timestamp').getValue();
             publicKey = catalog.getValue('$publicKey').getValue();
             privateKey = catalog.getValue('$privateKey').getValue();
@@ -96,6 +100,8 @@ exports.api = function(tag, testDirectory) {
 
     } catch (e) {
         throw bali.exception({
+            $module: '$V1Test',
+            $function: '$api',
             $exception: '$directoryAccess',
             $directory: '"' + configDirectory + '"',
             $message: '"The configuration directory could not be accessed."'
@@ -213,6 +219,8 @@ exports.api = function(tag, testDirectory) {
                 fs.writeFileSync(certificateFilename, certificateSource, {encoding: 'utf8', mode: 384});  // -rw------- permissions
             } catch (e) {
                 throw bali.exception({
+                    $module: '$V1Test',
+                    $function: '$generate',
                     $exception: '$directoryAccess',
                     $directory: '"' + configDirectory + '"',
                     $message: '"The configuration directory could not be accessed."'
@@ -243,6 +251,8 @@ exports.api = function(tag, testDirectory) {
                 }
             } catch (e) {
                 throw bali.exception({
+                    $module: '$V1Test',
+                    $function: '$forget',
                     $exception: '$directoryAccess',
                     $directory: '"' + configDirectory + '"',
                     $message: '"The configuration directory could not be accessed."'
@@ -280,6 +290,8 @@ exports.api = function(tag, testDirectory) {
             const protocol = aem.getValue('$protocol');
             if (!v1Public.protocol.isEqualTo(protocol)) {
                 throw bali.exception({
+                    $module: '$V1Test',
+                    $function: '$decrypt',
                     $exception: '$unsupportedProtocol',
                     $protocol: protocol,
                     $message: '"The protocol for the authenticated encrypted message is not supported."'
