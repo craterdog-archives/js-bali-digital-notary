@@ -48,7 +48,7 @@ exports.api = function(tag, testDirectory) {
     const configDirectory = testDirectory || os.homedir() + '/.bali/';
     if (!fs.existsSync(configDirectory)) fs.mkdirSync(configDirectory, 448);  // drwx------ permissions
     const keyFilename = configDirectory + 'NotaryKey.bali';
-    const certificateFilename = configDirectory + 'NotaryCertificate.bdoc';
+    const certificateFilename = configDirectory + 'NotaryCertificate.ndoc';
     
     // read in the notary key attributes
     var version;               // the current version of the notary key
