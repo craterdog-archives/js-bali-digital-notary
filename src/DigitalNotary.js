@@ -93,47 +93,46 @@ exports.api = function(testDirectory) {
          * is updated with the digest of the notarized document. The newly notarized document
          * is returned.
          * 
-         * @param {Component} component The component to be notarized.
-         * @param {Catalog} previous A document citation to the previous version of the notarized document.
-         * @returns {Object} An object containing the newly notarized document for the component and
-         * a document citation to the notarized document.
+         * @param {Component} component The document content to be notarized.
+         * @param {Catalog} previous An optional document citation to the previous version of
+         * the notarized document.
+         * @returns {Catalog} A catalog that is the newly notarized document for the component.
          */
-        notarizeComponent: function(component, previous) {
-            // force previous version to 'none' if necessary
-            previous = previous || bali.NONE;
+        notarizeDocument: function(component, previous) {
 
-            // create the content with the component parameters
-            const parameters = component.getParameters() || bali.parameters({});
-            parameters.setParameter('$protocol', publicAPI.protocol);
-            const tag = parameters.getParameter('$tag') || bali.tag();
-            parameters.setParameter('$tag', tag);
-            const version = parameters.getParameter('$version') || bali.version();
-            parameters.setParameter('$version', version);
-            const content = bali.catalog(component, parameters);
+            // extract component parameters
+            var parameters = component.getParameters();
+            if (!parameters) {
+                parameters = bali.parameters({
+                    $tag: bali.tag(),
+                    $version: bali.version()
+                });
+                // TODO: need to find a way not to require a setParameters() method
+                component.setParameters(parameters);
+            }
 
-            // retrieve the notary certificate
-            const certificate = privateAPI.citation();
-            if (!certificate) {
+            // retrieve the notary certificate citation
+            const citation = privateAPI.citation();
+            if (!citation) {
                 throw bali.exception({
                     $module: '$DigitalNotary',
-                    $function: '$notarizeComponent',
+                    $function: '$notarizeDocument',
                     $exception: '$missingKey',
                     $tag: notaryTag,
                     $message: '"The notary key is missing."'
                 });
             }
 
-            // assemble and sign the full component source
-            var source = content + EOL + previous + EOL + certificate;
-            const signature = privateAPI.sign(source);
+            // encode and sign the full document source
+            var encoded = encodeDocument(previous, component, citation);
+            const signature = privateAPI.sign(encoded);
 
             // construct the notarized document
-            const document = bali.catalog({
-                $content: content,
-                $previous: previous,
-                $certificate: certificate,
-                $signature: signature
-            });
+            const document = bali.catalog();
+            if (previous) document.setValue('$previous', previous);
+            document.setValue('$component', component);
+            document.setValue('$citation', citation);
+            document.setValue('$signature', signature);
 
             return document;
         },
@@ -145,7 +144,16 @@ exports.api = function(testDirectory) {
          * @returns {Catalog} A document citation for the document.
          */
         citeDocument: function(document) {
-            const parameters = document.getValue('$content').getParameters();
+            const parameters = document.getValue('$component').getParameters();
+            if (!parameters) {
+                throw bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$citeDocument',
+                    $exception: '$missingParameters',
+                    $document: document,
+                    $message: '"The document parameters are missing."'
+                });
+            }
             const tag = parameters.getParameter('$tag');
             const version = parameters.getParameter('$version');
             const digest = publicAPI.digest(document);
@@ -188,7 +196,7 @@ exports.api = function(testDirectory) {
          * @returns {Boolean} Whether or not the notary seal on the document is valid.
          */
         documentIsValid: function(document, certificate) {
-            const protocol = certificate.getParameters().getParameter('$protocol');
+            const protocol = certificate.getValue('$protocol');
             if (!publicAPI.protocol.isEqualTo(protocol)) {
                 throw bali.exception({
                     $module: '$DigitalNotary',
@@ -198,12 +206,13 @@ exports.api = function(testDirectory) {
                     $message: '"The protocol for the notary certificate is not supported."'
                 });
             }
-            var source = document.getValue('$content') + EOL;
-            source += document.getValue('$previous') + EOL;
-            source += document.getValue('$certificate');
-            var publicKey = certificate.getValue('$publicKey');
-            var signature = document.getValue('$signature');
-            var isValid = publicAPI.verify(source, publicKey, signature);
+            const previous = document.getValue('$previous');
+            const component = document.getValue('$component');
+            const citation = document.getValue('$citation');
+            const encoded = encodeDocument(previous, component, citation);
+            const publicKey = certificate.getValue('$publicKey');
+            const signature = document.getValue('$signature');
+            const isValid = publicAPI.verify(encoded, publicKey, signature);
             return isValid;
         },
 
@@ -222,7 +231,7 @@ exports.api = function(testDirectory) {
          * and other required attributes for the specified message.
          */
         encryptMessage: function(message, certificate) {
-            const protocol = certificate.getParameters().getParameter('$protocol');
+            const protocol = certificate.getValue('$protocol');
             if (!publicAPI.protocol.isEqualTo(protocol)) {
                 throw bali.exception({
                     $module: '$DigitalNotary',
@@ -270,7 +279,7 @@ exports.api = function(testDirectory) {
  * This function stores the digital notary configuration citation in the specified
  * configuration directory and filename.
  */
-function storeConfiguration(configDirectory, configFilename, citation) {
+const storeConfiguration = function(configDirectory, configFilename, citation) {
     try {
         const configFile = configDirectory + configFilename;
         const source = citation.toString() + EOL;  // add POSIX compliant end of line
@@ -285,13 +294,13 @@ function storeConfiguration(configDirectory, configFilename, citation) {
             $message: '"' + EOL + 'Unable to store the configuration file: ' + EOL + e + EOL + '"'
         });
     }
-}
+};
 
 /*
  * This function loads the digital notary configuration citation from the specified
  * configuration directory and filename.
  */
-function retrieveConfiguration(configDirectory, configFilename) {
+const retrieveConfiguration = function(configDirectory, configFilename) {
     try {
         // create the config directory if necessary
         if (!fs.existsSync(configDirectory)) fs.mkdirSync(configDirectory, 448);  // drwx------ permissions
@@ -319,13 +328,13 @@ function retrieveConfiguration(configDirectory, configFilename) {
             $message: '"' + EOL + 'Unable to retrieve the current configuration file, or create a new one: ' + EOL + e + EOL + '"'
         });
     }
-}
+};
 
 /*
  * This function connects to a remote hardware security module which implements all API
  * methods that utilize the private key.
  */
-function connectToHSM(notaryTag, testDirectory) {
+const connectToHSM = function(notaryTag, testDirectory) {
     try {
         // connect to the private hardware security module for the account
         const privateAPI = testDirectory ? 
@@ -344,4 +353,12 @@ function connectToHSM(notaryTag, testDirectory) {
             $message: '"' + EOL + 'Unable to access the hardware security module (HSM): ' + EOL + e + EOL + '"'
         });
     }
-}
+};
+
+const encodeDocument = function(previous, component, citation) {
+    var encoded = '';
+    if (previous) encoded += previous + EOL;
+    encoded += component + EOL;
+    encoded += citation;
+    return encoded;
+};

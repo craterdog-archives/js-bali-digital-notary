@@ -65,7 +65,7 @@ exports.api = function(tag, testDirectory) {
             // read in the notary key information
             const keySource = fs.readFileSync(keyFilename, 'utf8');
             const catalog = bali.parse(keySource);
-            const protocol = catalog.getParameters().getParameter('$protocol');
+            const protocol = catalog.getValue('$protocol');
             if (!v1Public.protocol.isEqualTo(protocol)) {
                 throw bali.exception({
                     $module: '$V1Test',
@@ -119,12 +119,12 @@ exports.api = function(tag, testDirectory) {
          */
         toString: function() {
             const catalog = bali.catalog({
+                $protocol: v1Public.protocol,
                 $timestamp: timestamp,
                 $publicKey: bali.binary(publicKey),
                 $privateKey: bali.binary(privateKey),
                 $citation: certificateCitation
             }, bali.parameters({
-                $protocol: v1Public.protocol,
                 $tag: tag,
                 $version: version
             }));
@@ -174,38 +174,36 @@ exports.api = function(tag, testDirectory) {
             publicKey = curve.getPublicKey();
 
             // generate the new notary certificate
-            const content = bali.catalog({
+            const component = bali.catalog({
+                $protocol: v1Public.protocol,
                 $timestamp: timestamp,
                 $publicKey: bali.binary(publicKey)
             }, bali.parameters({
-                $protocol: v1Public.protocol,
                 $tag: tag,
                 $version: version
             }));
 
             // assemble and sign the notary certificate source
-            var previous, certificate;
+            var previous, citation;
             if (isRegeneration) {
                 // sign with the old key
-                certificate = certificateCitation;  // signed with old certificate
+                citation = certificateCitation;  // signed with old certificate
                 previous = certificateCitation;  // previous version is old certificate
             } else {
                 // self sign with the new key
-                certificate = v1Public.citation(tag, version);  // no digest (self-signed)
-                previous = bali.NONE;  // no previous version
+                citation = v1Public.citation(tag, version);  // no digest (self-signed)
                 privateKey = curve.getPrivateKey();  // sign with new key
             }
-            var source = content + EOL + previous + EOL + certificate;
+            var source = encodeDocument(previous, component, citation);
             const signature = this.sign(source);
             privateKey = curve.getPrivateKey();
 
             // cache the new notary certificate
-            notaryCertificate = bali.catalog({
-                $content: content,
-                $previous: previous,
-                $certificate: certificate,
-                $signature: signature
-            });
+            notaryCertificate = bali.catalog({});
+            if (previous) notaryCertificate.setValue('$previous', previous);
+            notaryCertificate.setValue('$component', component);
+            notaryCertificate.setValue('$citation', citation);
+            notaryCertificate.setValue('$signature', signature);
 
             // cache the new certificate citation
             const digest = v1Public.digest(notaryCertificate);
@@ -315,4 +313,12 @@ exports.api = function(tag, testDirectory) {
             return message;
         }
     };
+};
+
+const encodeDocument = function(previous, component, citation) {
+    var encoded = '';
+    if (previous) encoded += previous + EOL;
+    encoded += component + EOL;
+    encoded += citation;
+    return encoded;
 };

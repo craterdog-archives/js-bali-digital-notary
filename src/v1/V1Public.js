@@ -109,8 +109,7 @@ exports.encrypt = function(message, publicKey) {
 
 
 /**
- * This function creates a new document citation using the specified attributes. If no
- * digest is specified, the digest value is set to Filter.NONE.
+ * This function creates a new document citation using the specified attributes.
  * 
  * @param {Tag} tag The unique tag for the cited document.
  * @param {Version} version The version of the cited document, default is 'v1'.
@@ -121,12 +120,11 @@ exports.citation = function(tag, version, digest) {
     const protocol = exports.protocol;
     tag = tag || bali.tag();
     version = version || bali.version();
-    digest = digest || bali.NONE;
     const citation = bali.catalog({
         $protocol: protocol,
         $tag: tag,
-        $version: version,
-        $digest: digest
+        $version: version
     });
+    if (digest) citation.setValue('$digest', digest);
     return citation;
 };

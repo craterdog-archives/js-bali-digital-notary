@@ -18,7 +18,7 @@ describe('Bali Digital Notary™', function() {
     var certificateDocument;
     var notaryCertificate;
     var certificateCitation;
-    var component = bali.parse('[$foo: "bar"]');
+    var component = bali.parse('[$foo: "bar"]($tag: #MFPCRNKS2SG20CD7VQ6KD329X7382KJY, $version: v1)');
 
     describe('Test Key Generation', function() {
 
@@ -33,7 +33,7 @@ describe('Bali Digital Notary™', function() {
         });
 
         it('should retrieve the notary certificate', function() {
-            notaryCertificate = certificateDocument.getValue('$content');
+            notaryCertificate = certificateDocument.getValue('$component');
             expect(notaryCertificate).to.exist;  // jshint ignore:line
         });
 
@@ -48,7 +48,7 @@ describe('Bali Digital Notary™', function() {
 
         it('should validate the certificate', function() {
             expect(certificateDocument.toString()).to.equal(notary.getCertificate().toString());
-            expect(notaryCertificate.getParameters().getParameter('$protocol').toString()).to.equal('v1');
+            expect(notaryCertificate.getValue('$protocol').toString()).to.equal('v1');
             var isValid = notary.documentIsValid(certificateDocument, notaryCertificate);
             expect(isValid).to.equal(true);
         });
@@ -63,7 +63,7 @@ describe('Bali Digital Notary™', function() {
     describe('Test Signing and Verification', function() {
 
         it('should digitally sign a document properly', function() {
-            var document = notary.notarizeComponent(component);
+            var document = notary.notarizeDocument(component);
             var citation = notary.citeDocument(document);
             var isValid = notary.documentIsValid(document, notaryCertificate);
             expect(isValid).to.equal(true);
@@ -89,9 +89,9 @@ describe('Bali Digital Notary™', function() {
         it('should regenerate a notary key properly', function() {
             var newCertificateDocument = notary.generateKeys();
             expect(newCertificateDocument).to.exist;  // jshint ignore:line
-            var newNotaryCertificate = newCertificateDocument.getValue('$content');
+            var newNotaryCertificate = newCertificateDocument.getValue('$component');
 
-            var document = notary.notarizeComponent(component);
+            var document = notary.notarizeDocument(component);
             var citation = notary.citeDocument(document);
             isValid = notary.documentIsValid(document, notaryCertificate);
             expect(isValid).to.equal(false);
@@ -109,14 +109,14 @@ describe('Bali Digital Notary™', function() {
     describe('Test Multiple Notarizations', function() {
 
         it('should notarized a component twice properly', function() {
-            var document = notary.notarizeComponent(component);
+            var document = notary.notarizeDocument(component);
             var citation = notary.citeDocument(document);
             var isValid = notary.documentIsValid(document, notaryCertificate);
             expect(isValid).to.equal(true);
             var matches = notary.documentMatches(document, citation);
             expect(matches).to.equal(true);
 
-            document = notary.notarizeComponent(document);
+            document = notary.notarizeDocument(document);
             citation = notary.citeDocument(document);
             isValid = notary.documentIsValid(document, notaryCertificate);
             expect(isValid).to.equal(true);
