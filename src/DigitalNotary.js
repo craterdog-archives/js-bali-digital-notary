@@ -116,7 +116,7 @@ exports.api = function(testDirectory) {
             if (!citation) {
                 throw bali.exception({
                     $module: '$DigitalNotary',
-                    $function: '$notarizeDocument',
+                    $procedure: '$notarizeDocument',
                     $exception: '$missingKey',
                     $tag: notaryTag,
                     $message: '"The notary key is missing."'
@@ -149,7 +149,7 @@ exports.api = function(testDirectory) {
             if (!parameters) {
                 throw bali.exception({
                     $module: '$DigitalNotary',
-                    $function: '$citeDocument',
+                    $procedure: '$citeDocument',
                     $exception: '$missingParameters',
                     $document: document,
                     $message: '"The document parameters are missing."'
@@ -233,7 +233,7 @@ exports.api = function(testDirectory) {
             if (!privateAPI.citation()) {
                 throw bali.exception({
                     $module: '$DigitalNotary',
-                    $function: '$decryptMessage',
+                    $procedure: '$decryptMessage',
                     $exception: '$missingKey',
                     $tag: notaryTag,
                     $message: '"The notary key is missing."'
@@ -261,7 +261,7 @@ const storeConfiguration = function(configDirectory, configFilename, citation) {
     } catch (e) {
         throw bali.exception({
             $module: '$DigitalNotary',
-            $function: '$generateKeys',
+            $procedure: '$generateKeys',
             $exception: '$configurationAccess',
             $directory: '"' + configDirectory + '"',
             $filename: '"' + configFilename + '"',
@@ -295,7 +295,7 @@ const retrieveConfiguration = function(configDirectory, configFilename) {
     } catch (e) {
         throw bali.exception({
             $module: '$DigitalNotary',
-            $function: '$api',
+            $procedure: '$api',
             $exception: '$configurationAccess',
             $directory: '"' + configDirectory + '"',
             $filename: '"' + configFilename + '"',
@@ -320,7 +320,7 @@ const connectToHSM = function(notaryTag, testDirectory) {
     } catch (e) {
         throw bali.exception({
             $module: '$DigitalNotary',
-            $function: '$api',
+            $procedure: '$api',
             $exception: '$hsmAccess',
             $tag: notaryTag,
             $testMode: testDirectory ? true : false,

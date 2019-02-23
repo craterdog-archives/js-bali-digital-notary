@@ -82,7 +82,7 @@ exports.api = function(tag, testDirectory) {
     } catch (e) {
         throw bali.exception({
             $module: '$Test',
-            $function: '$api',
+            $procedure: '$api',
             $exception: '$directoryAccess',
             $directory: '"' + configDirectory + '"',
             $message: '"The configuration directory could not be accessed."'
@@ -200,7 +200,7 @@ exports.api = function(tag, testDirectory) {
             } catch (e) {
                 throw bali.exception({
                     $module: '$Test',
-                    $function: '$generate',
+                    $procedure: '$generate',
                     $exception: '$directoryAccess',
                     $directory: '"' + configDirectory + '"',
                     $message: '"The configuration directory could not be accessed."'
@@ -232,7 +232,7 @@ exports.api = function(tag, testDirectory) {
             } catch (e) {
                 throw bali.exception({
                     $module: '$Test',
-                    $function: '$forget',
+                    $procedure: '$forget',
                     $exception: '$directoryAccess',
                     $directory: '"' + configDirectory + '"',
                     $message: '"The configuration directory could not be accessed."'
