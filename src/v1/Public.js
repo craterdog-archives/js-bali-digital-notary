@@ -29,8 +29,68 @@ exports.CIPHER = 'aes-256-gcm';
 
 exports.protocol = bali.parse(exports.PROTOCOL);
 
+// This private constant sets the POSIX end of line character
+const EOL = '\n';
+
+
 
 // FUNCTIONS
+
+/**
+ * This function returns a list of notary protocol versions supported by this module.
+ * 
+ * @returns {List} A list of notary protocol versions supported by this module.
+ */
+exports.versions = function() {
+    const versions = bali.list([exports.protocol]);
+    return versions;
+};
+
+
+/**
+ * This function checks to make sure that the specified document was created using a
+ * supported version of the notary protocol.  If not, an exception is thrown.
+ * 
+ * @param {String} module The symbol for the module that called this function.
+ * @param {String} procedure The symbol for the procedure that called this function.
+ * @param {Catalog} document The document to be checked.
+ * @throws {Exception} The specified document does not contain a supported version of the
+ * notary protocol.
+ */
+exports.check = function(module, procedure, document) {
+    const protocol = document.getValue('$protocol');
+    if (!exports.versions().containsItem(protocol)) {
+        throw bali.exception({
+            $module: module,
+            $procedure: procedure,
+            $exception: '$unsupportedProtocol',
+            $protocol: protocol,
+            $document: document,
+            $message: '"The notary protocol version for the document is not supported."'
+        });
+    }
+};
+
+
+/**
+ * This function encodes the specified attributes in a canonical way so that the resulting
+ * string can be digitally signed and verified.
+ * 
+ * @param {Catalog} previous An optional document citation to the previous version of the
+ * notarized document for the component.
+ * @param {Component} component The component to be notarized.
+ * @param {Catalog} citation A document citation to the notary certificate that may be used
+ * to verify the resulting notarized document for this component.
+ * @returns {String} The encoded string for the specified document attributes.
+ */
+exports.encode = function(previous, component, citation) {
+    var encoded = '';
+    if (previous) encoded += previous + EOL;
+    encoded += component + EOL;
+    encoded += citation;
+    return encoded;
+};
+
 
 /**
  * This function returns a cryptographically secure base 32 encoded digital digest of
@@ -98,9 +158,9 @@ exports.encrypt = function(message, publicKey) {
     // construct the authenticated encrypted message (AEM)
     const aem = bali.catalog({
         $protocol: exports.protocol,
+        $seed: bali.binary(seed),
         $iv: bali.binary(iv),
         $auth: bali.binary(auth),
-        $seed: bali.binary(seed),
         $ciphertext: bali.binary(ciphertext)
     });
 

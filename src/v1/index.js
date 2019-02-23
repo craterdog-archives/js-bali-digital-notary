@@ -9,6 +9,6 @@
  ************************************************************************/
 'use strict';
 
-exports.v1Public = require('./V1Public');
-exports.v1Proxy = require('./V1Proxy');
-exports.v1Test = require('./V1Test');
+exports.Public = require('./Public');
+exports.Proxy = require('./Proxy');
+exports.Test = require('./Test');

@@ -63,7 +63,24 @@ describe('Bali Digital Notary™', function() {
     describe('Test Signing and Verification', function() {
 
         it('should digitally sign a document properly', function() {
-            var document = notary.notarizeDocument(component);
+            const tag = bali.tag();
+            const transaction = bali.catalog({
+                $transactionId: bali.tag(),
+                $timestamp: bali.moment(),
+                $consumer: bali.text('Derk Norton'),
+                $merchant: bali.reference('https://www.starbucks.com/'),
+                $amount: 4.95
+            }, bali.parameters({
+                $tag: tag,
+                $version: bali.version([2.4]),
+            }));
+            const previous = bali.catalog({
+                $protocol: bali.version(),
+                $tag: tag,
+                $version: bali.version([2.3]),
+                $digest: bali.parse("'JB2NG73VTB957T9TZWT44KRZVQ467KWJ2MSJYT6YW2RQAYQMSR861XGM5ZCDCPNJYR612SJT9RFKHA9YZ5DJMLYC7N3127AY4QDVJ38'")
+            });
+            var document = notary.notarizeDocument(transaction, previous);
             var citation = notary.citeDocument(document);
             var isValid = notary.documentIsValid(document, notaryCertificate);
             expect(isValid).to.equal(true);

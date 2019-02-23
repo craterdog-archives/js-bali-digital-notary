@@ -26,11 +26,10 @@ const os = require('os');
 const crypto = require('crypto');
 const ec_pem = require('ec-pem');
 const bali = require('bali-component-framework');
-const v1Public = require('./V1Public');
+const Public = require('./Public');
 
 // This private constant sets the POSIX end of line character
 const EOL = '\n';
-
 
 
 /**
@@ -64,31 +63,13 @@ exports.api = function(tag, testDirectory) {
 
             // read in the notary key information
             const keySource = fs.readFileSync(keyFilename, 'utf8');
-            const catalog = bali.parse(keySource);
-            const protocol = catalog.getValue('$protocol');
-            if (!v1Public.protocol.isEqualTo(protocol)) {
-                throw bali.exception({
-                    $module: '$V1Test',
-                    $function: '$api',
-                    $exception: '$unsupportedProtocol',
-                    $protocol: protocol,
-                    $message: '"The protocol for the notary key is not supported."'
-                });
-            }
-            if (!tag.isEqualTo(catalog.getParameters().getParameter('$tag'))) {
-                throw bali.exception({
-                    $module: '$V1Test',
-                    $function: '$api',
-                    $exception: '$invalidKey',
-                    $tag: tag,
-                    $message: '"The notary key is invalid."'
-                });
-            }
-            version = catalog.getParameters().getParameter('$version');
-            timestamp = catalog.getValue('$timestamp').getValue();
-            publicKey = catalog.getValue('$publicKey').getValue();
-            privateKey = catalog.getValue('$privateKey').getValue();
-            certificateCitation = catalog.getValue('$citation');
+            const keys = bali.parse(keySource);
+            Public.check('Test', '$api', keys);
+            version = keys.getParameters().getParameter('$version');
+            timestamp = keys.getValue('$timestamp').getValue();
+            publicKey = keys.getValue('$publicKey').getValue();
+            privateKey = keys.getValue('$privateKey').getValue();
+            certificateCitation = keys.getValue('$citation');
         }
 
         // check for an existing notary certificate file
@@ -100,7 +81,7 @@ exports.api = function(tag, testDirectory) {
 
     } catch (e) {
         throw bali.exception({
-            $module: '$V1Test',
+            $module: '$Test',
             $function: '$api',
             $exception: '$directoryAccess',
             $directory: '"' + configDirectory + '"',
@@ -119,7 +100,7 @@ exports.api = function(tag, testDirectory) {
          */
         toString: function() {
             const catalog = bali.catalog({
-                $protocol: v1Public.protocol,
+                $protocol: Public.protocol,
                 $timestamp: timestamp,
                 $publicKey: bali.binary(publicKey),
                 $privateKey: bali.binary(privateKey),
@@ -167,7 +148,7 @@ exports.api = function(tag, testDirectory) {
             const isRegeneration = !!privateKey;
 
             // generate a new public-private key pair
-            const curve = crypto.createECDH(v1Public.CURVE);
+            const curve = crypto.createECDH(Public.CURVE);
             curve.generateKeys();
             version = version ? bali.version.nextVersion(version) : bali.version();
             timestamp = bali.moment();
@@ -175,7 +156,7 @@ exports.api = function(tag, testDirectory) {
 
             // generate the new notary certificate
             const component = bali.catalog({
-                $protocol: v1Public.protocol,
+                $protocol: Public.protocol,
                 $timestamp: timestamp,
                 $publicKey: bali.binary(publicKey)
             }, bali.parameters({
@@ -191,33 +172,34 @@ exports.api = function(tag, testDirectory) {
                 previous = certificateCitation;  // previous version is old certificate
             } else {
                 // self sign with the new key
-                citation = v1Public.citation(tag, version);  // no digest (self-signed)
+                citation = Public.citation(tag, version);  // no digest (self-signed)
                 privateKey = curve.getPrivateKey();  // sign with new key
             }
-            var source = encodeDocument(previous, component, citation);
+            var source = Public.encode(previous, component, citation);
             const signature = this.sign(source);
             privateKey = curve.getPrivateKey();
 
             // cache the new notary certificate
             notaryCertificate = bali.catalog({});
+            notaryCertificate.setValue('$protocol', Public.protocol);
             if (previous) notaryCertificate.setValue('$previous', previous);
             notaryCertificate.setValue('$component', component);
             notaryCertificate.setValue('$citation', citation);
             notaryCertificate.setValue('$signature', signature);
 
             // cache the new certificate citation
-            const digest = v1Public.digest(notaryCertificate);
-            certificateCitation = v1Public.citation(tag, version, digest);
+            const digest = Public.digest(notaryCertificate);
+            certificateCitation = Public.citation(tag, version, digest);
 
             // save the state of this notary key and certificate in the local configuration
             try {
-                const keySource = this.toString() + '\n';  // add POSIX compliant <EOL>
-                const certificateSource = notaryCertificate.toString() + '\n';  // add POSIX compliant <EOL>
+                const keySource = this.toString() + EOL;  // add POSIX compliant <EOL>
+                const certificateSource = notaryCertificate.toString() + EOL;  // add POSIX compliant <EOL>
                 fs.writeFileSync(keyFilename, keySource, {encoding: 'utf8', mode: 384});  // -rw------- permissions
                 fs.writeFileSync(certificateFilename, certificateSource, {encoding: 'utf8', mode: 384});  // -rw------- permissions
             } catch (e) {
                 throw bali.exception({
-                    $module: '$V1Test',
+                    $module: '$Test',
                     $function: '$generate',
                     $exception: '$directoryAccess',
                     $directory: '"' + configDirectory + '"',
@@ -249,7 +231,7 @@ exports.api = function(tag, testDirectory) {
                 }
             } catch (e) {
                 throw bali.exception({
-                    $module: '$V1Test',
+                    $module: '$Test',
                     $function: '$forget',
                     $exception: '$directoryAccess',
                     $directory: '"' + configDirectory + '"',
@@ -261,16 +243,16 @@ exports.api = function(tag, testDirectory) {
         /**
          * This method generates a digital signature of the specified message using the local
          * notary key. The resulting digital signature is base 32 encoded and may be verified
-         * using the v1Public.verify() method and the corresponding public key.
+         * using the Public.verify() method and the corresponding public key.
          * 
          * @param {String} message The message to be digitally signed.
          * @returns {Binary} A base 32 encoded digital signature of the message.
          */
         sign: function(message) {
-            const curve = crypto.createECDH(v1Public.CURVE);
+            const curve = crypto.createECDH(Public.CURVE);
             curve.setPrivateKey(privateKey);
-            const pem = ec_pem(curve, v1Public.CURVE);
-            const signer = crypto.createSign(v1Public.SIGNATURE);
+            const pem = ec_pem(curve, Public.CURVE);
+            const signer = crypto.createSign(Public.SIGNATURE);
             signer.update(message);
             const signature = signer.sign(pem.encodePrivateKey());
             const binary = bali.binary(signature);
@@ -285,40 +267,23 @@ exports.api = function(tag, testDirectory) {
          * @returns {String} The decrypted plaintext message.
          */
         decrypt: function(aem) {
-            const protocol = aem.getValue('$protocol');
-            if (!v1Public.protocol.isEqualTo(protocol)) {
-                throw bali.exception({
-                    $module: '$V1Test',
-                    $function: '$decrypt',
-                    $exception: '$unsupportedProtocol',
-                    $protocol: protocol,
-                    $message: '"The protocol for the authenticated encrypted message is not supported."'
-                });
-            }
+            Public.check('Test', '$decrypt', aem);
+            const seed = aem.getValue('$seed').getValue();
             const iv = aem.getValue('$iv').getValue();
             const auth = aem.getValue('$auth').getValue();
-            const seed = aem.getValue('$seed').getValue();
             const ciphertext = aem.getValue('$ciphertext').getValue();
 
             // decrypt the 32-byte symmetric key
-            const curve = crypto.createECDH(v1Public.CURVE);
+            const curve = crypto.createECDH(Public.CURVE);
             curve.setPrivateKey(privateKey);
             const symmetricKey = curve.computeSecret(seed).slice(0, 32);  // take only first 32 bytes
 
             // decrypt the ciphertext using the symmetric key
-            const decipher = crypto.createDecipheriv(v1Public.CIPHER, symmetricKey, iv);
+            const decipher = crypto.createDecipheriv(Public.CIPHER, symmetricKey, iv);
             decipher.setAuthTag(auth);
             var message = decipher.update(ciphertext, undefined, 'utf8');
             message += decipher.final('utf8');
             return message;
         }
     };
-};
-
-const encodeDocument = function(previous, component, citation) {
-    var encoded = '';
-    if (previous) encoded += previous + EOL;
-    encoded += component + EOL;
-    encoded += citation;
-    return encoded;
 };
