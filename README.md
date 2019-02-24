@@ -12,7 +12,7 @@ _This project is still in its early stages and the classes and interfaces to the
 For more information on this project click on the following links:
  * [wiki](https://github.com/craterdog-bali/js-bali-digital-notary/wiki)
  * [node package](https://www.npmjs.com/package/bali-digital-notary)
- * [release notes](https://github.com/craterdog-bali/js-bali-digital-notary/wiki/releases)
+ * [release notes](https://github.com/craterdog-bali/js-bali-digital-notary/wiki/release-notes)
  * [project documentation](https://github.com/craterdog-bali/bali-project-documentation/wiki)
 
 ### Getting Started
@@ -25,5 +25,5 @@ Then add the following line to your NodeJS modules:
 var notary = require('bali-digital-notary);
 ```
 
-Check out the example code [here](https://github.com/craterdog-bali/js-bali-digital-notary/wiki/Code-Examples).
+Check out the example code [here](https://github.com/craterdog-bali/js-bali-digital-notary/wiki/code-examples).
 
