@@ -33,15 +33,14 @@ const EOL = '\n';
 
 
 /**
- * This function returns an object that implements the API for the software security module
- * (notary key) associated with the specified unique tag. The internal attributes for the
- * notary key are hidden from the code that is using the notary key, but it is NOT fool-proof.
+ * This function returns an object that implements the API for the test software security module
+ * (containing the notary key). The internal attributes for the notary key are hidden from the
+ * code that is using the notary key, but it is NOT fool-proof.
  * 
- * @param {Tag} tag The unique tag for the software security module.
  * @param {String} testDirectory An optional directory to use for local testing.
  * @returns {Object} A proxy to the test software security module managing the private key.
  */
-exports.api = function(tag, testDirectory) {
+exports.api = function(testDirectory) {
 
     // create the config directory if necessary
     const configDirectory = testDirectory || os.homedir() + '/.bali/';
@@ -50,6 +49,7 @@ exports.api = function(tag, testDirectory) {
     const certificateFilename = configDirectory + 'NotaryCertificate.ndoc';
     
     // read in the notary key attributes
+    var tag;                   // the unique tag for the notary key
     var version;               // the current version of the notary key
     var timestamp;             // the timestamp of when the key was generated
     var publicKey;             // the public key residing in the certificate in the cloud
@@ -64,8 +64,9 @@ exports.api = function(tag, testDirectory) {
             // read in the notary key information
             const keySource = fs.readFileSync(keyFilename, 'utf8');
             const keys = bali.parse(keySource);
-            Public.check('Test', '$api', keys);
-            version = keys.getParameters().getParameter('$version');
+            const parameters = keys.getParameters();
+            tag = parameters.getParameter('$tag');
+            version = parameters.getParameter('$version');
             timestamp = keys.getValue('$timestamp').getValue();
             publicKey = keys.getValue('$publicKey').getValue();
             privateKey = keys.getValue('$privateKey').getValue();
@@ -179,6 +180,7 @@ exports.api = function(tag, testDirectory) {
             // create the new notary certificate
             notaryCertificate = bali.catalog({});
             notaryCertificate.setValue('$protocol', Public.protocol);
+            notaryCertificate.setValue('$timestamp', bali.moment());  // now
             if (previous) notaryCertificate.setValue('$previous', previous);
             notaryCertificate.setValue('$component', component);
             notaryCertificate.setValue('$citation', citation);
@@ -267,7 +269,6 @@ exports.api = function(tag, testDirectory) {
          * @returns {String} The decrypted plaintext message.
          */
         decrypt: function(aem) {
-            Public.check('Test', '$decrypt', aem);
             const seed = aem.getValue('$seed').getValue();
             const iv = aem.getValue('$iv').getValue();
             const auth = aem.getValue('$auth').getValue();

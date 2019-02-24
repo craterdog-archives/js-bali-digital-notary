@@ -23,7 +23,7 @@ describe('Bali Digital Notary™', function() {
     describe('Test Key Generation', function() {
 
         it('should support correct versions', function() {
-            const versions = notary.supportedVersions();
+            const versions = notary.supportedProtocols();
             expect(versions.toString()).to.equal('[v1]');
         });
 

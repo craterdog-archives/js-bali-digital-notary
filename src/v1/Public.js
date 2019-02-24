@@ -29,48 +29,8 @@ exports.CIPHER = 'aes-256-gcm';
 
 exports.protocol = bali.parse(exports.PROTOCOL);
 
-// This private constant sets the POSIX end of line character
-const EOL = '\n';
-
-
 
 // FUNCTIONS
-
-/**
- * This function returns a list of notary protocol versions supported by this module.
- * 
- * @returns {List} A list of notary protocol versions supported by this module.
- */
-exports.versions = function() {
-    const versions = bali.list([exports.protocol]);
-    return versions;
-};
-
-
-/**
- * This function checks to make sure that the specified document was created using a
- * supported version of the notary protocol.  If not, an exception is thrown.
- * 
- * @param {String} module The symbol for the module that called this function.
- * @param {String} procedure The symbol for the procedure that called this function.
- * @param {Catalog} document The document to be checked.
- * @throws {Exception} The specified document does not contain a supported version of the
- * notary protocol.
- */
-exports.check = function(module, procedure, document) {
-    const protocol = document.getValue('$protocol');
-    if (!exports.versions().containsItem(protocol)) {
-        throw bali.exception({
-            $module: module,
-            $procedure: procedure,
-            $exception: '$unsupportedProtocol',
-            $protocol: protocol,
-            $document: document,
-            $message: '"The notary protocol version for the document is not supported."'
-        });
-    }
-};
-
 
 /**
  * This function returns a cryptographically secure base 32 encoded digital digest of
@@ -138,6 +98,7 @@ exports.encrypt = function(message, publicKey) {
     // construct the authenticated encrypted message (AEM)
     const aem = bali.catalog({
         $protocol: exports.protocol,
+        $timestamp: bali.moment(),  // now
         $seed: bali.binary(seed),
         $iv: bali.binary(iv),
         $auth: bali.binary(auth),
@@ -162,6 +123,7 @@ exports.citation = function(tag, version, digest) {
     version = version || bali.version();
     const citation = bali.catalog({
         $protocol: protocol,
+        $timestamp: bali.moment(),  // now
         $tag: tag,
         $version: version
     });

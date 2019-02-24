@@ -19,8 +19,21 @@
 const fs = require('fs');
 const os = require('os');
 const bali = require('bali-component-framework');
-const version = require('./v1');
-const publicAPI = version.Public;
+const v1 = require('./v1');
+//const v2 = require('./v2');
+//const v3 = require('./v3');
+//  ...
+
+// configure the supported protocol public APIs
+const supportedAPIs = {
+    v1: v1
+//  v2: v2,
+//  v3: v3,
+//  ...
+};
+const supportedProtocols = bali.list(Object.keys(supportedAPIs));
+const preferredProtocol = supportedAPIs[supportedProtocols.getItem(-1).toString()];  // last is preferred
+const publicAPI = preferredProtocol.Public;
 
 // This private constant sets the POSIX end of line character
 const EOL = '\n';
@@ -39,13 +52,12 @@ exports.api = function(testDirectory) {
     const configFilename = 'Citation.bali';
     const notaryCitation = retrieveConfiguration(configDirectory, configFilename);
     const notaryTag = notaryCitation.getValue('$tag');
-    const privateAPI = connectToHSM(notaryTag, testDirectory);
+    const privateAPI = connectToHSM(testDirectory);
 
     return {
 
-        supportedVersions: function() {
-            var versions = bali.list([publicAPI.protocol]);
-            return versions;
+        supportedProtocols: function() {
+            return supportedProtocols;
         },
 
         /**
@@ -126,6 +138,7 @@ exports.api = function(testDirectory) {
             // construct the notarized document
             const document = bali.catalog();
             document.setValue('$protocol', publicAPI.protocol);
+            document.setValue('$timestamp', bali.moment());  // now
             if (previous) document.setValue('$previous', previous);
             document.setValue('$component', component);
             document.setValue('$citation', citation);
@@ -169,7 +182,7 @@ exports.api = function(testDirectory) {
          * @returns {Boolean} Whether or not the citation matches the specified document.
          */
         documentMatches: function(document, citation) {
-            publicAPI.check('$DigitalNotary', '$documentMatches', citation);
+            const publicAPI = getPublicAPI('$documentMatches', citation);
             var digest = publicAPI.digest(document);
             return digest.isEqualTo(citation.getValue('$digest'));
         },
@@ -184,10 +197,11 @@ exports.api = function(testDirectory) {
          * @returns {Boolean} Whether or not the notary seal on the document is valid.
          */
         documentIsValid: function(document, certificate) {
-            publicAPI.check('$DigitalNotary', '$documentIsValid', certificate);
+            const publicAPI = getPublicAPI('$documentIsValid', certificate);
             const catalog = bali.catalog();
             const previous = document.getValue('$previous');
             catalog.setValue('$protocol', document.getValue('$protocol'));
+            catalog.setValue('$timestamp', document.getValue('$timestamp'));
             if (previous) catalog.setValue('$previous', previous);
             catalog.setValue('$component', document.getValue('$component'));
             catalog.setValue('$citation', document.getValue('$citation'));
@@ -212,7 +226,7 @@ exports.api = function(testDirectory) {
          * and other required attributes for the specified message.
          */
         encryptMessage: function(message, certificate) {
-            publicAPI.check('$DigitalNotary', '$encryptMessage', certificate);
+            const publicAPI = getPublicAPI('$encryptMessage', certificate);
             var publicKey = certificate.getValue('$publicKey');
             var aem = publicAPI.encrypt(message, publicKey);
             return aem;
@@ -235,6 +249,17 @@ exports.api = function(testDirectory) {
                     $exception: '$missingKey',
                     $tag: notaryTag,
                     $message: '"The notary key is missing."'
+                });
+            }
+            const protocol = aem.getValue('$protocol');
+            if (!publicAPI.protocol.isEqualTo(protocol)) {
+                throw bali.exception({
+                    $module: '$DigitalNotary',
+                    $procedure: '$decryptMessage',
+                    $exception: '$unsupportedProtocol',
+                    $expected: publicAPI.protocol,
+                    $actual: protocol,
+                    $message: '"The message was encrypted using an unsupported version of the notary protocol."'
                 });
             }
             var message = bali.parse(privateAPI.decrypt(aem));
@@ -303,24 +328,43 @@ const retrieveConfiguration = function(configDirectory, configFilename) {
 };
 
 /*
+ * This function returns the requested version of the public API or throws an exception
+ * if it does not exist.
+ */
+const getPublicAPI = function(procedure, document) {
+    const protocol = document.getValue('$protocol');
+    const publicAPI = supportedAPIs[protocol.toString()].Public;
+    if (!publicAPI) {
+        throw bali.exception({
+            $module: '$DigitalNotary',
+            $procedure: procedure,
+            $exception: '$unsupportedProtocol',
+            $expected: supportedProtocols,
+            $actual: protocol,
+            $message: '"Attempted to use an unsupported version of the notary protocol."'
+        });
+    }
+    return publicAPI;
+};
+
+/*
  * This function connects to a remote hardware security module which implements all API
  * methods that utilize the private key.
  */
-const connectToHSM = function(notaryTag, testDirectory) {
+const connectToHSM = function(testDirectory) {
     try {
         // connect to the private hardware security module for the account
         const privateAPI = testDirectory ? 
             // use a test software security module (SSM)
-            version.Test.api(notaryTag, testDirectory) : 
+            preferredProtocol.Test.api(testDirectory) :
             // or, use a proxy to a hardware security module (HSM)
-            version.Proxy.api(notaryTag);
+            preferredProtocol.Proxy.api();
         return privateAPI;
     } catch (e) {
         throw bali.exception({
             $module: '$DigitalNotary',
             $procedure: '$api',
             $exception: '$hsmAccess',
-            $tag: notaryTag,
             $testMode: testDirectory ? true : false,
             $message: '"' + EOL + 'Unable to access the hardware security module (HSM): ' + EOL + e + EOL + '"'
         });
