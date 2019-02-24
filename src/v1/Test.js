@@ -175,17 +175,17 @@ exports.api = function(tag, testDirectory) {
                 citation = Public.citation(tag, version);  // no digest (self-signed)
                 privateKey = curve.getPrivateKey();  // sign with new key
             }
-            var source = Public.encode(previous, component, citation);
-            const signature = this.sign(source);
-            privateKey = curve.getPrivateKey();
 
-            // cache the new notary certificate
+            // create the new notary certificate
             notaryCertificate = bali.catalog({});
             notaryCertificate.setValue('$protocol', Public.protocol);
             if (previous) notaryCertificate.setValue('$previous', previous);
             notaryCertificate.setValue('$component', component);
             notaryCertificate.setValue('$citation', citation);
-            notaryCertificate.setValue('$signature', signature);
+            notaryCertificate.setValue('$signature', this.sign(notaryCertificate));
+
+            // save the new key
+            privateKey = curve.getPrivateKey();
 
             // cache the new certificate citation
             const digest = Public.digest(notaryCertificate);
@@ -253,7 +253,7 @@ exports.api = function(tag, testDirectory) {
             curve.setPrivateKey(privateKey);
             const pem = ec_pem(curve, Public.CURVE);
             const signer = crypto.createSign(Public.SIGNATURE);
-            signer.update(message);
+            signer.update(message.toString());  // force it to a string if it isn't already
             const signature = signer.sign(pem.encodePrivateKey());
             const binary = bali.binary(signature);
             return binary;

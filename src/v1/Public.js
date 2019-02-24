@@ -73,26 +73,6 @@ exports.check = function(module, procedure, document) {
 
 
 /**
- * This function encodes the specified attributes in a canonical way so that the resulting
- * string can be digitally signed and verified.
- * 
- * @param {Catalog} previous An optional document citation to the previous version of the
- * notarized document for the component.
- * @param {Component} component The component to be notarized.
- * @param {Catalog} citation A document citation to the notary certificate that may be used
- * to verify the resulting notarized document for this component.
- * @returns {String} The encoded string for the specified document attributes.
- */
-exports.encode = function(previous, component, citation) {
-    var encoded = '';
-    if (previous) encoded += previous + EOL;
-    encoded += component + EOL;
-    encoded += citation;
-    return encoded;
-};
-
-
-/**
  * This function returns a cryptographically secure base 32 encoded digital digest of
  * the specified message string. The digest is a Bali binary string and will always be
  * the same for the same message.
@@ -126,7 +106,7 @@ exports.verify = function(message, publicKey, signature) {
     curve.setPublicKey(publicKey);
     const pem = ec_pem(curve, exports.CURVE);
     const verifier = crypto.createVerify(exports.SIGNATURE);
-    verifier.update(message.toString());
+    verifier.update(message.toString());  // force it to a string if it isn't already
     return verifier.verify(pem.encodePublicKey(), signature);
 };
 

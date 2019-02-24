@@ -72,7 +72,7 @@ describe('Bali Digital Notary™', function() {
                 $amount: 4.95
             }, bali.parameters({
                 $tag: tag,
-                $version: bali.version([2.4]),
+                $version: bali.version([2.4])
             }));
             const previous = bali.catalog({
                 $protocol: bali.version(),

@@ -123,17 +123,13 @@ exports.api = function(testDirectory) {
                 });
             }
 
-            // encode and sign the full document source
-            var encoded = publicAPI.encode(previous, component, citation);
-            const signature = privateAPI.sign(encoded);
-
             // construct the notarized document
             const document = bali.catalog();
             document.setValue('$protocol', publicAPI.protocol);
             if (previous) document.setValue('$previous', previous);
             document.setValue('$component', component);
             document.setValue('$citation', citation);
-            document.setValue('$signature', signature);
+            document.setValue('$signature', privateAPI.sign(document));
 
             return document;
         },
@@ -189,13 +185,15 @@ exports.api = function(testDirectory) {
          */
         documentIsValid: function(document, certificate) {
             publicAPI.check('$DigitalNotary', '$documentIsValid', certificate);
+            const catalog = bali.catalog();
             const previous = document.getValue('$previous');
-            const component = document.getValue('$component');
-            const citation = document.getValue('$citation');
-            const encoded = publicAPI.encode(previous, component, citation);
+            catalog.setValue('$protocol', document.getValue('$protocol'));
+            if (previous) catalog.setValue('$previous', previous);
+            catalog.setValue('$component', document.getValue('$component'));
+            catalog.setValue('$citation', document.getValue('$citation'));
             const publicKey = certificate.getValue('$publicKey');
             const signature = document.getValue('$signature');
-            const isValid = publicAPI.verify(encoded, publicKey, signature);
+            const isValid = publicAPI.verify(catalog, publicKey, signature);
             return isValid;
         },
 
