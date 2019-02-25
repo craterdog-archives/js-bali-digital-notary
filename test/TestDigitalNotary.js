@@ -72,13 +72,13 @@ describe('Bali Digital Notary™', function() {
                 $amount: 4.95
             }, bali.parameters({
                 $tag: tag,
-                $version: bali.version([2.4])
+                $version: bali.version([2, 4])
             }));
             const previous = bali.catalog({
                 $protocol: bali.version(),
                 $timestamp: bali.parse('<2019-02-24T22:41:18.843>'),
                 $tag: tag,
-                $version: bali.version([2.3]),
+                $version: bali.version([2, 3]),
                 $digest: bali.parse("'JB2NG73VTB957T9TZWT44KRZVQ467KWJ2MSJYT6YW2RQAYQMSR861XGM5ZCDCPNJYR612SJT9RFKHA9YZ5DJMLYC7N3127AY4QDVJ38'")
             });
             var document = notary.notarizeDocument(transaction, previous);

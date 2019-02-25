@@ -49,13 +49,13 @@ exports.api = function(testDirectory) {
     const certificateFilename = configDirectory + 'NotaryCertificate.ndoc';
     
     // read in the notary key attributes
-    var tag;                   // the unique tag for the notary key
-    var version;               // the current version of the notary key
-    var timestamp;             // the timestamp of when the key was generated
-    var publicKey;             // the public key residing in the certificate in the cloud
-    var privateKey;            // the local private key that is used for signing and decryption
-    var notaryCertificate;     // the public notary certificate containing the public key
-    var certificateCitation;   // a document citation for the public notary certificate
+    var tag = bali.tag();           // the unique tag for the notary key
+    var version = bali.version();   // the current version of the notary key
+    var timestamp = bali.moment();  // the timestamp of when the key was generated
+    var publicKey;                  // the public key residing in the certificate in the cloud
+    var privateKey;                 // the local private key that is used for signing and decryption
+    var notaryCertificate;          // the public notary certificate containing the public key
+    var certificateCitation;        // a document citation for the public notary certificate
     try {
 
         // check for an existing notary key file
