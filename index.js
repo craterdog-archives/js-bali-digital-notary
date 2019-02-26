@@ -17,11 +17,12 @@
  * module will be used instead of a remote hardware security module (HSM)
  * for all operations that utilize the private notary key.
  * 
+ * @param {Tag} accountTag The unique tag for the account that owns the notary key.
  * @param {String} testDirectory The optional local directory to be used to 
  * maintain the configuration information for the digital notary API.
  * @returns {Object} A singleton object containing the initialized digital notary API.
  */
-exports.api = function(testDirectory) {
-    const api = require('./src/DigitalNotary').api(testDirectory);
+exports.api = function(accountTag, testDirectory) {
+    const api = require('./src/DigitalNotary').api(accountTag, testDirectory);
     return api;
 };

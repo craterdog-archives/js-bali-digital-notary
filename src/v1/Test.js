@@ -37,19 +37,33 @@ const EOL = '\n';
  * (containing the notary key). The internal attributes for the notary key are hidden from the
  * code that is using the notary key, but it is NOT fool-proof.
  * 
+ * @param {Tag} account The unique tag for the account that owns the notary key.
  * @param {String} testDirectory An optional directory to use for local testing.
  * @returns {Object} A proxy to the test software security module managing the private key.
  */
-exports.api = function(testDirectory) {
+exports.api = function(account, testDirectory) {
 
-    // create the config directory if necessary
-    const configDirectory = testDirectory || os.homedir() + '/.bali/';
-    if (!fs.existsSync(configDirectory)) fs.mkdirSync(configDirectory, 448);  // drwx------ permissions
+    // analyze the parameters
+    if (!account || account.getTypeId() !== bali.types.TAG) {
+        throw bali.exception({
+            $module: '$Test',
+            $procedure: '$api',
+            $exception: '$invalidParameter',
+            $parameter: account,
+            $message: '"The specified account tag is invalid."'
+        });
+    }
+
+    // create the configuration directory structure if necessary (with drwx------ permissions)
+    var configDirectory = testDirectory || os.homedir() + '/.bali/';
+    if (!fs.existsSync(configDirectory)) fs.mkdirSync(configDirectory, 448);
+    configDirectory += account + '/';
+    if (!fs.existsSync(configDirectory)) fs.mkdirSync(configDirectory, 448);
     const keyFilename = configDirectory + 'NotaryKey.bali';
     const certificateFilename = configDirectory + 'NotaryCertificate.ndoc';
     
     // read in the notary key attributes
-    var tag;                  // the unique tag for the notary key
+    var notaryTag;            // the unique tag for the notary key
     var version;              // the current version of the notary key
     var timestamp;            // the timestamp of when the key was generated
     var publicKey;            // the public key residing in the certificate in the cloud
@@ -65,7 +79,7 @@ exports.api = function(testDirectory) {
             const keySource = fs.readFileSync(keyFilename, 'utf8');
             const keys = bali.parse(keySource);
             const parameters = keys.getParameters();
-            tag = parameters.getParameter('$tag');
+            notaryTag = parameters.getParameter('$tag');
             version = parameters.getParameter('$version');
             timestamp = keys.getValue('$timestamp').getValue();
             publicKey = keys.getValue('$publicKey').getValue();
@@ -103,11 +117,12 @@ exports.api = function(testDirectory) {
             const catalog = bali.catalog({
                 $protocol: Public.protocol,
                 $timestamp: timestamp,
+                $account: account,
                 $publicKey: bali.binary(publicKey),
                 $privateKey: bali.binary(privateKey),
                 $citation: certificateCitation
             }, bali.parameters({
-                $tag: tag,
+                $tag: notaryTag,
                 $version: version
             }));
             return catalog.toString();
@@ -150,7 +165,7 @@ exports.api = function(testDirectory) {
             // generate a new public-private key pair
             const curve = crypto.createECDH(Public.CURVE);
             curve.generateKeys();
-            tag = tag || bali.tag();
+            notaryTag = notaryTag || bali.tag();  // generate a new tag if necessary
             version = version ? bali.version.nextVersion(version) : bali.version();
             timestamp = bali.moment();
             publicKey = curve.getPublicKey();
@@ -159,9 +174,10 @@ exports.api = function(testDirectory) {
             const component = bali.catalog({
                 $protocol: Public.protocol,
                 $timestamp: timestamp,
+                $account: account,
                 $publicKey: bali.binary(publicKey)
             }, bali.parameters({
-                $tag: tag,
+                $tag: notaryTag,
                 $version: version
             }));
 
@@ -190,7 +206,7 @@ exports.api = function(testDirectory) {
 
             // cache the new certificate citation
             const digest = Public.digest(notaryCertificate);
-            certificateCitation = Public.citation(tag, version, digest);
+            certificateCitation = Public.citation(notaryTag, version, digest);
 
             // save the state of this notary key and certificate in the local configuration
             try {

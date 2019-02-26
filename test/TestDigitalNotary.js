@@ -11,7 +11,7 @@
 const mocha = require('mocha');
 const expect = require('chai').expect;
 const bali = require('bali-component-framework');
-const notary = require('../').api('test/config/');
+const notary = require('../').api(bali.tag(), 'test/config/');
 
 describe('Bali Digital Notary™', function() {
 

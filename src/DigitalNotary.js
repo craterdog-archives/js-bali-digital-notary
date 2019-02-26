@@ -42,16 +42,14 @@ const EOL = '\n';
 /**
  * This function returns an object that implements the API for a digital notary.
  * 
- * @param {String} configDirectory The location of the test directory to be used for local
+ * @param {Tag} account The unique tag for the account that owns the notary key.
+ * @param {String} testDirectory An optional location of the test directory to be used for local
  * configuration storage. If not specified, the location of the configuration is in '~/.bali/'.
  * @returns {Object} An object that implements the API for a digital notary.
  */
-exports.api = function(configDirectory) {
+exports.api = function(account, testDirectory) {
 
-    const privateAPI = connectToHSM(configDirectory);
-    configDirectory = configDirectory || os.homedir() + '/.bali/';
-    const configFilename = 'Citation.bali';
-    const notaryCitation = retrieveConfiguration(configDirectory, configFilename);
+    const privateAPI = connectToHSM(account, testDirectory);
 
     return {
 
@@ -71,8 +69,6 @@ exports.api = function(configDirectory) {
          */
         generateKeys: function() {
             var notaryCertificate = privateAPI.generate();
-            var certificateCitation = privateAPI.citation();
-            storeConfiguration(configDirectory, configFilename, certificateCitation);
             return notaryCertificate;
         },
 
@@ -129,6 +125,7 @@ exports.api = function(configDirectory) {
                     $module: '$DigitalNotary',
                     $procedure: '$notarizeDocument',
                     $exception: '$missingKey',
+                    $account: account,
                     $message: '"The notary key is missing."'
                 });
             }
@@ -245,6 +242,7 @@ exports.api = function(configDirectory) {
                     $module: '$DigitalNotary',
                     $procedure: '$decryptMessage',
                     $exception: '$missingKey',
+                    $account: account,
                     $message: '"The notary key is missing."'
                 });
             }
@@ -270,58 +268,6 @@ exports.api = function(configDirectory) {
 // PRIVATE FUNCTIONS
 
 /*
- * This function stores the digital notary configuration citation in the specified
- * configuration directory and filename.
- */
-const storeConfiguration = function(configDirectory, configFilename, citation) {
-    try {
-        // create the config directory if necessary
-        if (!fs.existsSync(configDirectory)) fs.mkdirSync(configDirectory, 448);  // drwx------ permissions
-
-        // write out the notary certificate citation to the config directory
-        const configFile = configDirectory + configFilename;
-        const source = citation.toString() + EOL;  // add POSIX compliant end of line
-        fs.writeFileSync(configFile, source, {encoding: 'utf8', mode: 384});  // -rw------- permissions
-    } catch (e) {
-        throw bali.exception({
-            $module: '$DigitalNotary',
-            $procedure: '$generateKeys',
-            $exception: '$configurationAccess',
-            $directory: '"' + configDirectory + '"',
-            $filename: '"' + configFilename + '"',
-            $message: '"' + EOL + 'Unable to store the configuration file: ' + EOL + e + EOL + '"'
-        });
-    }
-};
-
-/*
- * This function loads the digital notary configuration citation from the specified
- * configuration directory and filename.
- */
-const retrieveConfiguration = function(configDirectory, configFilename) {
-    try {
-        // read in the notary certificate citation from the config directory
-        const configFile = configDirectory + configFilename;
-        var source;
-        var certificateCitation;
-        if (fs.existsSync(configFile)) {
-            source = fs.readFileSync(configFile, 'utf8');
-            certificateCitation = bali.parse(source);
-        }
-        return certificateCitation;
-    } catch (e) {
-        throw bali.exception({
-            $module: '$DigitalNotary',
-            $procedure: '$api',
-            $exception: '$configurationAccess',
-            $directory: '"' + configDirectory + '"',
-            $filename: '"' + configFilename + '"',
-            $message: '"' + EOL + 'Unable to retrieve the current configuration file, or create a new one: ' + EOL + e + EOL + '"'
-        });
-    }
-};
-
-/*
  * This function returns the requested version of the public API or throws an exception
  * if it does not exist.
  */
@@ -345,20 +291,21 @@ const getPublicAPI = function(procedure, document) {
  * This function connects to a remote hardware security module which implements all API
  * methods that utilize the private key.
  */
-const connectToHSM = function(testDirectory) {
+const connectToHSM = function(account, testDirectory) {
     try {
         // connect to the private hardware security module for the account
         const privateAPI = testDirectory ? 
             // use a test software security module (SSM)
-            preferredProtocol.Test.api(testDirectory) :
+            preferredProtocol.Test.api(account, testDirectory) :
             // or, use a proxy to a hardware security module (HSM)
-            preferredProtocol.Proxy.api();
+            preferredProtocol.Proxy.api(account);
         return privateAPI;
     } catch (e) {
         throw bali.exception({
             $module: '$DigitalNotary',
             $procedure: '$api',
             $exception: '$hsmAccess',
+            $account: account,
             $testMode: testDirectory ? true : false,
             $message: '"' + EOL + 'Unable to access the hardware security module (HSM): ' + EOL + e + EOL + '"'
         });
