@@ -49,13 +49,13 @@ exports.api = function(testDirectory) {
     const certificateFilename = configDirectory + 'NotaryCertificate.ndoc';
     
     // read in the notary key attributes
-    var tag = bali.tag();           // the unique tag for the notary key
-    var version = bali.version();   // the current version of the notary key
-    var timestamp = bali.moment();  // the timestamp of when the key was generated
-    var publicKey;                  // the public key residing in the certificate in the cloud
-    var privateKey;                 // the local private key that is used for signing and decryption
-    var notaryCertificate;          // the public notary certificate containing the public key
-    var certificateCitation;        // a document citation for the public notary certificate
+    var tag;                  // the unique tag for the notary key
+    var version;              // the current version of the notary key
+    var timestamp;            // the timestamp of when the key was generated
+    var publicKey;            // the public key residing in the certificate in the cloud
+    var privateKey;           // the local private key that is used for signing and decryption
+    var notaryCertificate;    // the public notary certificate containing the public key
+    var certificateCitation;  // a document citation for the public notary certificate
     try {
 
         // check for an existing notary key file
@@ -138,10 +138,9 @@ exports.api = function(testDirectory) {
          * new notary key. It returns the new public notary certificate.
          * 
          * NOTE: Ideally, it would make more sense for most of this method to be moved to the
-         * <code>DigitalNotary</code> class but can't be moved there because during regeneration
-         * both the old key and new key must sign the new certificate and the old key goes
-         * away right after it signs it. So the complete certificate signing process must
-         * happen in the security model.
+         * <code>DigitalNotary</code> class but it can't be moved there because during regeneration
+         * the old key key must sign the new certificate and the old key goes away right after the
+         * new one is generated.
          * 
          * @returns {Catalog} The new notary certificate.
          */
@@ -151,6 +150,7 @@ exports.api = function(testDirectory) {
             // generate a new public-private key pair
             const curve = crypto.createECDH(Public.CURVE);
             curve.generateKeys();
+            tag = tag || bali.tag();
             version = version ? bali.version.nextVersion(version) : bali.version();
             timestamp = bali.moment();
             publicKey = curve.getPublicKey();
@@ -173,7 +173,6 @@ exports.api = function(testDirectory) {
                 previous = certificateCitation;  // previous version is old certificate
             } else {
                 // self sign with the new key
-                citation = Public.citation(tag, version);  // no digest (self-signed)
                 privateKey = curve.getPrivateKey();  // sign with new key
             }
 
@@ -183,7 +182,7 @@ exports.api = function(testDirectory) {
             notaryCertificate.setValue('$timestamp', bali.moment());  // now
             if (previous) notaryCertificate.setValue('$previous', previous);
             notaryCertificate.setValue('$component', component);
-            notaryCertificate.setValue('$citation', citation);
+            if (citation) notaryCertificate.setValue('$citation', citation);
             notaryCertificate.setValue('$signature', this.sign(notaryCertificate));
 
             // save the new key

@@ -118,15 +118,11 @@ exports.encrypt = function(message, publicKey) {
  * @returns {Catalog} A new document citation.
  */
 exports.citation = function(tag, version, digest) {
-    const protocol = exports.protocol;
-    tag = tag || bali.tag();
-    version = version || bali.version();
-    const citation = bali.catalog({
-        $protocol: protocol,
+    return bali.catalog({
+        $protocol: exports.protocol,
         $timestamp: bali.moment(),  // now
         $tag: tag,
-        $version: version
+        $version: version,
+        $digest: digest
     });
-    if (digest) citation.setValue('$digest', digest);
-    return citation;
 };

@@ -42,17 +42,16 @@ const EOL = '\n';
 /**
  * This function returns an object that implements the API for a digital notary.
  * 
- * @param {String} testDirectory The location of the test directory to be used for local
+ * @param {String} configDirectory The location of the test directory to be used for local
  * configuration storage. If not specified, the location of the configuration is in '~/.bali/'.
  * @returns {Object} An object that implements the API for a digital notary.
  */
-exports.api = function(testDirectory) {
+exports.api = function(configDirectory) {
 
-    const configDirectory = testDirectory || os.homedir() + '/.bali/';
+    const privateAPI = connectToHSM(configDirectory);
+    configDirectory = configDirectory || os.homedir() + '/.bali/';
     const configFilename = 'Citation.bali';
     const notaryCitation = retrieveConfiguration(configDirectory, configFilename);
-    const notaryTag = notaryCitation.getValue('$tag');
-    const privateAPI = connectToHSM(testDirectory);
 
     return {
 
@@ -130,7 +129,6 @@ exports.api = function(testDirectory) {
                     $module: '$DigitalNotary',
                     $procedure: '$notarizeDocument',
                     $exception: '$missingKey',
-                    $tag: notaryTag,
                     $message: '"The notary key is missing."'
                 });
             }
@@ -141,7 +139,7 @@ exports.api = function(testDirectory) {
             document.setValue('$timestamp', bali.moment());  // now
             if (previous) document.setValue('$previous', previous);
             document.setValue('$component', component);
-            document.setValue('$citation', citation);
+            if (citation) document.setValue('$citation', citation);
             document.setValue('$signature', privateAPI.sign(document));
 
             return document;
@@ -198,13 +196,13 @@ exports.api = function(testDirectory) {
          */
         documentIsValid: function(document, certificate) {
             const publicAPI = getPublicAPI('$documentIsValid', certificate);
-            const catalog = bali.catalog();
-            const previous = document.getValue('$previous');
-            catalog.setValue('$protocol', document.getValue('$protocol'));
-            catalog.setValue('$timestamp', document.getValue('$timestamp'));
-            if (previous) catalog.setValue('$previous', previous);
-            catalog.setValue('$component', document.getValue('$component'));
-            catalog.setValue('$citation', document.getValue('$citation'));
+            const catalog = bali.catalog.extraction(document, bali.list([
+                '$protocol',
+                '$timestamp',
+                '$previous',
+                '$component',
+                '$citation'
+            ]));  // everything but the signature
             const publicKey = certificate.getValue('$publicKey');
             const signature = document.getValue('$signature');
             const isValid = publicAPI.verify(catalog, publicKey, signature);
@@ -247,7 +245,6 @@ exports.api = function(testDirectory) {
                     $module: '$DigitalNotary',
                     $procedure: '$decryptMessage',
                     $exception: '$missingKey',
-                    $tag: notaryTag,
                     $message: '"The notary key is missing."'
                 });
             }
@@ -278,6 +275,10 @@ exports.api = function(testDirectory) {
  */
 const storeConfiguration = function(configDirectory, configFilename, citation) {
     try {
+        // create the config directory if necessary
+        if (!fs.existsSync(configDirectory)) fs.mkdirSync(configDirectory, 448);  // drwx------ permissions
+
+        // write out the notary certificate citation to the config directory
         const configFile = configDirectory + configFilename;
         const source = citation.toString() + EOL;  // add POSIX compliant end of line
         fs.writeFileSync(configFile, source, {encoding: 'utf8', mode: 384});  // -rw------- permissions
@@ -299,20 +300,13 @@ const storeConfiguration = function(configDirectory, configFilename, citation) {
  */
 const retrieveConfiguration = function(configDirectory, configFilename) {
     try {
-        // create the config directory if necessary
-        if (!fs.existsSync(configDirectory)) fs.mkdirSync(configDirectory, 448);  // drwx------ permissions
-
-        // load the account citation
+        // read in the notary certificate citation from the config directory
         const configFile = configDirectory + configFilename;
         var source;
         var certificateCitation;
         if (fs.existsSync(configFile)) {
             source = fs.readFileSync(configFile, 'utf8');
             certificateCitation = bali.parse(source);
-        } else {
-            certificateCitation = publicAPI.citation();
-            source = certificateCitation.toString() + EOL;  // add POSIX compliant end of line
-            fs.writeFileSync(configFile, source, {encoding: 'utf8', mode: 384});  // -rw------- permissions
         }
         return certificateCitation;
     } catch (e) {
