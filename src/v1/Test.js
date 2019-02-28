@@ -57,7 +57,7 @@ exports.api = function(account, testDirectory) {
     // create the configuration directory structure if necessary (with drwx------ permissions)
     var configDirectory = testDirectory || os.homedir() + '/.bali/';
     if (!fs.existsSync(configDirectory)) fs.mkdirSync(configDirectory, 448);
-    configDirectory += account + '/';
+    configDirectory += account.getValue() + '/';
     if (!fs.existsSync(configDirectory)) fs.mkdirSync(configDirectory, 448);
     const keyFilename = configDirectory + 'NotaryKey.bali';
     const certificateFilename = configDirectory + 'NotaryCertificate.ndoc';

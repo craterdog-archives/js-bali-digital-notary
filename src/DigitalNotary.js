@@ -16,8 +16,6 @@
  * created and used as the location of the local key store. Otherwise, a proxy
  * to a hardware security module will be used for all private key operations.
  */
-const fs = require('fs');
-const os = require('os');
 const bali = require('bali-component-framework');
 const v1 = require('./v1');
 //const v2 = require('./v2');
