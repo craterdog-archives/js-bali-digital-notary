@@ -24,7 +24,7 @@
  * @param {Tag} account The unique tag for the account that owns the notary key.
  * @returns {Object} A proxy object to the hardware security module managing the private key.
  */
-exports.api = function(account) {
+exports.api = async function(account) {
     
     return {
 
@@ -32,27 +32,27 @@ exports.api = function(account) {
             throw new Error('BUG: The following method has not yet been implemented: toString()');
         },
 
-        certificate: function() {
+        certificate: async function() {
             throw new Error('BUG: The following method has not yet been implemented: certificate()');
         },
 
-        citation: function() {
+        citation: async function() {
             throw new Error('BUG: The following method has not yet been implemented: citation()');
         },
 
-        generate: function() {
+        generate: async function() {
             throw new Error('BUG: The following method has not yet been implemented: generate()');
         },
 
-        forget: function() {
+        forget: async function() {
             throw new Error('BUG: The following method has not yet been implemented: forget()');
         },
 
-        sign: function(message) {
+        sign: async function(message) {
             throw new Error('BUG: The following method has not yet been implemented: sign(message)');
         },
 
-        decrypt: function(aem) {
+        decrypt: async function(aem) {
             throw new Error('BUG: The following method has not yet been implemented: decrypt(aem)');
         }
     };

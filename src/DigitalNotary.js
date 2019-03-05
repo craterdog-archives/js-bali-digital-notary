@@ -46,12 +46,33 @@ const EOL = '\n';
  * @returns {Object} An object that implements the API for a digital notary.
  */
 exports.api = function(account, testDirectory) {
-
-    const privateAPI = connectToHSM(account, testDirectory);
+    var privateAPI;
 
     return {
 
-        supportedProtocols: function() {
+        connectHSM: async function() {
+            try {
+                // connect to the private hardware security module for the account
+                if (testDirectory) {
+                    // use a test software security module (SSM)
+                    privateAPI = await preferredProtocol.Test.api(account, testDirectory);
+                } else {
+                    // or, use a proxy to a hardware security module (HSM)
+                    privateAPI = await preferredProtocol.Proxy.api(account);
+                }
+            } catch (exception) {
+                throw bali.exception({
+                    $module: '$DigitalNotary',
+                    $procedure: '$api',
+                    $exception: '$hsmAccess',
+                    $account: account,
+                    $testMode: testDirectory ? true : false,
+                    $message: '"' + EOL + 'Unable to access the hardware security module (HSM): ' + EOL + exception + EOL + '"'
+                });
+            }
+        },
+
+        supportedProtocols: async function() {
             return supportedProtocols;
         },
 
@@ -65,8 +86,8 @@ exports.api = function(account, testDirectory) {
          * @returns {Catalog} A new Bali Notarized Document™ containing the public
          * notary certificate associated with the new private notary key.
          */
-        generateKeys: function() {
-            var notaryCertificate = privateAPI.generate();
+        generateKeys: async function() {
+            var notaryCertificate = await privateAPI.generate();
             return notaryCertificate;
         },
 
@@ -77,8 +98,8 @@ exports.api = function(account, testDirectory) {
          * @returns {Catalog} A document citation referencing the document containing the
          * public certificate for this digital notary.
          */
-        getCitation: function() {
-            return privateAPI.citation();
+        getCitation: async function() {
+            return await privateAPI.citation();
         },
 
         /**
@@ -88,8 +109,8 @@ exports.api = function(account, testDirectory) {
          * @returns {Catalog} The notarized document containing the public certificate
          * for this digital notary.
          */
-        getCertificate: function() {
-            return privateAPI.certificate();
+        getCertificate: async function() {
+            return await privateAPI.certificate();
         },
 
         /**
@@ -103,7 +124,7 @@ exports.api = function(account, testDirectory) {
          * the notarized document.
          * @returns {Catalog} A catalog that is the newly notarized document for the component.
          */
-        notarizeDocument: function(component, previous) {
+        notarizeDocument: async function(component, previous) {
 
             // extract component parameters
             var parameters = component.getParameters();
@@ -117,7 +138,7 @@ exports.api = function(account, testDirectory) {
             }
 
             // retrieve the notary certificate citation
-            const citation = privateAPI.citation();
+            const citation = await privateAPI.citation();
             if (!citation) {
                 throw bali.exception({
                     $module: '$DigitalNotary',
@@ -135,7 +156,8 @@ exports.api = function(account, testDirectory) {
             if (previous) document.setValue('$previous', previous);
             document.setValue('$component', component);
             if (citation) document.setValue('$citation', citation);
-            document.setValue('$signature', privateAPI.sign(document));
+            const signature = await privateAPI.sign(document);
+            document.setValue('$signature', signature);
 
             return document;
         },
@@ -146,7 +168,7 @@ exports.api = function(account, testDirectory) {
          * @param {Catalog} document The document to be cited.
          * @returns {Catalog} A document citation for the document.
          */
-        citeDocument: function(document) {
+        citeDocument: async function(document) {
             const parameters = document.getValue('$component').getParameters();
             if (!parameters) {
                 throw bali.exception({
@@ -174,7 +196,7 @@ exports.api = function(account, testDirectory) {
          * specified document.
          * @returns {Boolean} Whether or not the citation matches the specified document.
          */
-        documentMatches: function(document, citation) {
+        documentMatches: async function(document, citation) {
             const publicAPI = getPublicAPI('$documentMatches', citation);
             var digest = publicAPI.digest(document);
             return digest.isEqualTo(citation.getValue('$digest'));
@@ -189,7 +211,7 @@ exports.api = function(account, testDirectory) {
          * private notary key that allegedly notarized the specified document.
          * @returns {Boolean} Whether or not the notary seal on the document is valid.
          */
-        documentIsValid: function(document, certificate) {
+        documentIsValid: async function(document, certificate) {
             const publicAPI = getPublicAPI('$documentIsValid', certificate);
             const catalog = bali.catalog.extraction(document, bali.list([
                 '$protocol',
@@ -218,7 +240,7 @@ exports.api = function(account, testDirectory) {
          * @returns {Catalog} An authenticated encrypted message (AEM) containing the ciphertext
          * and other required attributes for the specified message.
          */
-        encryptMessage: function(message, certificate) {
+        encryptMessage: async function(message, certificate) {
             const publicAPI = getPublicAPI('$encryptMessage', certificate);
             var publicKey = certificate.getValue('$publicKey');
             var aem = publicAPI.encrypt(message, publicKey);
@@ -234,8 +256,9 @@ exports.api = function(account, testDirectory) {
          * and other required attributes required to decrypt the message.
          * @returns {Component} The decrypted message component.
          */
-        decryptMessage: function(aem) {
-            if (!privateAPI.citation()) {
+        decryptMessage: async function(aem) {
+            const citation = await privateAPI.citation();
+            if (!citation) {
                 throw bali.exception({
                     $module: '$DigitalNotary',
                     $procedure: '$decryptMessage',
@@ -255,7 +278,8 @@ exports.api = function(account, testDirectory) {
                     $message: '"The message was encrypted using an unsupported version of the notary protocol."'
                 });
             }
-            var message = bali.parse(privateAPI.decrypt(aem));
+            const plaintext = await privateAPI.decrypt(aem);
+            var message = bali.parse(plaintext);
             return message;
         }
 
@@ -283,29 +307,4 @@ const getPublicAPI = function(procedure, document) {
         });
     }
     return publicAPI;
-};
-
-/*
- * This function connects to a remote hardware security module which implements all API
- * methods that utilize the private key.
- */
-const connectToHSM = function(account, testDirectory) {
-    try {
-        // connect to the private hardware security module for the account
-        const privateAPI = testDirectory ? 
-            // use a test software security module (SSM)
-            preferredProtocol.Test.api(account, testDirectory) :
-            // or, use a proxy to a hardware security module (HSM)
-            preferredProtocol.Proxy.api(account);
-        return privateAPI;
-    } catch (e) {
-        throw bali.exception({
-            $module: '$DigitalNotary',
-            $procedure: '$api',
-            $exception: '$hsmAccess',
-            $account: account,
-            $testMode: testDirectory ? true : false,
-            $message: '"' + EOL + 'Unable to access the hardware security module (HSM): ' + EOL + e + EOL + '"'
-        });
-    }
 };

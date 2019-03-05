@@ -22,23 +22,27 @@ describe('Bali Digital Notary™', function() {
 
     describe('Test Key Generation', function() {
 
-        it('should support correct versions', function() {
-            const versions = notary.supportedProtocols();
+        it('should connect to the HSM', async function() {
+            await notary.connectHSM();
+        });
+
+        it('should support correct versions', async function() {
+            const versions = await notary.supportedProtocols();
             expect(versions.toString()).to.equal('[v1]');
         });
 
-        it('should generate the keys', function() {
-            certificateDocument = notary.generateKeys();
+        it('should generate the keys', async function() {
+            certificateDocument = await notary.generateKeys();
             expect(certificateDocument).to.exist;  // jshint ignore:line
         });
 
-        it('should retrieve the notary certificate', function() {
+        it('should retrieve the notary certificate', async function() {
             notaryCertificate = certificateDocument.getValue('$component');
             expect(notaryCertificate).to.exist;  // jshint ignore:line
         });
 
-        it('should retrieve the certificate citation', function() {
-            certificateCitation = notary.getCitation();
+        it('should retrieve the certificate citation', async function() {
+            certificateCitation = await notary.getCitation();
             expect(certificateCitation).to.exist;  // jshint ignore:line
         });
 
@@ -46,15 +50,16 @@ describe('Bali Digital Notary™', function() {
 
     describe('Test Certificate Validation', function() {
 
-        it('should validate the certificate', function() {
-            expect(certificateDocument.toString()).to.equal(notary.getCertificate().toString());
+        it('should validate the certificate', async function() {
+            const certificate = await notary.getCertificate();
+            expect(certificateDocument.toString()).to.equal(certificate.toString());
             expect(notaryCertificate.getValue('$protocol').toString()).to.equal('v1');
-            var isValid = notary.documentIsValid(certificateDocument, notaryCertificate);
+            var isValid = await notary.documentIsValid(certificateDocument, notaryCertificate);
             expect(isValid).to.equal(true);
         });
 
-        it('should validate the citation for the certificate', function() {
-            var isValid = notary.documentMatches(certificateDocument, certificateCitation);
+        it('should validate the citation for the certificate', async function() {
+            var isValid = await notary.documentMatches(certificateDocument, certificateCitation);
             expect(isValid).to.equal(true);
         });
 
@@ -62,7 +67,7 @@ describe('Bali Digital Notary™', function() {
 
     describe('Test Signing and Verification', function() {
 
-        it('should digitally sign a document properly', function() {
+        it('should digitally sign a document properly', async function() {
             const tag = bali.tag();
             const transaction = bali.catalog({
                 $transactionId: bali.tag(),
@@ -81,11 +86,11 @@ describe('Bali Digital Notary™', function() {
                 $version: bali.version([2, 3]),
                 $digest: bali.parse("'JB2NG73VTB957T9TZWT44KRZVQ467KWJ2MSJYT6YW2RQAYQMSR861XGM5ZCDCPNJYR612SJT9RFKHA9YZ5DJMLYC7N3127AY4QDVJ38'")
             });
-            var document = notary.notarizeDocument(transaction, previous);
-            var citation = notary.citeDocument(document);
-            var isValid = notary.documentIsValid(document, notaryCertificate);
+            var document = await notary.notarizeDocument(transaction, previous);
+            var citation = await notary.citeDocument(document);
+            var isValid = await notary.documentIsValid(document, notaryCertificate);
             expect(isValid).to.equal(true);
-            var matches = notary.documentMatches(document, citation);
+            var matches = await notary.documentMatches(document, citation);
             expect(matches).to.equal(true);
         });
 
@@ -93,10 +98,10 @@ describe('Bali Digital Notary™', function() {
 
     describe('Test Encryption and Decryption', function() {
 
-        it('should encrypt and decrypt a message properly', function() {
+        it('should encrypt and decrypt a message properly', async function() {
             var message = bali.parse('"This is a test..."');
-            var encrypted = notary.encryptMessage(message, notaryCertificate);
-            var decrypted = notary.decryptMessage(encrypted);
+            var encrypted = await notary.encryptMessage(message, notaryCertificate);
+            var decrypted = await notary.decryptMessage(encrypted);
             expect(decrypted.isEqualTo(message)).to.equal(true);
         });
 
@@ -104,20 +109,20 @@ describe('Bali Digital Notary™', function() {
 
     describe('Test Key Regeneration', function() {
 
-        it('should regenerate a notary key properly', function() {
-            var newCertificateDocument = notary.generateKeys();
+        it('should regenerate a notary key properly', async function() {
+            var newCertificateDocument = await notary.generateKeys();
             expect(newCertificateDocument).to.exist;  // jshint ignore:line
             var newNotaryCertificate = newCertificateDocument.getValue('$component');
 
-            var document = notary.notarizeDocument(component);
-            var citation = notary.citeDocument(document);
-            isValid = notary.documentIsValid(document, notaryCertificate);
+            var document = await notary.notarizeDocument(component);
+            var citation = await notary.citeDocument(document);
+            isValid = await notary.documentIsValid(document, notaryCertificate);
             expect(isValid).to.equal(false);
 
-            isValid = notary.documentIsValid(document, newNotaryCertificate);
+            isValid = await notary.documentIsValid(document, newNotaryCertificate);
             expect(isValid).to.equal(true);
 
-            var matches = notary.documentMatches(document, citation);
+            var matches = await notary.documentMatches(document, citation);
             expect(matches).to.equal(true);
             notaryCertificate = newNotaryCertificate;
         });
@@ -126,19 +131,19 @@ describe('Bali Digital Notary™', function() {
 
     describe('Test Multiple Notarizations', function() {
 
-        it('should notarized a component twice properly', function() {
-            var document = notary.notarizeDocument(component);
-            var citation = notary.citeDocument(document);
-            var isValid = notary.documentIsValid(document, notaryCertificate);
+        it('should notarized a component twice properly', async function() {
+            var document = await notary.notarizeDocument(component);
+            var citation = await notary.citeDocument(document);
+            var isValid = await notary.documentIsValid(document, notaryCertificate);
             expect(isValid).to.equal(true);
-            var matches = notary.documentMatches(document, citation);
+            var matches = await notary.documentMatches(document, citation);
             expect(matches).to.equal(true);
 
-            document = notary.notarizeDocument(document);
-            citation = notary.citeDocument(document);
-            isValid = notary.documentIsValid(document, notaryCertificate);
+            document = await notary.notarizeDocument(document);
+            citation = await notary.citeDocument(document);
+            isValid = await notary.documentIsValid(document, notaryCertificate);
             expect(isValid).to.equal(true);
-            matches = notary.documentMatches(document, citation);
+            matches = await notary.documentMatches(document, citation);
             expect(matches).to.equal(true);
         });
 

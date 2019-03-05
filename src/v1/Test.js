@@ -21,7 +21,7 @@
  * implements these operations as a software security module to allow testing without an
  * actual HSM.
  */
-const fs = require('fs');
+const pfs = require('fs').promises;
 const os = require('os');
 const crypto = require('crypto');
 const ec_pem = require('ec-pem');
@@ -41,7 +41,7 @@ const EOL = '\n';
  * @param {String} testDirectory An optional directory to use for local testing.
  * @returns {Object} A proxy to the test software security module managing the private key.
  */
-exports.api = function(account, testDirectory) {
+exports.api = async function(account, testDirectory) {
 
     // analyze the parameters
     if (!account || account.getTypeId() !== bali.types.TAG) {
@@ -56,9 +56,11 @@ exports.api = function(account, testDirectory) {
 
     // create the configuration directory structure if necessary (with drwx------ permissions)
     var configDirectory = testDirectory || os.homedir() + '/.bali/';
-    if (!fs.existsSync(configDirectory)) fs.mkdirSync(configDirectory, 448);
+    var exists = await doesExist(configDirectory);
+    if (!exists) await pfs.mkdir(configDirectory, 0o700);
     configDirectory += account.getValue() + '/';
-    if (!fs.existsSync(configDirectory)) fs.mkdirSync(configDirectory, 448);
+    exists = await doesExist(configDirectory);
+    if (!exists) await pfs.mkdir(configDirectory, 0o700);
     const keyFilename = configDirectory + 'NotaryKey.bali';
     const certificateFilename = configDirectory + 'NotaryCertificate.ndoc';
     
@@ -73,10 +75,11 @@ exports.api = function(account, testDirectory) {
     try {
 
         // check for an existing notary key file
-        if (fs.existsSync(keyFilename)) {
+        var exists = await doesExist(keyFilename);
+        if (exists) {
 
             // read in the notary key information
-            const keySource = fs.readFileSync(keyFilename, 'utf8');
+            const keySource = await pfs.readFile(keyFilename, 'utf8');
             const keys = bali.parse(keySource);
             const parameters = keys.getParameters();
             notaryTag = parameters.getParameter('$tag');
@@ -88,13 +91,14 @@ exports.api = function(account, testDirectory) {
         }
 
         // check for an existing notary certificate file
-        if (fs.existsSync(certificateFilename)) {
+        exists = await doesExist(certificateFilename);
+        if (exists) {
             // read in the notary certificate information
-            const certificateSource = fs.readFileSync(certificateFilename, 'utf8');
+            const certificateSource = await pfs.readFile(certificateFilename, 'utf8');
             notaryCertificate = bali.parse(certificateSource);
         }
 
-    } catch (e) {
+    } catch (exception) {
         throw bali.exception({
             $module: '$Test',
             $procedure: '$api',
@@ -133,7 +137,7 @@ exports.api = function(account, testDirectory) {
          * 
          * @returns {Catalog} The notary certificate associated with this notary key.
          */
-        certificate: function() {
+        certificate: async function() {
             return notaryCertificate;
         },
 
@@ -144,7 +148,7 @@ exports.api = function(account, testDirectory) {
          * @returns {Catalog} A citation referencing the notary certificate associated
          * with this notary key.
          */
-        citation: function() {
+        citation: async function() {
             return certificateCitation;
         },
 
@@ -159,7 +163,7 @@ exports.api = function(account, testDirectory) {
          * 
          * @returns {Catalog} The new notary certificate.
          */
-        generate: function() {
+        generate: async function() {
             const isRegeneration = !!privateKey;
 
             // generate a new public-private key pair
@@ -199,7 +203,8 @@ exports.api = function(account, testDirectory) {
             if (previous) notaryCertificate.setValue('$previous', previous);
             notaryCertificate.setValue('$component', component);
             if (citation) notaryCertificate.setValue('$citation', citation);
-            notaryCertificate.setValue('$signature', this.sign(notaryCertificate));
+            const signature = await this.sign(notaryCertificate);
+            notaryCertificate.setValue('$signature', signature);
 
             // save the new key
             privateKey = curve.getPrivateKey();
@@ -212,9 +217,9 @@ exports.api = function(account, testDirectory) {
             try {
                 const keySource = this.toString() + EOL;  // add POSIX compliant <EOL>
                 const certificateSource = notaryCertificate.toString() + EOL;  // add POSIX compliant <EOL>
-                fs.writeFileSync(keyFilename, keySource, {encoding: 'utf8', mode: 384});  // -rw------- permissions
-                fs.writeFileSync(certificateFilename, certificateSource, {encoding: 'utf8', mode: 384});  // -rw------- permissions
-            } catch (e) {
+                await pfs.writeFile(keyFilename, keySource, {encoding: 'utf8', mode: 0o600});
+                await pfs.writeFile(certificateFilename, certificateSource, {encoding: 'utf8', mode: 0o600});
+            } catch (exception) {
                 throw bali.exception({
                     $module: '$Test',
                     $procedure: '$generate',
@@ -231,22 +236,24 @@ exports.api = function(account, testDirectory) {
          * This method causes the notary key to forget all information it knows about the
          * current public-private key pair.
          */
-        forget: function() {
+        forget: async function() {
             version = undefined;
             publicKey = undefined;
             privateKey = undefined;
             certificateCitation = undefined;
             notaryCertificate = undefined;
             try {
-                if (fs.existsSync(keyFilename)) {
+                var exists = await doesExist(keyFilename);
+                if (exists) {
                     // remove the configuration file
-                    fs.unlinkSync(keyFilename);
+                    await pfs.unlink(keyFilename);
                 }
-                if (fs.existsSync(certificateFilename)) {
+                exists = await doesExist(certificateFilename);
+                if (exists) {
                     // remove the configuration file
-                    fs.unlinkSync(certificateFilename);
+                    await pfs.unlink(certificateFilename);
                 }
-            } catch (e) {
+            } catch (exception) {
                 throw bali.exception({
                     $module: '$Test',
                     $procedure: '$forget',
@@ -265,7 +272,7 @@ exports.api = function(account, testDirectory) {
          * @param {String} message The message to be digitally signed.
          * @returns {Binary} A base 32 encoded digital signature of the message.
          */
-        sign: function(message) {
+        sign: async function(message) {
             const curve = crypto.createECDH(Public.CURVE);
             curve.setPrivateKey(privateKey);
             const pem = ec_pem(curve, Public.CURVE);
@@ -283,7 +290,7 @@ exports.api = function(account, testDirectory) {
          * @param {Catalog} aem The authenticated encrypted message to be decrypted.
          * @returns {String} The decrypted plaintext message.
          */
-        decrypt: function(aem) {
+        decrypt: async function(aem) {
             const seed = aem.getValue('$seed').getValue();
             const iv = aem.getValue('$iv').getValue();
             const auth = aem.getValue('$auth').getValue();
@@ -302,4 +309,17 @@ exports.api = function(account, testDirectory) {
             return message;
         }
     };
+};
+
+
+const doesExist = async function(path) {
+    var exists = true;
+    await pfs.stat(path).catch(function(error) {
+        if (error.code === "ENOENT") {
+            exists = false;
+        } else {
+            throw error;
+        }
+    });
+    return exists;
 };
