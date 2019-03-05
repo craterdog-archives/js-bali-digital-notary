@@ -40,18 +40,19 @@ const EOL = '\n';
 /**
  * This function returns an object that implements the API for a digital notary.
  * 
- * @param {Tag} account The unique tag for the account that owns the notary key.
  * @param {String} testDirectory An optional location of the test directory to be used for local
  * configuration storage. If not specified, the location of the configuration is in '~/.bali/'.
  * @returns {Object} An object that implements the API for a digital notary.
  */
-exports.api = function(account, testDirectory) {
+exports.api = function(testDirectory) {
+    var accountTag;
     var privateAPI;
 
     return {
 
-        connectHSM: async function() {
+        connectHSM: async function(account) {
             try {
+                accountTag = account;
                 // connect to the private hardware security module for the account
                 if (testDirectory) {
                     // use a test software security module (SSM)
@@ -63,11 +64,12 @@ exports.api = function(account, testDirectory) {
             } catch (exception) {
                 throw bali.exception({
                     $module: '$DigitalNotary',
-                    $procedure: '$api',
+                    $procedure: '$connectHSM',
                     $exception: '$hsmAccess',
-                    $account: account,
+                    $account: accountTag,
                     $testMode: testDirectory ? true : false,
-                    $message: '"' + EOL + 'Unable to access the hardware security module (HSM): ' + EOL + exception + EOL + '"'
+                    $message: '"Unable to access the hardware security module (HSM)."',
+                    $cause: exception
                 });
             }
         },
@@ -144,7 +146,7 @@ exports.api = function(account, testDirectory) {
                     $module: '$DigitalNotary',
                     $procedure: '$notarizeDocument',
                     $exception: '$missingKey',
-                    $account: account,
+                    $account: accountTag,
                     $message: '"The notary key is missing."'
                 });
             }
@@ -263,7 +265,7 @@ exports.api = function(account, testDirectory) {
                     $module: '$DigitalNotary',
                     $procedure: '$decryptMessage',
                     $exception: '$missingKey',
-                    $account: account,
+                    $account: accountTag,
                     $message: '"The notary key is missing."'
                 });
             }

@@ -104,7 +104,8 @@ exports.api = async function(account, testDirectory) {
             $procedure: '$api',
             $exception: '$directoryAccess',
             $directory: '"' + configDirectory + '"',
-            $message: '"The configuration directory could not be accessed."'
+            $message: '"The configuration directory could not be accessed."',
+            $cause: exception
         });
     }
 
@@ -225,7 +226,8 @@ exports.api = async function(account, testDirectory) {
                     $procedure: '$generate',
                     $exception: '$directoryAccess',
                     $directory: '"' + configDirectory + '"',
-                    $message: '"The configuration directory could not be accessed."'
+                    $message: '"The configuration directory could not be accessed."',
+                    $cause: exception
                 });
             }
 
@@ -259,7 +261,8 @@ exports.api = async function(account, testDirectory) {
                     $procedure: '$forget',
                     $exception: '$directoryAccess',
                     $directory: '"' + configDirectory + '"',
-                    $message: '"The configuration directory could not be accessed."'
+                    $message: '"The configuration directory could not be accessed."',
+                    $cause: exception
                 });
             }
         },

@@ -11,7 +11,7 @@
 const mocha = require('mocha');
 const expect = require('chai').expect;
 const bali = require('bali-component-framework');
-const notary = require('../').api(bali.tag(), 'test/config/');
+const notary = require('../').api('test/config/');
 
 describe('Bali Digital Notary™', function() {
 
@@ -23,7 +23,8 @@ describe('Bali Digital Notary™', function() {
     describe('Test Key Generation', function() {
 
         it('should connect to the HSM', async function() {
-            await notary.connectHSM();
+            const account = bali.tag();
+            await notary.connectHSM(account);
         });
 
         it('should support correct versions', async function() {
