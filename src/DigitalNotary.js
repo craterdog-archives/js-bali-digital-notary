@@ -68,9 +68,8 @@ exports.api = function(testDirectory) {
                     $exception: '$hsmAccess',
                     $account: accountTag,
                     $testMode: testDirectory ? true : false,
-                    $message: '"Unable to access the hardware security module (HSM)."',
-                    $cause: exception
-                });
+                    $message: '"Unable to access the hardware security module (HSM)."'
+                }, exception);
             }
         },
 

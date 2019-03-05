@@ -11,7 +11,7 @@ module.exports = function(grunt) {
     // read in the package information
     pkg: grunt.file.readJSON('package.json'),
 
-    // grunt-contrib-jshint plugin configuration (lint for JS)
+    // grunt-eslint plugin configuration (lint for JS)
     eslint: {
       options: {
       },
