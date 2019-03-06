@@ -108,18 +108,6 @@ exports.api = function(account, testDirectory) {
          */
         initialize: async function() {
             try {
-                // analyze the parameters
-                if (!account || account.getTypeId() !== bali.types.TAG) {
-                    const exception = bali.exception({
-                        $module: '$v1Test',
-                        $procedure: '$initialize',
-                        $exception: '$invalidParameter',
-                        $parameter: account,
-                        $message: bali.text('The specified account tag is invalid.')
-                    });
-                    throw exception;
-                }
-        
                 // create the configuration directory structure if necessary (with drwx------ permissions)
                 configDirectory = testDirectory || os.homedir() + '/.bali/';
                 await pfs.mkdir(configDirectory, 0o700).catch(function() {});
@@ -130,8 +118,7 @@ exports.api = function(account, testDirectory) {
 
                 // read in the notary key attributes (if possible)
                 try {
-                    var exists = await doesExist(keyFilename);
-                    if (exists) {
+                    if (await doesExist(keyFilename)) {
                         // read in the notary key information
                         const keySource = await pfs.readFile(keyFilename, 'utf8');
                         const keys = bali.parse(keySource);
@@ -143,8 +130,7 @@ exports.api = function(account, testDirectory) {
                         privateKey = keys.getValue('$privateKey').getValue();
                         certificateCitation = keys.getValue('$citation');
                     }
-                    exists = await doesExist(certificateFilename);
-                    if (exists) {
+                    if (await doesExist(certificateFilename)) {
                         // read in the notary certificate information
                         const certificateSource = await pfs.readFile(certificateFilename, 'utf8');
                         notaryCertificate = bali.parse(certificateSource);
@@ -330,6 +316,19 @@ exports.api = function(account, testDirectory) {
          * @returns {Binary} A base 32 encoded digital signature of the component.
          */
         sign: async function(component) {
+            // validate the parameters
+            if (!component || !component.getTypeId) {
+                const exception = bali.exception({
+                    $module: '$v1Test',
+                    $procedure: '$sign',
+                    $exception: '$invalidParameter',
+                    $parameter: component ? bali.text(component.toString()) : bali.NONE,
+                    $message: bali.text('The component is invalid.')
+                });
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
+
             try {
                 const string = component.toString();  // force it to a string if it isn't already
                 const curve = crypto.createECDH(Public.CURVE);
@@ -362,6 +361,19 @@ exports.api = function(account, testDirectory) {
          * @returns {String} The decrypted component.
          */
         decrypt: async function(aem) {
+            // validate the parameters
+            if (!aem || !aem.getTypeId || aem.getTypeId() !== bali.types.CATALOG) {
+                const exception = bali.exception({
+                    $module: '$v1Test',
+                    $procedure: '$decrypt',
+                    $exception: '$invalidParameter',
+                    $parameter: aem ? bali.text(aem.toString()) : bali.NONE,
+                    $message: bali.text('The authenticated encrypted message is invalid.')
+                });
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
+
             try {
                 const seed = aem.getValue('$seed').getValue();
                 const iv = aem.getValue('$iv').getValue();

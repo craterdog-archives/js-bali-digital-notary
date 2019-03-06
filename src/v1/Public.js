@@ -42,6 +42,19 @@ exports.protocol = bali.parse(exports.PROTOCOL);
  * @returns {Binary} A base 32 encoded digital digest of the component.
  */
 exports.digest = function(component) {
+    // validate the parameters
+    if (!component || !component.getTypeId) {
+        const exception = bali.exception({
+            $module: '$v1Public',
+            $procedure: '$digest',
+            $exception: '$invalidParameter',
+            $parameter: component ? bali.text(component.toString()) : bali.NONE,
+            $message: bali.text('The component is invalid.')
+        });
+        if (debug) console.error(exception.toString());
+        throw exception;
+    }
+
     try {
         const string = component.toString();
         const hasher = crypto.createHash(exports.DIGEST);
@@ -74,6 +87,41 @@ exports.digest = function(component) {
  * @returns {Boolean} Whether or not the digital signature is valid.
  */
 exports.verify = function(component, publicKey, signature) {
+    // validate the parameters
+    if (!component || !component.getTypeId) {
+        const exception = bali.exception({
+            $module: '$v1Public',
+            $procedure: '$verify',
+            $exception: '$invalidParameter',
+            $parameter: component ? bali.text(component.toString()) : bali.NONE,
+            $message: bali.text('The component is invalid.')
+        });
+        if (debug) console.error(exception.toString());
+        throw exception;
+    }
+    if (!publicKey || !publicKey.getTypeId || publicKey.getTypeId() !== bali.types.BINARY) {
+        const exception = bali.exception({
+            $module: '$v1Public',
+            $procedure: '$verify',
+            $exception: '$invalidParameter',
+            $parameter: publicKey ? bali.text(publicKey.toString()) : bali.NONE,
+            $message: bali.text('The public key is invalid.')
+        });
+        if (debug) console.error(exception.toString());
+        throw exception;
+    }
+    if (!signature || !signature.getTypeId || signature.getTypeId() !== bali.types.BINARY) {
+        const exception = bali.exception({
+            $module: '$v1Public',
+            $procedure: '$verify',
+            $exception: '$invalidParameter',
+            $parameter: signature ? bali.text(signature.toString()) : bali.NONE,
+            $message: bali.text('The digital signature is invalid.')
+        });
+        if (debug) console.error(exception.toString());
+        throw exception;
+    }
+
     try {
         const string = component.toString();
         signature = signature.getValue();
@@ -108,6 +156,30 @@ exports.verify = function(component, publicKey, signature) {
  * @returns {Catalog} An authenticated encrypted message.
  */
 exports.encrypt = function(component, publicKey) {
+    // validate the parameters
+    if (!component || !component.getTypeId) {
+        const exception = bali.exception({
+            $module: '$v1Public',
+            $procedure: '$encrypt',
+            $exception: '$invalidParameter',
+            $parameter: component ? bali.text(component.toString()) : bali.NONE,
+            $message: bali.text('The component is invalid.')
+        });
+        if (debug) console.error(exception.toString());
+        throw exception;
+    }
+    if (!publicKey || !publicKey.getTypeId || publicKey.getTypeId() !== bali.types.BINARY) {
+        const exception = bali.exception({
+            $module: '$v1Public',
+            $procedure: '$encrypt',
+            $exception: '$invalidParameter',
+            $parameter: publicKey ? bali.text(publicKey.toString()) : bali.NONE,
+            $message: bali.text('The public key is invalid.')
+        });
+        if (debug) console.error(exception.toString());
+        throw exception;
+    }
+
     try {
         // convert the component to a string and public key to bytes
         const string = component.toString();
@@ -165,6 +237,41 @@ exports.encrypt = function(component, publicKey) {
  * @returns {Catalog} A new document citation.
  */
 exports.citation = function(tag, version, digest) {
+    // validate the parameters
+    if (!tag || !tag.getTypeId || tag.getTypeId() !== bali.types.TAG) {
+        const exception = bali.exception({
+            $module: '$v1Public',
+            $procedure: '$citation',
+            $exception: '$invalidParameter',
+            $parameter: tag ? bali.text(tag.toString()) : bali.NONE,
+            $message: bali.text('The tag is invalid.')
+        });
+        if (debug) console.error(exception.toString());
+        throw exception;
+    }
+    if (!version || !version.getTypeId || version.getTypeId() !== bali.types.VERSION) {
+        const exception = bali.exception({
+            $module: '$v1Public',
+            $procedure: '$citation',
+            $exception: '$invalidParameter',
+            $parameter: version ? bali.text(version.toString()) : bali.NONE,
+            $message: bali.text('The version is invalid.')
+        });
+        if (debug) console.error(exception.toString());
+        throw exception;
+    }
+    if (!digest || !digest.getTypeId || digest.getTypeId() !== bali.types.BINARY) {
+        const exception = bali.exception({
+            $module: '$v1Public',
+            $procedure: '$citation',
+            $exception: '$invalidParameter',
+            $parameter: digest ? bali.text(digest.toString()) : bali.NONE,
+            $message: bali.text('The digest is invalid.')
+        });
+        if (debug) console.error(exception.toString());
+        throw exception;
+    }
+
     return bali.catalog({
         $protocol: exports.protocol,
         $timestamp: bali.moment(),  // now
