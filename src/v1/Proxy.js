@@ -15,6 +15,9 @@
  * associated private key. The private key itself is created on the HSM and never leaves
  * it.  All operations requiring the private key are performed in hardware on the HSM.
  */
+const bali = require('bali-component-framework');
+const Public = require('./Public');
+const debug = false;  // set to true for error logging
 
 
 /**
@@ -24,12 +27,29 @@
  * @param {Tag} account The unique tag for the account that owns the notary key.
  * @returns {Object} A proxy object to the hardware security module managing the private key.
  */
-exports.api = async function(account) {
+exports.api = function(account) {
+
+    // validate the parameters
+    if (!account || !account.getTypeId || account.getTypeId() !== bali.types.TAG) {
+        const exception = bali.exception({
+            $module: '$v1Proxy',
+            $procedure: '$api',
+            $exception: '$invalidParameter',
+            $parameter: account ? bali.text(account.toString()) : bali.NONE,
+            $message: bali.text('The account tag is invalid.')
+        });
+        if (debug) console.error(exception.toString());
+        throw exception;
+    }
     
     return {
 
         toString: function() {
             throw new Error('BUG: The following method has not yet been implemented: toString()');
+        },
+
+        initialize: async function() {
+            throw new Error('BUG: The following method has not yet been implemented: initialize()');
         },
 
         certificate: async function() {

@@ -9,9 +9,11 @@
  ************************************************************************/
 
 const mocha = require('mocha');
+const assert = require('chai').assert;
 const expect = require('chai').expect;
 const bali = require('bali-component-framework');
-const notary = require('../').api('test/config/');
+const account = bali.tag();
+const notary = require('../').api(account, 'test/config/');
 
 describe('Bali Digital Notary™', function() {
 
@@ -22,9 +24,14 @@ describe('Bali Digital Notary™', function() {
 
     describe('Test Key Generation', function() {
 
-        it('should connect to the HSM', async function() {
-            const account = bali.tag();
-            await notary.connectHSM(account);
+        it('should initialize the API once and only once', async function() {
+            await notary.initializeAPI();
+            try {
+                await notary.initializeAPI();
+                assert.fail('The second attempt to initialize the API should have failed.');
+            } catch(error) {
+                // expected
+            };
         });
 
         it('should support correct versions', async function() {
@@ -33,7 +40,7 @@ describe('Bali Digital Notary™', function() {
         });
 
         it('should generate the keys', async function() {
-            certificateDocument = await notary.generateKeys();
+            certificateDocument = await notary.generateKeyPair();
             expect(certificateDocument).to.exist;  // jshint ignore:line
         });
 
@@ -99,11 +106,11 @@ describe('Bali Digital Notary™', function() {
 
     describe('Test Encryption and Decryption', function() {
 
-        it('should encrypt and decrypt a message properly', async function() {
-            var message = bali.parse('"This is a test..."');
-            var encrypted = await notary.encryptMessage(message, notaryCertificate);
-            var decrypted = await notary.decryptMessage(encrypted);
-            expect(decrypted.isEqualTo(message)).to.equal(true);
+        it('should encrypt and decrypt a component properly', async function() {
+            var component = bali.parse('"This is a test..."');
+            var encrypted = await notary.encryptComponent(component, notaryCertificate);
+            var decrypted = await notary.decryptComponent(encrypted);
+            expect(decrypted.isEqualTo(component)).to.equal(true);
         });
 
     });
@@ -111,7 +118,7 @@ describe('Bali Digital Notary™', function() {
     describe('Test Key Regeneration', function() {
 
         it('should regenerate a notary key properly', async function() {
-            var newCertificateDocument = await notary.generateKeys();
+            var newCertificateDocument = await notary.generateKeyPair();
             expect(newCertificateDocument).to.exist;  // jshint ignore:line
             var newNotaryCertificate = newCertificateDocument.getValue('$component');
 
