@@ -8,12 +8,13 @@
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
 
+const debug = false;  // set to true for exception logging
 const mocha = require('mocha');
 const assert = require('chai').assert;
 const expect = require('chai').expect;
 const bali = require('bali-component-framework');
 const account = bali.tag();
-const notary = require('../').api(account, 'test/config/');
+const notary = require('../').api(account, 'test/config/', debug);
 
 describe('Bali Digital Notary™', function() {
 

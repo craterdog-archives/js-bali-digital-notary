@@ -27,7 +27,6 @@ const crypto = require('crypto');
 const ec_pem = require('ec-pem');
 const bali = require('bali-component-framework');
 const Public = require('./Public');
-const debug = false;  // set to true for error logging
 
 // This private constant sets the POSIX end of line character
 const EOL = '\n';
@@ -40,9 +39,12 @@ const EOL = '\n';
  * 
  * @param {Tag} account The unique tag for the account that owns the notary key.
  * @param {String} testDirectory An optional directory to use for local testing.
+ * @param {Boolean} debug An optional flag that determines whether or not exceptions
+ * will be logged to the error console.
  * @returns {Object} A proxy to the test software security module managing the private key.
  */
-exports.api = function(account, testDirectory) {
+exports.api = function(account, testDirectory, debug) {
+    debug = debug || false;
 
     // validate the parameters
     if (!account || !account.getTypeId || account.getTypeId() !== bali.types.TAG) {

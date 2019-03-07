@@ -21,7 +21,6 @@ const v1 = require('./v1');
 //const v2 = require('./v2');
 //const v3 = require('./v3');
 //  ...
-const debug = false;  // set to true for error logging
 
 // configure the supported protocol public APIs
 const supportedAPIs = {
@@ -44,9 +43,12 @@ const EOL = '\n';
  * @param {Tag} account The unique account tag for the owner of the digital notary.
  * @param {String} testDirectory An optional location of the test directory to be used for local
  * configuration storage. If not specified, the location of the configuration is in '~/.bali/'.
+ * @param {Boolean} debug An optional flag that determines whether or not exceptions
+ * will be logged to the error console.
  * @returns {Object} An object that implements the API for a digital notary.
  */
-exports.api = function(account, testDirectory) {
+exports.api = function(account, testDirectory, debug) {
+    debug = debug || false;
 
     // validate the parameters
     if (!account || !account.getTypeId || account.getTypeId() !== bali.types.TAG) {
@@ -70,6 +72,7 @@ exports.api = function(account, testDirectory) {
             $parameter: bali.text(testDirectory.toString()),
             $message: bali.text('The test directory string is invalid.')
         });
+        if (debug) console.error(exception.toString());
         throw exception;
     }
 
@@ -97,6 +100,7 @@ exports.api = function(account, testDirectory) {
                         $testMode: testDirectory ? true : false,
                         $message: bali.text('The Bali Digital Notary API™ has already been initialized.')
                     });
+                    if (debug) console.error(exception.toString());
                     throw exception;
                 };
             } catch (cause) {

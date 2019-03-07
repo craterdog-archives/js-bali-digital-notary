@@ -17,7 +17,6 @@
  */
 const bali = require('bali-component-framework');
 const Public = require('./Public');
-const debug = false;  // set to true for error logging
 
 
 /**
@@ -25,9 +24,12 @@ const debug = false;  // set to true for error logging
  * (notary private key) associated with the specified unique tag.
  * 
  * @param {Tag} account The unique tag for the account that owns the notary key.
+ * @param {Boolean} debug An optional flag that determines whether or not exceptions
+ * will be logged to the error console.
  * @returns {Object} A proxy object to the hardware security module managing the private key.
  */
-exports.api = function(account) {
+exports.api = function(account, debug) {
+    debug = debug || false;
 
     // validate the parameters
     if (!account || !account.getTypeId || account.getTypeId() !== bali.types.TAG) {

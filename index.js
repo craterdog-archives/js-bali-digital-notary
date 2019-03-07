@@ -20,9 +20,11 @@
  * @param {Tag} account The unique account tag for the owner of the digital notary.
  * @param {String} testDirectory The optional local directory to be used to 
  * maintain the configuration information for the digital notary API.
+ * @param {Boolean} debug An optional flag that determines whether or not exceptions
+ * will be logged to the error console.
  * @returns {Object} A singleton object containing the initialized digital notary API.
  */
-exports.api = function(account, testDirectory) {
-    const api = require('./src/DigitalNotary').api(account, testDirectory);
+exports.api = function(account, testDirectory, debug) {
+    const api = require('./src/DigitalNotary').api(account, testDirectory, debug);
     return api;
 };

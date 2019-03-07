@@ -14,10 +14,10 @@
  * public key. The public key is associated with a private key that is maintained
  * within a hardware security module (HSM).
  */
+const debug = false;  // set to true for error logging
 const crypto = require('crypto');
 const ec_pem = require('ec-pem');
 const bali = require('bali-component-framework');
-const debug = false;  // set to true for error logging
 
 
 // ALGORITHMS FOR THIS VERSION OF THE PROTOCOL
