@@ -52,7 +52,7 @@ exports.api = function(account, testDirectory) {
     if (!account || !account.getTypeId || account.getTypeId() !== bali.types.TAG) {
         const exception = bali.exception({
             $module: '$DigitalNotary',
-            $procedure: '$api',
+            $function: '$api',
             $exception: '$invalidParameter',
             $parameter: account ? bali.text(account.toString()) : bali.NONE,
             $message: bali.text('The account tag is invalid.')
@@ -63,7 +63,7 @@ exports.api = function(account, testDirectory) {
     if (testDirectory && typeof testDirectory !== 'string') {
         const exception = bali.exception({
             $module: '$DigitalNotary',
-            $procedure: '$api',
+            $function: '$api',
             $exception: '$invalidParameter',
             $account: account,
             $testMode: testDirectory ? true : false,
@@ -91,7 +91,7 @@ exports.api = function(account, testDirectory) {
                 this.initializeAPI = function() {
                     const exception = bali.exception({
                         $module: '$DigitalNotary',
-                        $procedure: '$initializeAPI',
+                        $function: '$initializeAPI',
                         $exception: '$alreadyInitialized',
                         $account: account,
                         $testMode: testDirectory ? true : false,
@@ -102,7 +102,7 @@ exports.api = function(account, testDirectory) {
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
-                    $procedure: '$initializeAPI',
+                    $function: '$initializeAPI',
                     $exception: '$unexpected',
                     $account: account,
                     $testMode: testDirectory ? true : false,
@@ -138,7 +138,7 @@ exports.api = function(account, testDirectory) {
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
-                    $procedure: '$generateKeyPair',
+                    $function: '$generateKeyPair',
                     $exception: '$unexpected',
                     $account: account,
                     $testMode: testDirectory ? true : false,
@@ -162,7 +162,7 @@ exports.api = function(account, testDirectory) {
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
-                    $procedure: '$getCitation',
+                    $function: '$getCitation',
                     $exception: '$unexpected',
                     $account: account,
                     $testMode: testDirectory ? true : false,
@@ -186,7 +186,7 @@ exports.api = function(account, testDirectory) {
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
-                    $procedure: '$getCertificate',
+                    $function: '$getCertificate',
                     $exception: '$unexpected',
                     $account: account,
                     $testMode: testDirectory ? true : false,
@@ -213,7 +213,7 @@ exports.api = function(account, testDirectory) {
             if (!component || !component.getTypeId) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
-                    $procedure: '$notarizeDocument',
+                    $function: '$notarizeDocument',
                     $exception: '$invalidParameter',
                     $account: account,
                     $testMode: testDirectory ? true : false,
@@ -226,7 +226,7 @@ exports.api = function(account, testDirectory) {
             if (previous && (!previous.getTypeId || previous.getTypeId() !== bali.types.CATALOG)) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
-                    $procedure: '$notarizeDocument',
+                    $function: '$notarizeDocument',
                     $exception: '$invalidParameter',
                     $account: account,
                     $testMode: testDirectory ? true : false,
@@ -243,7 +243,7 @@ exports.api = function(account, testDirectory) {
                 if (!citation) {
                     const exception = bali.exception({
                         $module: '$DigitalNotary',
-                        $procedure: '$notarizeDocument',
+                        $function: '$notarizeDocument',
                         $exception: '$missingKey',
                         $account: account,
                         $testMode: testDirectory ? true : false,
@@ -276,7 +276,7 @@ exports.api = function(account, testDirectory) {
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
-                    $procedure: '$notarizeDocument',
+                    $function: '$notarizeDocument',
                     $exception: '$unexpected',
                     $account: account,
                     $testMode: testDirectory ? true : false,
@@ -301,7 +301,7 @@ exports.api = function(account, testDirectory) {
             if (!document || !document.getTypeId || document.getTypeId() !== bali.types.CATALOG) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
-                    $procedure: '$citeDocument',
+                    $function: '$citeDocument',
                     $exception: '$invalidParameter',
                     $account: account,
                     $testMode: testDirectory ? true : false,
@@ -317,7 +317,7 @@ exports.api = function(account, testDirectory) {
             if (!parameters || !parameters.getParameter('$tag') || !parameters.getParameter('$version')) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
-                    $procedure: '$citeDocument',
+                    $function: '$citeDocument',
                     $exception: '$missingParameters',
                     $document: document,
                     $message: bali.text('The document parameters are missing.')
@@ -335,7 +335,7 @@ exports.api = function(account, testDirectory) {
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
-                    $procedure: '$citeDocument',
+                    $function: '$citeDocument',
                     $exception: '$unexpected',
                     $account: account,
                     $testMode: testDirectory ? true : false,
@@ -352,30 +352,17 @@ exports.api = function(account, testDirectory) {
          * the specified document. The citation only matches if its digest matches the
          * digest of the document.
          * 
-         * @param {Catalog} document The document to be tested.
          * @param {Catalog} citation A document citation allegedly referring to the
          * specified document.
+         * @param {Catalog} document The document to be tested.
          * @returns {Boolean} Whether or not the citation matches the specified document.
          */
-        documentMatches: async function(document, citation) {
+        citationMatches: async function(citation, document) {
             // validate the parameters
-            if (!document || !document.getTypeId || document.getTypeId() !== bali.types.CATALOG) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $procedure: '$documentMatches',
-                    $exception: '$invalidParameter',
-                    $account: account,
-                    $testMode: testDirectory ? true : false,
-                    $parameter: document ? bali.text(document.toString()) : bali.NONE,
-                    $message: bali.text('The document is invalid.')
-                });
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
             if (!citation || !citation.getTypeId || citation.getTypeId() !== bali.types.CATALOG) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
-                    $procedure: '$documentMatches',
+                    $function: '$citationMatches',
                     $exception: '$invalidParameter',
                     $account: account,
                     $testMode: testDirectory ? true : false,
@@ -385,10 +372,23 @@ exports.api = function(account, testDirectory) {
                 if (debug) console.error(exception.toString());
                 throw exception;
             }
+            if (!document || !document.getTypeId || document.getTypeId() !== bali.types.CATALOG) {
+                const exception = bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$citationMatches',
+                    $exception: '$invalidParameter',
+                    $account: account,
+                    $testMode: testDirectory ? true : false,
+                    $parameter: document ? bali.text(document.toString()) : bali.NONE,
+                    $message: bali.text('The document is invalid.')
+                });
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
 
             try {
                 // verify the citation
-                const publicAPI = getPublicAPI('$documentMatches', citation);
+                const publicAPI = getPublicAPI('$citationMatches', citation);
                 var digest = publicAPI.digest(document);
 
                 return digest.isEqualTo(citation.getValue('$digest'));
@@ -396,7 +396,7 @@ exports.api = function(account, testDirectory) {
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
-                    $procedure: '$documentMatches',
+                    $function: '$citationMatches',
                     $exception: '$unexpected',
                     $account: account,
                     $testMode: testDirectory ? true : false,
@@ -423,7 +423,7 @@ exports.api = function(account, testDirectory) {
             if (!document || !document.getTypeId || document.getTypeId() !== bali.types.CATALOG) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
-                    $procedure: '$documentIsValid',
+                    $function: '$documentIsValid',
                     $exception: '$invalidParameter',
                     $account: account,
                     $testMode: testDirectory ? true : false,
@@ -436,7 +436,7 @@ exports.api = function(account, testDirectory) {
             if (!certificate || !certificate.getTypeId || certificate.getTypeId() !== bali.types.CATALOG) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
-                    $procedure: '$documentIsValid',
+                    $function: '$documentIsValid',
                     $exception: '$invalidParameter',
                     $account: account,
                     $testMode: testDirectory ? true : false,
@@ -463,7 +463,7 @@ exports.api = function(account, testDirectory) {
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
-                    $procedure: '$documentIsValid',
+                    $function: '$documentIsValid',
                     $exception: '$unexpected',
                     $account: account,
                     $testMode: testDirectory ? true : false,
@@ -495,7 +495,7 @@ exports.api = function(account, testDirectory) {
             if (!component || !component.getTypeId) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
-                    $procedure: '$encryptComponent',
+                    $function: '$encryptComponent',
                     $exception: '$invalidParameter',
                     $account: account,
                     $testMode: testDirectory ? true : false,
@@ -508,7 +508,7 @@ exports.api = function(account, testDirectory) {
             if (!certificate || !certificate.getTypeId || certificate.getTypeId() !== bali.types.CATALOG) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
-                    $procedure: '$encryptComponent',
+                    $function: '$encryptComponent',
                     $exception: '$invalidParameter',
                     $account: account,
                     $testMode: testDirectory ? true : false,
@@ -527,7 +527,7 @@ exports.api = function(account, testDirectory) {
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
-                    $procedure: '$encryptComponent',
+                    $function: '$encryptComponent',
                     $exception: '$unexpected',
                     $account: account,
                     $testMode: testDirectory ? true : false,
@@ -553,7 +553,7 @@ exports.api = function(account, testDirectory) {
             if (!aem || !aem.getTypeId || aem.getTypeId() !== bali.types.CATALOG) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
-                    $procedure: '$decryptComponent',
+                    $function: '$decryptComponent',
                     $exception: '$invalidParameter',
                     $account: account,
                     $testMode: testDirectory ? true : false,
@@ -569,7 +569,7 @@ exports.api = function(account, testDirectory) {
                 if (!citation) {
                     const exception = bali.exception({
                         $module: '$DigitalNotary',
-                        $procedure: '$decryptComponent',
+                        $function: '$decryptComponent',
                         $exception: '$missingKey',
                         $account: account,
                         $message: bali.text('The notary key is missing.')
@@ -581,7 +581,7 @@ exports.api = function(account, testDirectory) {
                 if (!publicAPI.protocol.isEqualTo(protocol)) {
                     const exception = bali.exception({
                         $module: '$DigitalNotary',
-                        $procedure: '$decryptComponent',
+                        $function: '$decryptComponent',
                         $exception: '$unsupportedProtocol',
                         $expected: publicAPI.protocol,
                         $actual: protocol,
@@ -595,7 +595,7 @@ exports.api = function(account, testDirectory) {
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
-                    $procedure: '$decryptComponent',
+                    $function: '$decryptComponent',
                     $exception: '$unexpected',
                     $account: account,
                     $testMode: testDirectory ? true : false,
@@ -617,13 +617,13 @@ exports.api = function(account, testDirectory) {
  * This function returns the requested version of the public API or throws an exception
  * if it does not exist.
  */
-const getPublicAPI = function(procedure, document) {
+const getPublicAPI = function(functionName, document) {
     const protocol = document.getValue('$protocol');
     const publicAPI = supportedAPIs[protocol.toString()].Public;
     if (!publicAPI) {
         const exception = bali.exception({
             $module: '$DigitalNotary',
-            $procedure: procedure,
+            $function: functionName,
             $exception: '$unsupportedProtocol',
             $expected: supportedProtocols,
             $actual: protocol,

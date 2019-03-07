@@ -46,7 +46,7 @@ exports.digest = function(component) {
     if (!component || !component.getTypeId) {
         const exception = bali.exception({
             $module: '$v1Public',
-            $procedure: '$digest',
+            $function: '$digest',
             $exception: '$invalidParameter',
             $parameter: component ? bali.text(component.toString()) : bali.NONE,
             $message: bali.text('The component is invalid.')
@@ -65,7 +65,7 @@ exports.digest = function(component) {
     } catch (cause) {
         const exception = bali.exception({
             $module: '$v1Public',
-            $procedure: '$digest',
+            $function: '$digest',
             $exception: '$unexpected',
             $string: bali.text(string),
             $message: bali.text('An unexpected error occurred while attempting to generate a digest.')
@@ -91,7 +91,7 @@ exports.verify = function(component, publicKey, signature) {
     if (!component || !component.getTypeId) {
         const exception = bali.exception({
             $module: '$v1Public',
-            $procedure: '$verify',
+            $function: '$verify',
             $exception: '$invalidParameter',
             $parameter: component ? bali.text(component.toString()) : bali.NONE,
             $message: bali.text('The component is invalid.')
@@ -102,7 +102,7 @@ exports.verify = function(component, publicKey, signature) {
     if (!publicKey || !publicKey.getTypeId || publicKey.getTypeId() !== bali.types.BINARY) {
         const exception = bali.exception({
             $module: '$v1Public',
-            $procedure: '$verify',
+            $function: '$verify',
             $exception: '$invalidParameter',
             $parameter: publicKey ? bali.text(publicKey.toString()) : bali.NONE,
             $message: bali.text('The public key is invalid.')
@@ -113,7 +113,7 @@ exports.verify = function(component, publicKey, signature) {
     if (!signature || !signature.getTypeId || signature.getTypeId() !== bali.types.BINARY) {
         const exception = bali.exception({
             $module: '$v1Public',
-            $procedure: '$verify',
+            $function: '$verify',
             $exception: '$invalidParameter',
             $parameter: signature ? bali.text(signature.toString()) : bali.NONE,
             $message: bali.text('The digital signature is invalid.')
@@ -135,7 +135,7 @@ exports.verify = function(component, publicKey, signature) {
     } catch (cause) {
         const exception = bali.exception({
             $module: '$v1Public',
-            $procedure: '$verify',
+            $function: '$verify',
             $exception: '$unexpected',
             $string: bali.text(string),
             $message: bali.text('An unexpected error occurred while attempting to verify a signature.')
@@ -160,7 +160,7 @@ exports.encrypt = function(component, publicKey) {
     if (!component || !component.getTypeId) {
         const exception = bali.exception({
             $module: '$v1Public',
-            $procedure: '$encrypt',
+            $function: '$encrypt',
             $exception: '$invalidParameter',
             $parameter: component ? bali.text(component.toString()) : bali.NONE,
             $message: bali.text('The component is invalid.')
@@ -171,7 +171,7 @@ exports.encrypt = function(component, publicKey) {
     if (!publicKey || !publicKey.getTypeId || publicKey.getTypeId() !== bali.types.BINARY) {
         const exception = bali.exception({
             $module: '$v1Public',
-            $procedure: '$encrypt',
+            $function: '$encrypt',
             $exception: '$invalidParameter',
             $parameter: publicKey ? bali.text(publicKey.toString()) : bali.NONE,
             $message: bali.text('The public key is invalid.')
@@ -216,7 +216,7 @@ exports.encrypt = function(component, publicKey) {
         const digest = bali.binary(hasher.digest());
         const exception = bali.exception({
             $module: '$v1Public',
-            $procedure: '$encrypt',
+            $function: '$encrypt',
             $exception: '$unexpected',
             $digest: digest,
             $publicKey: publicKey,
@@ -241,7 +241,7 @@ exports.citation = function(tag, version, digest) {
     if (!tag || !tag.getTypeId || tag.getTypeId() !== bali.types.TAG) {
         const exception = bali.exception({
             $module: '$v1Public',
-            $procedure: '$citation',
+            $function: '$citation',
             $exception: '$invalidParameter',
             $parameter: tag ? bali.text(tag.toString()) : bali.NONE,
             $message: bali.text('The tag is invalid.')
@@ -252,7 +252,7 @@ exports.citation = function(tag, version, digest) {
     if (!version || !version.getTypeId || version.getTypeId() !== bali.types.VERSION) {
         const exception = bali.exception({
             $module: '$v1Public',
-            $procedure: '$citation',
+            $function: '$citation',
             $exception: '$invalidParameter',
             $parameter: version ? bali.text(version.toString()) : bali.NONE,
             $message: bali.text('The version is invalid.')
@@ -263,7 +263,7 @@ exports.citation = function(tag, version, digest) {
     if (!digest || !digest.getTypeId || digest.getTypeId() !== bali.types.BINARY) {
         const exception = bali.exception({
             $module: '$v1Public',
-            $procedure: '$citation',
+            $function: '$citation',
             $exception: '$invalidParameter',
             $parameter: digest ? bali.text(digest.toString()) : bali.NONE,
             $message: bali.text('The digest is invalid.')

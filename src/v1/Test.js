@@ -48,7 +48,7 @@ exports.api = function(account, testDirectory) {
     if (!account || !account.getTypeId || account.getTypeId() !== bali.types.TAG) {
         const exception = bali.exception({
             $module: '$v1Test',
-            $procedure: '$api',
+            $function: '$api',
             $exception: '$invalidParameter',
             $parameter: account ? bali.text(account.toString()) : bali.NONE,
             $message: bali.text('The account tag is invalid.')
@@ -59,7 +59,7 @@ exports.api = function(account, testDirectory) {
     if (testDirectory && typeof testDirectory !== 'string') {
         const exception = bali.exception({
             $module: '$v1Test',
-            $procedure: '$api',
+            $function: '$api',
             $exception: '$invalidParameter',
             $account: account,
             $testMode: testDirectory ? true : false,
@@ -138,7 +138,7 @@ exports.api = function(account, testDirectory) {
                 } catch (cause) {
                     const exception = bali.exception({
                         $module: '$v1Test',
-                        $procedure: '$initialize',
+                        $function: '$initialize',
                         $exception: '$directoryAccess',
                         $directory: bali.text(configDirectory),
                         $message: bali.text('The configuration directory could not be accessed.')
@@ -148,7 +148,7 @@ exports.api = function(account, testDirectory) {
                 this.initialize = function() {
                     const exception = bali.exception({
                         $module: '$v1Test',
-                        $procedure: '$initialize',
+                        $function: '$initialize',
                         $exception: '$alreadyInitialized',
                         $message: bali.text('The test private API has already been initialized.')
                     });
@@ -157,7 +157,7 @@ exports.api = function(account, testDirectory) {
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '$v1Test',
-                    $procedure: '$initialize',
+                    $function: '$initialize',
                     $exception: '$unexpected',
                     $account: account,
                     $message: bali.text('An unexpected error occurred while attempting to initialize the API.')
@@ -258,7 +258,7 @@ exports.api = function(account, testDirectory) {
                 } catch (cause) {
                     const exception = bali.exception({
                         $module: '$v1Test',
-                        $procedure: '$generate',
+                        $function: '$generate',
                         $exception: '$directoryAccess',
                         $directory: bali.text(configDirectory),
                         $message: bali.text('The configuration directory could not be accessed.')
@@ -270,7 +270,7 @@ exports.api = function(account, testDirectory) {
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '$v1Test',
-                    $procedure: '$generate',
+                    $function: '$generate',
                     $exception: '$unexpected',
                     $account: account,
                     $message: bali.text('An unexpected error occurred while attempting to (re)generate the key pair.')
@@ -297,7 +297,7 @@ exports.api = function(account, testDirectory) {
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '$v1Test',
-                    $procedure: '$forget',
+                    $function: '$forget',
                     $exception: '$unexpected',
                     $account: account,
                     $message: bali.text('An unexpected error occurred while attempting to forget the current key pair.')
@@ -320,7 +320,7 @@ exports.api = function(account, testDirectory) {
             if (!component || !component.getTypeId) {
                 const exception = bali.exception({
                     $module: '$v1Test',
-                    $procedure: '$sign',
+                    $function: '$sign',
                     $exception: '$invalidParameter',
                     $parameter: component ? bali.text(component.toString()) : bali.NONE,
                     $message: bali.text('The component is invalid.')
@@ -342,7 +342,7 @@ exports.api = function(account, testDirectory) {
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '$v1Test',
-                    $procedure: '$sign',
+                    $function: '$sign',
                     $exception: '$unexpected',
                     $account: account,
                     $string: bali.text(string),
@@ -365,7 +365,7 @@ exports.api = function(account, testDirectory) {
             if (!aem || !aem.getTypeId || aem.getTypeId() !== bali.types.CATALOG) {
                 const exception = bali.exception({
                     $module: '$v1Test',
-                    $procedure: '$decrypt',
+                    $function: '$decrypt',
                     $exception: '$invalidParameter',
                     $parameter: aem ? bali.text(aem.toString()) : bali.NONE,
                     $message: bali.text('The authenticated encrypted message is invalid.')
@@ -395,7 +395,7 @@ exports.api = function(account, testDirectory) {
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '$v1Test',
-                    $procedure: '$decrypt',
+                    $function: '$decrypt',
                     $exception: '$unexpected',
                     $account: account,
                     $aem: aem,

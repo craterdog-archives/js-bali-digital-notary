@@ -33,7 +33,7 @@ exports.api = function(account) {
     if (!account || !account.getTypeId || account.getTypeId() !== bali.types.TAG) {
         const exception = bali.exception({
             $module: '$v1Proxy',
-            $procedure: '$api',
+            $function: '$api',
             $exception: '$invalidParameter',
             $parameter: account ? bali.text(account.toString()) : bali.NONE,
             $message: bali.text('The account tag is invalid.')

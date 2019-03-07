@@ -67,7 +67,7 @@ describe('Bali Digital Notary™', function() {
         });
 
         it('should validate the citation for the certificate', async function() {
-            var isValid = await notary.documentMatches(certificateDocument, certificateCitation);
+            var isValid = await notary.citationMatches(certificateCitation, certificateDocument);
             expect(isValid).to.equal(true);
         });
 
@@ -98,7 +98,7 @@ describe('Bali Digital Notary™', function() {
             var citation = await notary.citeDocument(document);
             var isValid = await notary.documentIsValid(document, notaryCertificate);
             expect(isValid).to.equal(true);
-            var matches = await notary.documentMatches(document, citation);
+            var matches = await notary.citationMatches(citation, document);
             expect(matches).to.equal(true);
         });
 
@@ -130,7 +130,7 @@ describe('Bali Digital Notary™', function() {
             isValid = await notary.documentIsValid(document, newNotaryCertificate);
             expect(isValid).to.equal(true);
 
-            var matches = await notary.documentMatches(document, citation);
+            var matches = await notary.citationMatches(citation, document);
             expect(matches).to.equal(true);
             notaryCertificate = newNotaryCertificate;
         });
@@ -144,14 +144,14 @@ describe('Bali Digital Notary™', function() {
             var citation = await notary.citeDocument(document);
             var isValid = await notary.documentIsValid(document, notaryCertificate);
             expect(isValid).to.equal(true);
-            var matches = await notary.documentMatches(document, citation);
+            var matches = await notary.citationMatches(citation, document);
             expect(matches).to.equal(true);
 
             document = await notary.notarizeDocument(document);
             citation = await notary.citeDocument(document);
             isValid = await notary.documentIsValid(document, notaryCertificate);
             expect(isValid).to.equal(true);
-            matches = await notary.documentMatches(document, citation);
+            matches = await notary.citationMatches(citation, document);
             expect(matches).to.equal(true);
         });
 
