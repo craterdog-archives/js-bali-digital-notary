@@ -9,6 +9,6 @@
  ************************************************************************/
 'use strict';
 
-exports.Public = require('./Public');
-exports.Proxy = require('./Proxy');
-exports.Test = require('./Test');
+exports.HSMPublic = require('./HSMPublic');
+exports.HSMProxy = require('./HSMProxy');
+exports.HSMTest = require('./HSMTest');

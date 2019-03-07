@@ -31,7 +31,7 @@ const supportedAPIs = {
 };
 const supportedProtocols = bali.list(Object.keys(supportedAPIs));
 const preferredProtocol = supportedAPIs[supportedProtocols.getItem(-1).toString()];  // last is preferred
-const publicAPI = preferredProtocol.Public;
+const publicAPI = preferredProtocol.HSMPublic;
 
 // This private constant sets the POSIX end of line character
 const EOL = '\n';
@@ -48,9 +48,8 @@ const EOL = '\n';
  * @returns {Object} An object that implements the API for a digital notary.
  */
 exports.api = function(account, testDirectory, debug) {
-    debug = debug || false;
-
     // validate the parameters
+    debug = debug || false;
     if (!account || !account.getTypeId || account.getTypeId() !== bali.types.TAG) {
         const exception = bali.exception({
             $module: '$DigitalNotary',
@@ -78,17 +77,27 @@ exports.api = function(account, testDirectory, debug) {
 
     var privateAPI;
 
+    // return a singleton object for the API
     return {
+
+        toString: function() {
+            const catalog = bali.catalog({
+                $module: '$DigitalNotary',
+                $account: account,
+                $protocols: supportedProtocols
+            });
+            return catalog.toString();
+        },
 
         initializeAPI: async function() {
             try {
                 // connect to the private hardware security module for the account
                 if (testDirectory) {
                     // use a test software security module (SSM)
-                    privateAPI = preferredProtocol.Test.api(account, testDirectory);
+                    privateAPI = preferredProtocol.HSMTest.api(account, testDirectory, debug);
                 } else {
                     // or, use a proxy to a hardware security module (HSM)
-                    privateAPI = preferredProtocol.Proxy.api(account);
+                    privateAPI = preferredProtocol.HSMProxy.api(account, debug);
                 }
                 await privateAPI.initialize();
                 this.initializeAPI = function() {
@@ -623,7 +632,7 @@ exports.api = function(account, testDirectory, debug) {
  */
 const getPublicAPI = function(functionName, document) {
     const protocol = document.getValue('$protocol');
-    const publicAPI = supportedAPIs[protocol.toString()].Public;
+    const publicAPI = supportedAPIs[protocol.toString()].HSMPublic;
     if (!publicAPI) {
         const exception = bali.exception({
             $module: '$DigitalNotary',

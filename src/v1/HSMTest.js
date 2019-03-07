@@ -26,7 +26,7 @@ const os = require('os');
 const crypto = require('crypto');
 const ec_pem = require('ec-pem');
 const bali = require('bali-component-framework');
-const Public = require('./Public');
+const HSMPublic = require('./HSMPublic');
 
 // This private constant sets the POSIX end of line character
 const EOL = '\n';
@@ -46,31 +46,6 @@ const EOL = '\n';
 exports.api = function(account, testDirectory, debug) {
     debug = debug || false;
 
-    // validate the parameters
-    if (!account || !account.getTypeId || account.getTypeId() !== bali.types.TAG) {
-        const exception = bali.exception({
-            $module: '$v1Test',
-            $function: '$api',
-            $exception: '$invalidParameter',
-            $parameter: account ? bali.text(account.toString()) : bali.NONE,
-            $message: bali.text('The account tag is invalid.')
-        });
-        if (debug) console.error(exception.toString());
-        throw exception;
-    }
-    if (testDirectory && typeof testDirectory !== 'string') {
-        const exception = bali.exception({
-            $module: '$v1Test',
-            $function: '$api',
-            $exception: '$invalidParameter',
-            $account: account,
-            $testMode: testDirectory ? true : false,
-            $parameter: bali.text(testDirectory.toString()),
-            $message: bali.text('The test directory string is invalid.')
-        });
-        throw exception;
-    }
-
     var notaryTag;            // the unique tag for the notary key
     var version;              // the current version of the notary key
     var timestamp;            // the timestamp of when the key was generated
@@ -85,18 +60,14 @@ exports.api = function(account, testDirectory, debug) {
     return {
 
         /**
-         * This method returns the canonical Bali source code representation for the private
-         * notary key.
+         * This function returns a string providing attributes about this test HSM.
          * 
-         * @returns {String} A canonical Bali source code string for the private notary key.
+         * @returns {String} A string providing attributes about this test HSM.
          */
         toString: function() {
             const catalog = bali.catalog({
-                $protocol: Public.protocol,
-                $timestamp: timestamp,
+                $module: '$HSMTest',
                 $account: account,
-                $publicKey: bali.binary(publicKey),
-                $privateKey: bali.binary(privateKey),
                 $citation: certificateCitation
             }, bali.parameters({
                 $tag: notaryTag,
@@ -106,7 +77,7 @@ exports.api = function(account, testDirectory, debug) {
         },
 
         /**
-         * This method initializes the API.
+         * This function initializes the API.
          */
         initialize: async function() {
             try {
@@ -139,7 +110,7 @@ exports.api = function(account, testDirectory, debug) {
                     }
                 } catch (cause) {
                     const exception = bali.exception({
-                        $module: '$v1Test',
+                        $module: '$HSMTest',
                         $function: '$initialize',
                         $exception: '$directoryAccess',
                         $directory: bali.text(configDirectory),
@@ -149,7 +120,7 @@ exports.api = function(account, testDirectory, debug) {
                 }
                 this.initialize = function() {
                     const exception = bali.exception({
-                        $module: '$v1Test',
+                        $module: '$HSMTest',
                         $function: '$initialize',
                         $exception: '$alreadyInitialized',
                         $message: bali.text('The test private API has already been initialized.')
@@ -158,7 +129,7 @@ exports.api = function(account, testDirectory, debug) {
                 };
             } catch (cause) {
                 const exception = bali.exception({
-                    $module: '$v1Test',
+                    $module: '$HSMTest',
                     $function: '$initialize',
                     $exception: '$unexpected',
                     $account: account,
@@ -170,7 +141,7 @@ exports.api = function(account, testDirectory, debug) {
         },
 
         /**
-         * This method returns the notary certificate associated with this notary key.
+         * This function returns the notary certificate associated with this notary key.
          * 
          * @returns {Catalog} The notary certificate associated with this notary key.
          */
@@ -179,7 +150,7 @@ exports.api = function(account, testDirectory, debug) {
         },
 
         /**
-         * This method returns a citation referencing the notary certificate associated
+         * This function returns a citation referencing the notary certificate associated
          * with this notary key.
          * 
          * @returns {Catalog} A citation referencing the notary certificate associated
@@ -190,7 +161,7 @@ exports.api = function(account, testDirectory, debug) {
         },
 
         /**
-         * This method generates a new public-private key pair and uses the private key as the
+         * This function generates a new public-private key pair and uses the private key as the
          * new notary key. It returns the new public notary certificate.
          * 
          * NOTE: Ideally, it would make more sense for most of this method to be moved to the
@@ -205,7 +176,7 @@ exports.api = function(account, testDirectory, debug) {
                 const isRegeneration = !!privateKey;
 
                 // generate a new public-private key pair
-                const curve = crypto.createECDH(Public.CURVE);
+                const curve = crypto.createECDH(HSMPublic.CURVE);
                 curve.generateKeys();
                 notaryTag = notaryTag || bali.tag();  // generate a new tag if necessary
                 version = version ? bali.version.nextVersion(version) : bali.version();
@@ -214,7 +185,7 @@ exports.api = function(account, testDirectory, debug) {
 
                 // generate the new notary certificate
                 const component = bali.catalog({
-                    $protocol: Public.protocol,
+                    $protocol: HSMPublic.protocol,
                     $timestamp: timestamp,
                     $account: account,
                     $publicKey: bali.binary(publicKey)
@@ -236,7 +207,7 @@ exports.api = function(account, testDirectory, debug) {
 
                 // create the new notary certificate
                 notaryCertificate = bali.catalog({});
-                notaryCertificate.setValue('$protocol', Public.protocol);
+                notaryCertificate.setValue('$protocol', HSMPublic.protocol);
                 notaryCertificate.setValue('$timestamp', bali.moment());  // now
                 if (previous) notaryCertificate.setValue('$previous', previous);
                 notaryCertificate.setValue('$component', component);
@@ -248,18 +219,29 @@ exports.api = function(account, testDirectory, debug) {
                 privateKey = curve.getPrivateKey();
 
                 // cache the new certificate citation
-                const digest = Public.digest(notaryCertificate);
-                certificateCitation = Public.citation(notaryTag, version, digest);
+                const digest = HSMPublic.digest(notaryCertificate);
+                certificateCitation = HSMPublic.citation(notaryTag, version, digest);
 
                 // save the state of this notary key and certificate in the local configuration
                 try {
-                    const keySource = this.toString() + EOL;  // add POSIX compliant <EOL>
+                    const notaryKey = bali.catalog({
+                        $protocol: HSMPublic.protocol,
+                        $timestamp: timestamp,
+                        $account: account,
+                        $publicKey: bali.binary(publicKey),
+                        $privateKey: bali.binary(privateKey),
+                        $citation: certificateCitation
+                    }, bali.parameters({
+                        $tag: notaryTag,
+                        $version: version
+                    }));
+                    const keySource = notaryKey.toString() + EOL;  // add POSIX compliant <EOL>
                     const certificateSource = notaryCertificate.toString() + EOL;  // add POSIX compliant <EOL>
                     await pfs.writeFile(keyFilename, keySource, {encoding: 'utf8', mode: 0o600});
                     await pfs.writeFile(certificateFilename, certificateSource, {encoding: 'utf8', mode: 0o600});
                 } catch (cause) {
                     const exception = bali.exception({
-                        $module: '$v1Test',
+                        $module: '$HSMTest',
                         $function: '$generate',
                         $exception: '$directoryAccess',
                         $directory: bali.text(configDirectory),
@@ -271,7 +253,7 @@ exports.api = function(account, testDirectory, debug) {
                 return notaryCertificate;
             } catch (cause) {
                 const exception = bali.exception({
-                    $module: '$v1Test',
+                    $module: '$HSMTest',
                     $function: '$generate',
                     $exception: '$unexpected',
                     $account: account,
@@ -283,7 +265,7 @@ exports.api = function(account, testDirectory, debug) {
         },
 
         /**
-         * This method causes the notary key to forget all information it knows about the
+         * This function causes the notary key to forget all information it knows about the
          * current public-private key pair.
          */
         forget: async function() {
@@ -298,7 +280,7 @@ exports.api = function(account, testDirectory, debug) {
                 await pfs.unlink(certificateFilename).catch(function() {});
             } catch (cause) {
                 const exception = bali.exception({
-                    $module: '$v1Test',
+                    $module: '$HSMTest',
                     $function: '$forget',
                     $exception: '$unexpected',
                     $account: account,
@@ -310,40 +292,27 @@ exports.api = function(account, testDirectory, debug) {
         },
 
         /**
-         * This method generates a digital signature of the specified component using the local
+         * This function generates a digital signature of the specified component using the 
          * notary key. The resulting digital signature is base 32 encoded and may be verified
-         * using the Public.verify() method and the corresponding public key.
+         * using the HSMPublic.verify() method and the corresponding public key.
          * 
          * @param {Component} component The component to be digitally signed.
          * @returns {Binary} A base 32 encoded digital signature of the component.
          */
         sign: async function(component) {
-            // validate the parameters
-            if (!component || !component.getTypeId) {
-                const exception = bali.exception({
-                    $module: '$v1Test',
-                    $function: '$sign',
-                    $exception: '$invalidParameter',
-                    $parameter: component ? bali.text(component.toString()) : bali.NONE,
-                    $message: bali.text('The component is invalid.')
-                });
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
-
             try {
                 const string = component.toString();  // force it to a string if it isn't already
-                const curve = crypto.createECDH(Public.CURVE);
+                const curve = crypto.createECDH(HSMPublic.CURVE);
                 curve.setPrivateKey(privateKey);
-                const pem = ec_pem(curve, Public.CURVE);
-                const signer = crypto.createSign(Public.SIGNATURE);
+                const pem = ec_pem(curve, HSMPublic.CURVE);
+                const signer = crypto.createSign(HSMPublic.SIGNATURE);
                 signer.update(string);
                 const signature = signer.sign(pem.encodePrivateKey());
                 const binary = bali.binary(signature);
                 return binary;
             } catch (cause) {
                 const exception = bali.exception({
-                    $module: '$v1Test',
+                    $module: '$HSMTest',
                     $function: '$sign',
                     $exception: '$unexpected',
                     $account: account,
@@ -356,26 +325,13 @@ exports.api = function(account, testDirectory, debug) {
         },
 
         /**
-         * This function uses the local notary key to decrypt the specified authenticated
+         * This function uses the notary key to decrypt the specified authenticated
          * encrypted message (AEM). The result is the decrypted component.
          * 
          * @param {Catalog} aem The authenticated encrypted message to be decrypted.
          * @returns {String} The decrypted component.
          */
         decrypt: async function(aem) {
-            // validate the parameters
-            if (!aem || !aem.getTypeId || aem.getTypeId() !== bali.types.CATALOG) {
-                const exception = bali.exception({
-                    $module: '$v1Test',
-                    $function: '$decrypt',
-                    $exception: '$invalidParameter',
-                    $parameter: aem ? bali.text(aem.toString()) : bali.NONE,
-                    $message: bali.text('The authenticated encrypted message is invalid.')
-                });
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
-
             try {
                 const seed = aem.getValue('$seed').getValue();
                 const iv = aem.getValue('$iv').getValue();
@@ -383,12 +339,12 @@ exports.api = function(account, testDirectory, debug) {
                 const ciphertext = aem.getValue('$ciphertext').getValue();
 
                 // decrypt the 32-byte symmetric key
-                const curve = crypto.createECDH(Public.CURVE);
+                const curve = crypto.createECDH(HSMPublic.CURVE);
                 curve.setPrivateKey(privateKey);
                 const symmetricKey = curve.computeSecret(seed).slice(0, 32);  // take only first 32 bytes
 
                 // decrypt the ciphertext using the symmetric key
-                const decipher = crypto.createDecipheriv(Public.CIPHER, symmetricKey, iv);
+                const decipher = crypto.createDecipheriv(HSMPublic.CIPHER, symmetricKey, iv);
                 decipher.setAuthTag(auth);
                 var plaintext = decipher.update(ciphertext, undefined, 'utf8');
                 plaintext += decipher.final('utf8');
@@ -396,7 +352,7 @@ exports.api = function(account, testDirectory, debug) {
                 return component;
             } catch (cause) {
                 const exception = bali.exception({
-                    $module: '$v1Test',
+                    $module: '$HSMTest',
                     $function: '$decrypt',
                     $exception: '$unexpected',
                     $account: account,
