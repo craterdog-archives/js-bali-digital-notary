@@ -89,6 +89,14 @@ exports.api = function(account, testDirectory, debug) {
             return catalog.toString();
         },
 
+        getAccount: function() {
+            return account;
+        },
+
+        getProtocols: function() {
+            return supportedProtocols;
+        },
+
         initializeAPI: async function() {
             try {
                 // connect to the private hardware security module for the account
@@ -113,14 +121,6 @@ exports.api = function(account, testDirectory, debug) {
                 if (debug) console.error(exception.toString());
                 throw exception;
             }
-        },
-
-        getAccount: function() {
-            return account;
-        },
-
-        supportedProtocols: function() {
-            return supportedProtocols;
         },
 
         /**

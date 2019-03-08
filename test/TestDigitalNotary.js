@@ -25,6 +25,15 @@ describe('Bali Digital Notary™', function() {
 
     describe('Test Key Generation', function() {
 
+        it('should return the correct account', function() {
+            expect(notary.getAccount().isEqualTo(account)).to.equal(true);
+        });
+
+        it('should support correct versions', function() {
+            const versions = notary.getProtocols();
+            expect(versions.toString()).to.equal('[v1]');
+        });
+
         it('should initialize the API once and only once', async function() {
             await notary.initializeAPI();
             try {
@@ -33,11 +42,6 @@ describe('Bali Digital Notary™', function() {
             } catch(error) {
                 // expected
             };
-        });
-
-        it('should support correct versions', async function() {
-            const versions = await notary.supportedProtocols();
-            expect(versions.toString()).to.equal('[v1]');
         });
 
         it('should generate the keys', async function() {
