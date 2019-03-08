@@ -54,8 +54,8 @@ exports.digest = function(component) {
             $module: '$HSMPublic',
             $function: '$digest',
             $exception: '$unexpected',
-            $string: bali.text(string),
-            $message: bali.text('An unexpected error occurred while attempting to generate a digest.')
+            $component: component || bali.NONE,
+            $text: bali.text('An unexpected error occurred while attempting to generate a digest.')
         }, cause);
         if (debug) console.error(exception.toString());
         throw exception;
@@ -89,8 +89,10 @@ exports.verify = function(component, publicKey, signature) {
             $module: '$HSMPublic',
             $function: '$verify',
             $exception: '$unexpected',
-            $string: bali.text(string),
-            $message: bali.text('An unexpected error occurred while attempting to verify a signature.')
+            $component: component || bali.NONE,
+            $publicKey: publicKey || bali.NONE,
+            $signature: signature || bali.NONE,
+            $text: bali.text('An unexpected error occurred while attempting to verify a signature.')
         }, cause);
         if (debug) console.error(exception.toString());
         throw exception;
@@ -139,16 +141,19 @@ exports.encrypt = function(component, publicKey) {
         return aem;
     } catch (cause) {
         // create a digest of the component to maintain privacy
-        const hasher = crypto.createHash(exports.DIGEST);
-        hasher.update(component.toString());
-        const digest = bali.binary(hasher.digest());
+        var digest;
+        if (component) {
+            const hasher = crypto.createHash(exports.DIGEST);
+            hasher.update(component.toString());
+            const digest = bali.binary(hasher.digest());
+        }
         const exception = bali.exception({
             $module: '$HSMPublic',
             $function: '$encrypt',
             $exception: '$unexpected',
-            $digest: digest,
-            $publicKey: publicKey,
-            $message: bali.text('An unexpected error occurred while attempting to encrypt a component.')
+            $digest: digest || bali.NONE,
+            $publicKey: publicKey || bali.NONE,
+            $text: bali.text('An unexpected error occurred while attempting to encrypt a component.')
         }, cause);
         if (debug) console.error(exception.toString());
         throw exception;

@@ -113,8 +113,9 @@ exports.api = function(account, testDirectory, debug) {
                         $module: '$HSMTest',
                         $function: '$initialize',
                         $exception: '$directoryAccess',
-                        $directory: bali.text(configDirectory),
-                        $message: bali.text('The configuration directory could not be accessed.')
+                        $account: account || bali.NONE,
+                        $directory: configDirectory ? bali.text(configDirectory) : bali.NONE,
+                        $text: bali.text('The configuration directory could not be accessed.')
                     }, cause);
                     throw exception;
                 }
@@ -123,7 +124,9 @@ exports.api = function(account, testDirectory, debug) {
                         $module: '$HSMTest',
                         $function: '$initialize',
                         $exception: '$alreadyInitialized',
-                        $message: bali.text('The test private API has already been initialized.')
+                        $account: account || bali.NONE,
+                        $directory: configDirectory ? bali.text(configDirectory) : bali.NONE,
+                        $text: bali.text('The test private API has already been initialized.')
                     });
                     throw exception;
                 };
@@ -132,8 +135,9 @@ exports.api = function(account, testDirectory, debug) {
                     $module: '$HSMTest',
                     $function: '$initialize',
                     $exception: '$unexpected',
-                    $account: account,
-                    $message: bali.text('An unexpected error occurred while attempting to initialize the API.')
+                    $account: account || bali.NONE,
+                    $directory: configDirectory ? bali.text(configDirectory) : bali.NONE,
+                    $text: bali.text('An unexpected error occurred while attempting to initialize the API.')
                 }, cause);
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -244,8 +248,8 @@ exports.api = function(account, testDirectory, debug) {
                         $module: '$HSMTest',
                         $function: '$generate',
                         $exception: '$directoryAccess',
-                        $directory: bali.text(configDirectory),
-                        $message: bali.text('The configuration directory could not be accessed.')
+                        $account: account || bali.NONE,
+                        $text: bali.text('The configuration directory could not be accessed.')
                     }, cause);
                     throw exception;
                 }
@@ -256,8 +260,8 @@ exports.api = function(account, testDirectory, debug) {
                     $module: '$HSMTest',
                     $function: '$generate',
                     $exception: '$unexpected',
-                    $account: account,
-                    $message: bali.text('An unexpected error occurred while attempting to (re)generate the key pair.')
+                    $account: account || bali.NONE,
+                    $text: bali.text('An unexpected error occurred while attempting to (re)generate the key pair.')
                 }, cause);
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -283,8 +287,8 @@ exports.api = function(account, testDirectory, debug) {
                     $module: '$HSMTest',
                     $function: '$forget',
                     $exception: '$unexpected',
-                    $account: account,
-                    $message: bali.text('An unexpected error occurred while attempting to forget the current key pair.')
+                    $account: account || bali.NONE,
+                    $text: bali.text('An unexpected error occurred while attempting to forget the current key pair.')
                 }, cause);
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -315,9 +319,9 @@ exports.api = function(account, testDirectory, debug) {
                     $module: '$HSMTest',
                     $function: '$sign',
                     $exception: '$unexpected',
-                    $account: account,
-                    $string: bali.text(string),
-                    $message: bali.text('An unexpected error occurred while attempting to digitally sign a component.')
+                    $account: account || bali.NONE,
+                    $component: component || bali.NONE,
+                    $text: bali.text('An unexpected error occurred while attempting to digitally sign a component.')
                 }, cause);
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -355,9 +359,9 @@ exports.api = function(account, testDirectory, debug) {
                     $module: '$HSMTest',
                     $function: '$decrypt',
                     $exception: '$unexpected',
-                    $account: account,
-                    $aem: aem,
-                    $message: bali.text('An unexpected error occurred while attempting to decrypt an authenticated encrypted message.')
+                    $account: account || bali.NONE,
+                    $aem: aem || bali.NONE,
+                    $text: bali.text('An unexpected error occurred while attempting to decrypt an authenticated encrypted message.')
                 }, cause);
                 if (debug) console.error(exception.toString());
                 throw exception;

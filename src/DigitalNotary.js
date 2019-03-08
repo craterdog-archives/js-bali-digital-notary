@@ -56,7 +56,7 @@ exports.api = function(account, testDirectory, debug) {
             $function: '$api',
             $exception: '$invalidParameter',
             $parameter: account ? bali.text(account.toString()) : bali.NONE,
-            $message: bali.text('The account tag is invalid.')
+            $text: bali.text('The account tag is invalid.')
         });
         if (debug) console.error(exception.toString());
         throw exception;
@@ -69,7 +69,7 @@ exports.api = function(account, testDirectory, debug) {
             $account: account,
             $testMode: testDirectory ? true : false,
             $parameter: bali.text(testDirectory.toString()),
-            $message: bali.text('The test directory string is invalid.')
+            $text: bali.text('The test directory string is invalid.')
         });
         if (debug) console.error(exception.toString());
         throw exception;
@@ -107,7 +107,7 @@ exports.api = function(account, testDirectory, debug) {
                         $exception: '$alreadyInitialized',
                         $account: account,
                         $testMode: testDirectory ? true : false,
-                        $message: bali.text('The Bali Digital Notary API™ has already been initialized.')
+                        $text: bali.text('The Bali Digital Notary API™ has already been initialized.')
                     });
                     if (debug) console.error(exception.toString());
                     throw exception;
@@ -119,7 +119,7 @@ exports.api = function(account, testDirectory, debug) {
                     $exception: '$unexpected',
                     $account: account,
                     $testMode: testDirectory ? true : false,
-                    $message: bali.text('An unexpected error occurred while attempting to initialize the API.')
+                    $text: bali.text('An unexpected error occurred while attempting to initialize the API.')
                 }, cause);
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -155,7 +155,7 @@ exports.api = function(account, testDirectory, debug) {
                     $exception: '$unexpected',
                     $account: account,
                     $testMode: testDirectory ? true : false,
-                    $message: bali.text('An unexpected error occurred while attempting to (re)generate a new key pair.')
+                    $text: bali.text('An unexpected error occurred while attempting to (re)generate a new key pair.')
                 }, cause);
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -179,7 +179,7 @@ exports.api = function(account, testDirectory, debug) {
                     $exception: '$unexpected',
                     $account: account,
                     $testMode: testDirectory ? true : false,
-                    $message: bali.text('An unexpected error occurred while attempting to retrieve the notary certificate citation.')
+                    $text: bali.text('An unexpected error occurred while attempting to retrieve the notary certificate citation.')
                 }, cause);
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -203,7 +203,7 @@ exports.api = function(account, testDirectory, debug) {
                     $exception: '$unexpected',
                     $account: account,
                     $testMode: testDirectory ? true : false,
-                    $message: bali.text('An unexpected error occurred while attempting to retrieve the notary certificate.')
+                    $text: bali.text('An unexpected error occurred while attempting to retrieve the notary certificate.')
                 }, cause);
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -231,7 +231,7 @@ exports.api = function(account, testDirectory, debug) {
                     $account: account,
                     $testMode: testDirectory ? true : false,
                     $parameter: component ? bali.text(component.toString()) : bali.NONE,
-                    $message: bali.text('The previous document citation is invalid.')
+                    $text: bali.text('The previous document citation is invalid.')
                 });
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -244,7 +244,7 @@ exports.api = function(account, testDirectory, debug) {
                     $account: account,
                     $testMode: testDirectory ? true : false,
                     $parameter: bali.text(previous.toString()),
-                    $message: bali.text('The previous document citation is invalid.')
+                    $text: bali.text('The previous document citation is invalid.')
                 });
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -260,7 +260,7 @@ exports.api = function(account, testDirectory, debug) {
                         $exception: '$missingKey',
                         $account: account,
                         $testMode: testDirectory ? true : false,
-                        $message: bali.text('The notary key is missing.')
+                        $text: bali.text('The notary key is missing.')
                     });
                     throw exception;
                 }
@@ -296,7 +296,7 @@ exports.api = function(account, testDirectory, debug) {
                     $component: component,
                     $previous: previous,
                     $document: document,
-                    $message: bali.text('An unexpected error occurred while attempting to notarize a document.')
+                    $text: bali.text('An unexpected error occurred while attempting to notarize a document.')
                 }, cause);
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -319,7 +319,7 @@ exports.api = function(account, testDirectory, debug) {
                     $account: account,
                     $testMode: testDirectory ? true : false,
                     $parameter: document ? bali.text(document.toString()) : bali.NONE,
-                    $message: bali.text('The previous document citation is invalid.')
+                    $text: bali.text('The previous document citation is invalid.')
                 });
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -333,7 +333,7 @@ exports.api = function(account, testDirectory, debug) {
                     $function: '$citeDocument',
                     $exception: '$missingParameters',
                     $document: document,
-                    $message: bali.text('The document parameters are missing.')
+                    $text: bali.text('The document parameters are missing.')
                 });
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -353,7 +353,7 @@ exports.api = function(account, testDirectory, debug) {
                     $account: account,
                     $testMode: testDirectory ? true : false,
                     $document: document,
-                    $message: bali.text('An unexpected error occurred while attempting to cite a document.')
+                    $text: bali.text('An unexpected error occurred while attempting to cite a document.')
                 }, cause);
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -380,7 +380,7 @@ exports.api = function(account, testDirectory, debug) {
                     $account: account,
                     $testMode: testDirectory ? true : false,
                     $parameter: citation ? bali.text(citation.toString()) : bali.NONE,
-                    $message: bali.text('The document citation is invalid.')
+                    $text: bali.text('The document citation is invalid.')
                 });
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -393,7 +393,7 @@ exports.api = function(account, testDirectory, debug) {
                     $account: account,
                     $testMode: testDirectory ? true : false,
                     $parameter: document ? bali.text(document.toString()) : bali.NONE,
-                    $message: bali.text('The document is invalid.')
+                    $text: bali.text('The document is invalid.')
                 });
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -415,7 +415,7 @@ exports.api = function(account, testDirectory, debug) {
                     $testMode: testDirectory ? true : false,
                     $document: document,
                     $citation: citation,
-                    $message: bali.text('An unexpected error occurred while attempting to verify a document citation.')
+                    $text: bali.text('An unexpected error occurred while attempting to verify a document citation.')
                 }, cause);
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -441,7 +441,7 @@ exports.api = function(account, testDirectory, debug) {
                     $account: account,
                     $testMode: testDirectory ? true : false,
                     $parameter: document ? bali.text(document.toString()) : bali.NONE,
-                    $message: bali.text('The document is invalid.')
+                    $text: bali.text('The document is invalid.')
                 });
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -454,7 +454,7 @@ exports.api = function(account, testDirectory, debug) {
                     $account: account,
                     $testMode: testDirectory ? true : false,
                     $parameter: certificate ? bali.text(certificate.toString()) : bali.NONE,
-                    $message: bali.text('The certificate is invalid.')
+                    $text: bali.text('The certificate is invalid.')
                 });
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -482,7 +482,7 @@ exports.api = function(account, testDirectory, debug) {
                     $testMode: testDirectory ? true : false,
                     $document: document,
                     $certificate: certificate,
-                    $message: bali.text('An unexpected error occurred while attempting to verify a notarized document.')
+                    $text: bali.text('An unexpected error occurred while attempting to verify a notarized document.')
                 }, cause);
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -513,7 +513,7 @@ exports.api = function(account, testDirectory, debug) {
                     $account: account,
                     $testMode: testDirectory ? true : false,
                     $parameter: component ? bali.text(component.toString()) : bali.NONE,
-                    $message: bali.text('The component is invalid.')
+                    $text: bali.text('The component is invalid.')
                 });
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -526,7 +526,7 @@ exports.api = function(account, testDirectory, debug) {
                     $account: account,
                     $testMode: testDirectory ? true : false,
                     $parameter: certificate ? bali.text(certificate.toString()) : bali.NONE,
-                    $message: bali.text('The certificate is invalid.')
+                    $text: bali.text('The certificate is invalid.')
                 });
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -545,7 +545,7 @@ exports.api = function(account, testDirectory, debug) {
                     $account: account,
                     $testMode: testDirectory ? true : false,
                     $certificate: certificate,
-                    $message: bali.text('An unexpected error occurred while attempting to encrypt a component.')
+                    $text: bali.text('An unexpected error occurred while attempting to encrypt a component.')
                 }, cause);
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -571,7 +571,7 @@ exports.api = function(account, testDirectory, debug) {
                     $account: account,
                     $testMode: testDirectory ? true : false,
                     $parameter: aem ? bali.text(aem.toString()) : bali.NONE,
-                    $message: bali.text('The authenticated encrypted message is invalid.')
+                    $text: bali.text('The authenticated encrypted message is invalid.')
                 });
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -585,7 +585,7 @@ exports.api = function(account, testDirectory, debug) {
                         $function: '$decryptComponent',
                         $exception: '$missingKey',
                         $account: account,
-                        $message: bali.text('The notary key is missing.')
+                        $text: bali.text('The notary key is missing.')
                     });
                     if (debug) console.error(exception.toString());
                     throw exception;
@@ -598,7 +598,7 @@ exports.api = function(account, testDirectory, debug) {
                         $exception: '$unsupportedProtocol',
                         $expected: publicAPI.protocol,
                         $actual: protocol,
-                        $message: bali.text('The component was encrypted using an unsupported version of the notary protocol.')
+                        $text: bali.text('The component was encrypted using an unsupported version of the notary protocol.')
                     });
                     if (debug) console.error(exception.toString());
                     throw exception;
@@ -613,7 +613,7 @@ exports.api = function(account, testDirectory, debug) {
                     $account: account,
                     $testMode: testDirectory ? true : false,
                     $aem: aem,
-                    $message: bali.text('An unexpected error occurred while attempting to decrypt an authenticated encrypted message.')
+                    $text: bali.text('An unexpected error occurred while attempting to decrypt an authenticated encrypted message.')
                 }, cause);
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -640,7 +640,7 @@ const getPublicAPI = function(functionName, document) {
             $exception: '$unsupportedProtocol',
             $expected: supportedProtocols,
             $actual: protocol,
-            $message: bali.text('Attempted to use an unsupported version of the notary protocol.')
+            $text: bali.text('Attempted to use an unsupported version of the notary protocol.')
         });
         throw exception;
     }
