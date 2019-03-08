@@ -119,7 +119,7 @@ exports.api = function(account, testDirectory, debug) {
                     }, cause);
                     throw exception;
                 }
-                this.initializeAPI = undefined;  // can only be called once
+                this.initialize = undefined;  // can only be called once
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '$HSMTest',

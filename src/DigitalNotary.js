@@ -100,7 +100,7 @@ exports.api = function(account, testDirectory, debug) {
                     privateAPI = preferredProtocol.HSMProxy.api(account, debug);
                 }
                 await privateAPI.initialize();
-                this.initializeAPI = undefined;
+                this.initializeAPI = undefined;  // can only be called once
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
