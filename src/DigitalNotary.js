@@ -100,18 +100,7 @@ exports.api = function(account, testDirectory, debug) {
                     privateAPI = preferredProtocol.HSMProxy.api(account, debug);
                 }
                 await privateAPI.initialize();
-                this.initializeAPI = function() {
-                    const exception = bali.exception({
-                        $module: '$DigitalNotary',
-                        $function: '$initializeAPI',
-                        $exception: '$alreadyInitialized',
-                        $account: account,
-                        $testMode: testDirectory ? true : false,
-                        $text: bali.text('The Bali Digital Notary API™ has already been initialized.')
-                    });
-                    if (debug) console.error(exception.toString());
-                    throw exception;
-                };
+                this.initializeAPI = undefined;
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '$DigitalNotary',
@@ -130,7 +119,7 @@ exports.api = function(account, testDirectory, debug) {
             return account;
         },
 
-        supportedProtocols: async function() {
+        supportedProtocols: function() {
             return supportedProtocols;
         },
 
@@ -145,6 +134,7 @@ exports.api = function(account, testDirectory, debug) {
          * notary certificate associated with the new private notary key.
          */
         generateKeyPair: async function() {
+            checkInitialization(this, '$generateKeyPair');
             try {
                 var notaryCertificate = await privateAPI.generate();
                 return notaryCertificate;
@@ -170,6 +160,7 @@ exports.api = function(account, testDirectory, debug) {
          * public certificate for this digital notary.
          */
         getCitation: async function() {
+            checkInitialization(this, '$getCitation');
             try {
                 return await privateAPI.citation();
             } catch (cause) {
@@ -194,6 +185,7 @@ exports.api = function(account, testDirectory, debug) {
          * for this digital notary.
          */
         getCertificate: async function() {
+            checkInitialization(this, '$getCertificate');
             try {
                 return await privateAPI.certificate();
             } catch (cause) {
@@ -222,6 +214,8 @@ exports.api = function(account, testDirectory, debug) {
          * @returns {Catalog} A catalog that is the newly notarized document for the component.
          */
         notarizeDocument: async function(component, previous) {
+            checkInitialization(this, '$notarizeDocument');
+
             // validate the parameters
             if (!component || !component.getTypeId) {
                 const exception = bali.exception({
@@ -310,6 +304,8 @@ exports.api = function(account, testDirectory, debug) {
          * @returns {Catalog} A document citation for the document.
          */
         citeDocument: async function(document) {
+            checkInitialization(this, '$citeDocument');
+
             // validate the parameters
             if (!document || !document.getTypeId || document.getTypeId() !== bali.types.CATALOG) {
                 const exception = bali.exception({
@@ -371,6 +367,8 @@ exports.api = function(account, testDirectory, debug) {
          * @returns {Boolean} Whether or not the citation matches the specified document.
          */
         citationMatches: async function(citation, document) {
+            checkInitialization(this, '$citationMatches');
+
             // validate the parameters
             if (!citation || !citation.getTypeId || citation.getTypeId() !== bali.types.CATALOG) {
                 const exception = bali.exception({
@@ -432,6 +430,8 @@ exports.api = function(account, testDirectory, debug) {
          * @returns {Boolean} Whether or not the notary seal on the document is valid.
          */
         documentIsValid: async function(document, certificate) {
+            checkInitialization(this, '$documentIsValid');
+
             // validate the parameters
             if (!document || !document.getTypeId || document.getTypeId() !== bali.types.CATALOG) {
                 const exception = bali.exception({
@@ -504,6 +504,8 @@ exports.api = function(account, testDirectory, debug) {
          * and other required attributes for the encrypted component.
          */
         encryptComponent: async function(component, certificate) {
+            checkInitialization(this, '$encryptComponent');
+
             // validate the parameters
             if (!component || !component.getTypeId) {
                 const exception = bali.exception({
@@ -562,6 +564,8 @@ exports.api = function(account, testDirectory, debug) {
          * @returns {Component} The decrypted component.
          */
         decryptComponent: async function(aem) {
+            checkInitialization(this, '$decryptComponent');
+
             // validate the parameters
             if (!aem || !aem.getTypeId || aem.getTypeId() !== bali.types.CATALOG) {
                 const exception = bali.exception({
@@ -625,6 +629,26 @@ exports.api = function(account, testDirectory, debug) {
 
 
 // PRIVATE FUNCTIONS
+
+/**
+ * This function throws an exception if the API has not yet been initialized.
+ * 
+ * @param {Object} api The object that implements the API.
+ * @param {String} functionName The name of the API function being called.
+ */
+const checkInitialization = function(api, functionName) {
+    if (api.initializeAPI) {
+        const exception = bali.exception({
+            $module: '$DigitalNotary',
+            $function: functionName,
+            $exception: '$notInitialized',
+            $text: bali.text('The Bali Nebula API™ has not been initialized.')
+        });
+        console.error(exception.toString());  // log no matter what
+        throw exception;
+    }
+};
+
 
 /*
  * This function returns the requested version of the public API or throws an exception

@@ -119,17 +119,7 @@ exports.api = function(account, testDirectory, debug) {
                     }, cause);
                     throw exception;
                 }
-                this.initialize = function() {
-                    const exception = bali.exception({
-                        $module: '$HSMTest',
-                        $function: '$initialize',
-                        $exception: '$alreadyInitialized',
-                        $account: account || bali.NONE,
-                        $directory: configDirectory ? bali.text(configDirectory) : bali.NONE,
-                        $text: bali.text('The test private API has already been initialized.')
-                    });
-                    throw exception;
-                };
+                this.initializeAPI = undefined;  // can only be called once
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '$HSMTest',
