@@ -36,7 +36,7 @@ const EOL = '\n';
  * This function returns an object that implements the API for the test software security module
  * (containing the notary key). The internal attributes for the notary key are hidden from the
  * code that is using the notary key, but it is NOT fool-proof.
- * 
+ *
  * @param {Tag} account The unique tag for the account that owns the notary key.
  * @param {String} testDirectory An optional directory to use for local testing.
  * @param {Boolean} debug An optional flag that determines whether or not exceptions
@@ -61,7 +61,7 @@ exports.api = function(account, testDirectory, debug) {
 
         /**
          * This function returns a string providing attributes about this test HSM.
-         * 
+         *
          * @returns {String} A string providing attributes about this test HSM.
          */
         toString: function() {
@@ -136,7 +136,7 @@ exports.api = function(account, testDirectory, debug) {
 
         /**
          * This function returns the notary certificate associated with this notary key.
-         * 
+         *
          * @returns {Catalog} The notary certificate associated with this notary key.
          */
         certificate: async function() {
@@ -146,7 +146,7 @@ exports.api = function(account, testDirectory, debug) {
         /**
          * This function returns a citation referencing the notary certificate associated
          * with this notary key.
-         * 
+         *
          * @returns {Catalog} A citation referencing the notary certificate associated
          * with this notary key.
          */
@@ -157,12 +157,12 @@ exports.api = function(account, testDirectory, debug) {
         /**
          * This function generates a new public-private key pair and uses the private key as the
          * new notary key. It returns the new public notary certificate.
-         * 
+         *
          * NOTE: Ideally, it would make more sense for most of this method to be moved to the
          * <code>DigitalNotary</code> class but it can't be moved there because during regeneration
          * the old key key must sign the new certificate and the old key goes away right after the
          * new one is generated.
-         * 
+         *
          * @returns {Catalog} The new notary certificate.
          */
         generate: async function() {
@@ -286,10 +286,10 @@ exports.api = function(account, testDirectory, debug) {
         },
 
         /**
-         * This function generates a digital signature of the specified component using the 
+         * This function generates a digital signature of the specified component using the
          * notary key. The resulting digital signature is base 32 encoded and may be verified
          * using the HSMPublic.verify() method and the corresponding public key.
-         * 
+         *
          * @param {Component} component The component to be digitally signed.
          * @returns {Binary} A base 32 encoded digital signature of the component.
          */
@@ -321,7 +321,7 @@ exports.api = function(account, testDirectory, debug) {
         /**
          * This function uses the notary key to decrypt the specified authenticated
          * encrypted message (AEM). The result is the decrypted component.
-         * 
+         *
          * @param {Catalog} aem The authenticated encrypted message to be decrypted.
          * @returns {String} The decrypted component.
          */

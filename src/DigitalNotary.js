@@ -39,7 +39,7 @@ const EOL = '\n';
 
 /**
  * This function returns an object that implements the API for a digital notary.
- * 
+ *
  * @param {Tag} account The unique account tag for the owner of the digital notary.
  * @param {String} testDirectory An optional location of the test directory to be used for local
  * configuration storage. If not specified, the location of the configuration is in '~/.bali/'.
@@ -80,6 +80,11 @@ exports.api = function(account, testDirectory, debug) {
     // return a singleton object for the API
     return {
 
+        /**
+         * This function returns a string providing attributes about this digital notary.
+         *
+         * @returns {String} A string providing attributes about this digital notary.
+         */
         toString: function() {
             const catalog = bali.catalog({
                 $module: '$DigitalNotary',
@@ -89,14 +94,30 @@ exports.api = function(account, testDirectory, debug) {
             return catalog.toString();
         },
 
+        /**
+         * This function returns the unique tag for the account that owns this digital
+         * notary.
+         *
+         * @returns {Tag} The unique tag for the account that owns this digital notary.
+         */
         getAccount: function() {
             return account;
         },
 
+        /**
+         * This function returns the list of protocols supported by this digital
+         * notary.
+         *
+         * @returns {Tag} The list of protocols supported by this digital notary.
+         */
         getProtocols: function() {
             return supportedProtocols;
         },
 
+        /**
+         * This function initializes the Bali Digital Notary™.  It must be called before any
+         * other API function and can only be called once.
+         */
         initializeAPI: async function() {
             try {
                 // connect to the private hardware security module for the account
@@ -129,7 +150,7 @@ exports.api = function(account, testDirectory, debug) {
          * and remains there. The associated public notary certificate is returned and a
          * document citation for the certificate is stored in the local configuration
          * directory.
-         * 
+         *
          * @returns {Catalog} A new Bali Notarized Document™ containing the public
          * notary certificate associated with the new private notary key.
          */
@@ -155,7 +176,7 @@ exports.api = function(account, testDirectory, debug) {
         /**
          * This function returns a document citation referencing the Bali Notarized Document™
          * containing the public certificate for this digital notary.
-         * 
+         *
          * @returns {Catalog} A document citation referencing the document containing the
          * public certificate for this digital notary.
          */
@@ -180,7 +201,7 @@ exports.api = function(account, testDirectory, debug) {
         /**
          * This function returns a Bali Notarized Document™ containing the public certificate for
          * this digital notary.
-         * 
+         *
          * @returns {Catalog} The notarized document containing the public certificate
          * for this digital notary.
          */
@@ -207,7 +228,7 @@ exports.api = function(account, testDirectory, debug) {
          * key maintained inside the hardware security module. The specified document citation
          * is updated with the digest of the notarized document. The newly notarized document
          * is returned.
-         * 
+         *
          * @param {Component} component The document content to be notarized.
          * @param {Catalog} previous An optional document citation to the previous version of
          * the notarized document.
@@ -299,7 +320,7 @@ exports.api = function(account, testDirectory, debug) {
 
         /**
          * This function generates a document citation for the specified document.
-         * 
+         *
          * @param {Catalog} document The document to be cited.
          * @returns {Catalog} A document citation for the document.
          */
@@ -360,7 +381,7 @@ exports.api = function(account, testDirectory, debug) {
          * This function determines whether or not the specified document citation matches
          * the specified document. The citation only matches if its digest matches the
          * digest of the document.
-         * 
+         *
          * @param {Catalog} citation A document citation allegedly referring to the
          * specified document.
          * @param {Catalog} document The document to be tested.
@@ -423,7 +444,7 @@ exports.api = function(account, testDirectory, debug) {
         /**
          * This function determines whether or not the notary seal on the specified document
          * is valid.
-         * 
+         *
          * @param {Catalog} document The notarized document to be tested.
          * @param {Catalog} certificate A catalog containing the public notary key for the
          * private notary key that allegedly notarized the specified document.
@@ -495,7 +516,7 @@ exports.api = function(account, testDirectory, debug) {
          * decrypt it using their private notary key. The result is an authenticated encrypted
          * message (AEM) containing the ciphertext and other required attributes needed to
          * decrypt the message.
-         * 
+         *
          * @param {Component} component The component to be encrypted using the specified
          * public notary certificate.
          * @param {Catalog} certificate A catalog containing the public notary key for the
@@ -558,7 +579,7 @@ exports.api = function(account, testDirectory, debug) {
          * This function uses the private notary key in the hardware security module to decrypt
          * the ciphertext residing in the specified authenticated encrypted message (AEM). THe
          * result is the decrypted component.
-         * 
+         *
          * @param {Catalog} aem An authenticated encrypted message (AEM) containing the ciphertext
          * and other required attributes required to decrypt the component.
          * @returns {Component} The decrypted component.
@@ -632,7 +653,7 @@ exports.api = function(account, testDirectory, debug) {
 
 /**
  * This function throws an exception if the API has not yet been initialized.
- * 
+ *
  * @param {Object} api The object that implements the API.
  * @param {String} functionName The name of the API function being called.
  */

@@ -37,7 +37,7 @@ exports.protocol = bali.parse(exports.PROTOCOL);
  * This function returns a cryptographically secure base 32 encoded digital digest of
  * the specified component. The digest is a Bali binary string and will always be
  * the same for the same component.
- * 
+ *
  * @param {Component} component The component to be digested.
  * @returns {Binary} A base 32 encoded digital digest of the component.
  */
@@ -67,7 +67,7 @@ exports.digest = function(component) {
  * This function uses the specified base 32 encoded public key to determine whether
  * or not the specified base 32 encoded digital signature was generated using the
  * corresponding private key on the specified component.
- * 
+ *
  * @param {Component} component The digitally signed component.
  * @param {Binary} publicKey The base 32 encoded public key.
  * @param {Binary} signature The digital signature generated using the private key.
@@ -104,7 +104,7 @@ exports.verify = function(component, publicKey, signature) {
  * This function uses the specified base 32 encoded public key to encrypt the specified
  * component. The result is an authenticated encrypted message (AEM) that can only be
  * decrypted using the associated private key.
- * 
+ *
  * @param {Component} component The component to be encrypted.
  * @param {Binary} publicKey The base 32 encoded public key to use for encryption.
  * @returns {Catalog} An authenticated encrypted message.
@@ -163,7 +163,7 @@ exports.encrypt = function(component, publicKey) {
 
 /**
  * This function creates a new document citation using the specified attributes.
- * 
+ *
  * @param {Tag} tag The unique tag for the cited document.
  * @param {Version} version The version of the cited document, default is 'v1'.
  * @param {Binary} digest The (optional) base 32 encoded digest of the cited document.

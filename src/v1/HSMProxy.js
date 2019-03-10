@@ -22,7 +22,7 @@ const HSMPublic = require('./HSMPublic');
 /**
  * This function returns a proxy object that implements the API for the hardware security module
  * (notary private key) associated with the specified unique tag.
- * 
+ *
  * @param {Tag} account The unique tag for the account that owns the notary key.
  * @param {Boolean} debug An optional flag that determines whether or not exceptions
  * will be logged to the error console.
@@ -36,12 +36,12 @@ exports.api = function(account, debug) {
     var timestamp = bali.moment();       // the timestamp of when the key was generated
     var notaryCertificate = bali.NONE;   // the public notary certificate containing the public key
     var certificateCitation= bali.NONE;  // a document citation for the public notary certificate
-    
+
     return {
 
         /**
          * This function returns a string providing attributes about this test HSM.
-         * 
+         *
          * @returns {String} A string providing attributes about this test HSM.
          */
         toString: function() {
@@ -67,7 +67,7 @@ exports.api = function(account, debug) {
 
         /**
          * This function returns the notary certificate associated with this notary key.
-         * 
+         *
          * @returns {Catalog} The notary certificate associated with this notary key.
          */
         certificate: async function() {
@@ -77,7 +77,7 @@ exports.api = function(account, debug) {
         /**
          * This function returns a citation referencing the notary certificate associated
          * with this notary key.
-         * 
+         *
          * @returns {Catalog} A citation referencing the notary certificate associated
          * with this notary key.
          */
@@ -88,7 +88,7 @@ exports.api = function(account, debug) {
         /**
          * This function generates a new public-private key pair and uses the private key as the
          * new notary key. It returns the new public notary certificate.
-         * 
+         *
          * @returns {Catalog} The new notary certificate.
          */
         generate: async function() {
@@ -104,10 +104,10 @@ exports.api = function(account, debug) {
         },
 
         /**
-         * This function generates a digital signature of the specified component using the 
+         * This function generates a digital signature of the specified component using the
          * notary key. The resulting digital signature is base 32 encoded and may be verified
          * using the HSMPublic.verify() method and the corresponding public key.
-         * 
+         *
          * @param {Component} component The component to be digitally signed.
          * @returns {Binary} A base 32 encoded digital signature of the component.
          */
@@ -118,7 +118,7 @@ exports.api = function(account, debug) {
         /**
          * This function uses the notary key to decrypt the specified authenticated
          * encrypted message (AEM). The result is the decrypted component.
-         * 
+         *
          * @param {Catalog} aem The authenticated encrypted message to be decrypted.
          * @returns {String} The decrypted component.
          */
