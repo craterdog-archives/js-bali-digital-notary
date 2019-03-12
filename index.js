@@ -10,7 +10,14 @@
 'use strict';
 
 /**
- * This function initializes the digital notary API. If a test directory
+ * This attribute provides a handle to the version 1 security module functions that
+ * do not require access to the private notary key.
+ */
+exports.v1Public = require('./src/v1/HSMPublic');
+
+
+/**
+ * This function returns the digital notary API. If a test directory
  * is passed in as a parameter the test directory will be used to maintain
  * the configuration file. Otherwise, the configuration file will be in the
  * '~/.bali/' directory. When running in test mode, a local software security
