@@ -10,9 +10,9 @@
 'use strict';
 
 /**
- * This function returns an object that implements the digital notary public API.
- * The public API only deals with public certificates and is implemented using a
- * software security module (SSM).
+ * This function returns an object that implements the public certificate API for
+ * the digital notary. The public API only deals with public certificates and is
+ * implemented using a software security module (SSM).
  *
  * @param {Boolean} debug An optional flag that determines whether or not exceptions
  * will be logged to the error console.
@@ -25,7 +25,7 @@ exports.publicAPI = function(debug) {
 
 
 /**
- * This function returns an object that implements the digital notary private API.
+ * This function returns an object that implements the full API for the digital notary.
  * If a test directory is passed in as a parameter the test directory will be used
  * to maintain the configuration file. Otherwise, the configuration file will be in
  * the '~/.bali/' directory. When running in test mode, a local software security
@@ -39,7 +39,7 @@ exports.publicAPI = function(debug) {
  * will be logged to the error console.
  * @returns {Object} A singleton object implementing the private API.
  */
-exports.privateAPI = function(account, testDirectory, debug) {
-    const api = require('./src/DigitalNotary').privateAPI(account, testDirectory, debug);
+exports.api = function(account, testDirectory, debug) {
+    const api = require('./src/DigitalNotary').api(account, testDirectory, debug);
     return api;
 };

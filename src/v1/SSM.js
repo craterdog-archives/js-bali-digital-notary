@@ -31,8 +31,8 @@ const bali = require('bali-component-framework');
 // PUBLIC APIs
 
 /**
- * This function returns an object that implements the API for the public software security
- * module (SSM).
+ * This function returns an object that implements the public certificate API for the 
+ * software security module (SSM).
  *
  * @param {Boolean} debug An optional flag that determines whether or not exceptions
  * will be logged to the error console.
@@ -296,10 +296,10 @@ exports.publicAPI = function(debug) {
 };
 
 /**
- * This function returns an object that implements the API for the test software security module
- * (containing the notary key). The internal attributes for the notary key are hidden from the
- * code that is using the notary key, but it is NOT fool-proof. It should only be used for
- * testing purposes.
+ * This function returns an object that implements the private key API for the software
+ * security module (SSM). The internal attributes for the notary key are hidden from
+ * the code that is using the notary key, but it is NOT fool-proof. It should only be
+ * used for testing purposes.
  *
  * @param {Tag} account The unique tag for the account that owns the notary key.
  * @param {String} testDirectory An optional directory to use for local testing.

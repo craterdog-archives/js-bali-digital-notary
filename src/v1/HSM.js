@@ -95,10 +95,8 @@ exports.publicAPI = function(debug) {
 };
 
 /**
- * This function returns an object that implements the API for the test hardware security module
- * (containing the notary key). The internal attributes for the notary key are hidden from the
- * code that is using the notary key, but it is NOT fool-proof. It should only be used for
- * testing purposes.
+ * This function returns an object that implements the private key API for the proxy to
+ * the hardware security module (HSM). 
  *
  * @param {Tag} account The unique tag for the account that owns the notary key.
  * @param {String} testDirectory An optional directory to use for local testing.

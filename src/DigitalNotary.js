@@ -30,7 +30,9 @@ const preferredProtocol = protocols[Object.keys(protocols)[0]];  // the first pr
 // PUBLIC APIs
 
 /**
- * This function returns an object that implements the public API for a digital notary.
+ * This function returns an object that implements the public certificate API for a
+ * digital notary. It provides only the functions that don't require a private key and
+ * can be used with any public certificates.
  *
  * @param {Boolean} debug An optional flag that determines whether or not exceptions
  * will be logged to the error console.
@@ -138,7 +140,7 @@ exports.publicAPI = function(debug) {
  * will be logged to the error console.
  * @returns {Object} An object that implements the API for a digital notary.
  */
-exports.privateAPI = function(account, testDirectory, debug) {
+exports.api = function(account, testDirectory, debug) {
 
     // validate the parameters
     debug = debug || false;
