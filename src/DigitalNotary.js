@@ -10,35 +10,126 @@
 'use strict';
 
 /*
- * This module uses the singleton pattern to provide an object that implements a
- * digital notary interface that is used for account identity and document notarization
- * purposes within the Bali Nebula™. If a test directory is specified, it will be
- * created and used as the location of the local key store. Otherwise, a proxy
- * to a hardware security module will be used for all private key operations.
+ * This module uses the singleton pattern to expose two objects that implement
+ * digital notary APIs that are used for document notarization purposes within
+ * the Bali Nebula™. The first is a public API that can used by anyone to validate
+ * existing notarized documents. The second is a private API that uses a hardware
+ * security module to provide full digital signing capabilities associated with
+ * a specific user account.
  */
 const bali = require('bali-component-framework');
-const v1 = require('./v1');
-//const v2 = require('./v2');
-//const v3 = require('./v3');
+const protocols = {
 //  ...
-
-// configure the supported protocol public APIs
-const supportedAPIs = {
-    v1: v1
-//  v2: v2,
-//  v3: v3,
-//  ...
+//  v3: require('./v3'),
+//  v2: require('./v2'),
+    v1: require('./v1')
 };
-const supportedProtocols = bali.list(Object.keys(supportedAPIs));
-const preferredProtocol = supportedAPIs[supportedProtocols.getItem(-1).toString()];  // last is preferred
-const publicAPI = preferredProtocol.HSMPublic;
+const preferredProtocol = protocols[Object.keys(protocols)[0]];  // the first protocol
 
-// This private constant sets the POSIX end of line character
-const EOL = '\n';
+
+// PUBLIC APIs
+
+/**
+ * This function returns an object that implements the public API for a digital notary.
+ *
+ * @param {Boolean} debug An optional flag that determines whether or not exceptions
+ * will be logged to the error console.
+ * @returns {Object} An object that implements the API for a digital notary.
+ */
+exports.publicAPI = function(debug) {
+
+    // validate the parameters
+    debug = debug || false;
+
+    // setup the public API implementation
+    const publicAPI = preferredProtocol.SSM.publicAPI(debug);
+
+    // return a singleton object for the API
+    return {
+   
+        /**
+         * This function returns a string providing attributes about this software security module.
+         *
+         * @returns {String} A string providing attributes about this software security module.
+         */
+        toString: function() {
+            return publicAPI.toString();
+        },
+
+        /**
+         * This function returns a list of the protocol versions supported by this digital notary
+         * API.
+         * 
+         * @returns {List} A list of the protocol versions supported by this digital notary API.
+         */
+        getProtocols: function() {
+            return getProtocols(debug);
+        },
+   
+        /**
+         * This function generates a document citation for the specified document.
+         *
+         * @param {Catalog} document The document to be cited.
+         * @returns {Catalog} A document citation for the document.
+         */
+        citeDocument: function(document) {
+            return publicAPI.citeDocument(document);
+        },
+   
+        /**
+         * This function determines whether or not the specified document citation matches
+         * the specified document. The citation only matches if its digest matches the
+         * digest of the document exactly.
+         *
+         * @param {Catalog} citation A document citation allegedly referring to the
+         * specified document.
+         * @param {Catalog} document The document to be tested.
+         * @returns {Boolean} Whether or not the citation matches the specified document.
+         */
+        citationMatches: function(citation, document) {
+            const api = getPublicAPI(debug, '$citationMatches', citation);
+            return api.citationMatches(citation, document);
+        },
+   
+        /**
+         * This function determines whether or not the notary seal on the specified document
+         * is valid.
+         *
+         * @param {Catalog} document The notarized document to be tested.
+         * @param {Catalog} certificate A catalog containing the public certificate for the
+         * private notary key that allegedly notarized the specified document.
+         * @returns {Boolean} Whether or not the notary seal on the document is valid.
+         */
+        documentIsValid: function(document, certificate) {
+            const api = getPublicAPI(debug, '$documentIsValid', certificate);
+            return api.documentIsValid(document, certificate);
+        },
+   
+        /**
+         * This function uses the specified public notary certificate to encrypt the specified
+         * document in such a way that only the intended recipient of the encrypted document can
+         * decrypt it using their private notary key. The result is an authenticated encrypted
+         * message (AEM) containing the ciphertext and other required attributes needed to
+         * decrypt the message.
+         *
+         * @param {Component} document The document to be encrypted using the specified
+         * public notary certificate.
+         * @param {Catalog} certificate A catalog containing the public certificate for the
+         * intended recipient of the encrypted document.
+         * @returns {Catalog} An authenticated encrypted message (AEM) containing the ciphertext
+         * and other required attributes for the encrypted document.
+         */
+        encryptDocument: function(document, certificate) {
+            const api = getPublicAPI(debug, '$encryptDocument', certificate);
+            return api.encryptDocument(document, certificate);
+        }
+   
+    };
+};
 
 
 /**
- * This function returns an object that implements the API for a digital notary.
+ * This function returns an object that implements the full API for a digital notary.
  *
  * @param {Tag} account The unique account tag for the owner of the digital notary.
  * @param {String} testDirectory An optional location of the test directory to be used for local
@@ -47,16 +138,17 @@ const EOL = '\n';
  * will be logged to the error console.
  * @returns {Object} An object that implements the API for a digital notary.
  */
-exports.api = function(account, testDirectory, debug) {
+exports.privateAPI = function(account, testDirectory, debug) {
+
     // validate the parameters
     debug = debug || false;
     if (!account || !account.getTypeId || account.getTypeId() !== bali.types.TAG) {
         const exception = bali.exception({
             $module: '$DigitalNotary',
-            $function: '$api',
+            $function: '$privateAPI',
             $exception: '$invalidParameter',
             $parameter: account ? bali.text(account.toString()) : bali.NONE,
-            $text: bali.text('The account tag is invalid.')
+            $text: bali.text('The account tag format is invalid.')
         });
         if (debug) console.error(exception.toString());
         throw exception;
@@ -64,7 +156,7 @@ exports.api = function(account, testDirectory, debug) {
     if (testDirectory && typeof testDirectory !== 'string') {
         const exception = bali.exception({
             $module: '$DigitalNotary',
-            $function: '$api',
+            $function: '$privateAPI',
             $exception: '$invalidParameter',
             $account: account,
             $testMode: testDirectory ? true : false,
@@ -75,247 +167,97 @@ exports.api = function(account, testDirectory, debug) {
         throw exception;
     }
 
+    // setup the public and private API implementations
+    var publicAPI;
     var privateAPI;
+    if (testDirectory) {
+        // use a test software security module (SSM)
+        publicAPI = preferredProtocol.SSM.publicAPI(debug);
+        privateAPI = preferredProtocol.SSM.privateAPI(account, testDirectory, debug);
+    } else {
+        // or, use a proxy to a hardware security module (HSM)
+        publicAPI = preferredProtocol.HSM.publicAPI(debug);
+        privateAPI = preferredProtocol.HSM.privateAPI(account, debug);
+    }
 
     // return a singleton object for the API
     return {
 
         /**
-         * This function returns a string providing attributes about this digital notary.
+         * This function returns a string providing attributes about this software security module.
          *
-         * @returns {String} A string providing attributes about this digital notary.
+         * @returns {String} A string providing attributes about this software security module.
          */
         toString: function() {
-            const catalog = bali.catalog({
-                $module: '$DigitalNotary',
-                $account: account,
-                $protocols: supportedProtocols
-            });
-            return catalog.toString();
+            return privateAPI.toString();
         },
 
         /**
-         * This function returns the unique tag for the account that owns this digital
+         * This function returns the unique tag for the account that is associated with this
+         * digital notary.
+         * 
+         * @returns {Tag} The unique tag for the account that is associated with this digital
          * notary.
-         *
-         * @returns {Tag} The unique tag for the account that owns this digital notary.
          */
         getAccount: function() {
             return account;
         },
 
         /**
-         * This function returns the list of protocols supported by this digital
-         * notary.
-         *
-         * @returns {Tag} The list of protocols supported by this digital notary.
+         * This function returns a list of the protocol versions supported by this digital notary
+         * API.
+         * 
+         * @returns {List} A list of the protocol versions supported by this digital notary API.
          */
         getProtocols: function() {
-            return supportedProtocols;
+            return getProtocols(debug);
         },
 
         /**
-         * This function initializes the Bali Digital Notary™.  It must be called before any
-         * other API function and can only be called once.
+         * This function initializes the API.
          */
         initializeAPI: async function() {
-            try {
-                // connect to the private hardware security module for the account
-                if (testDirectory) {
-                    // use a test software security module (SSM)
-                    privateAPI = preferredProtocol.HSMTest.api(account, testDirectory, debug);
-                } else {
-                    // or, use a proxy to a hardware security module (HSM)
-                    privateAPI = preferredProtocol.HSMProxy.api(account, debug);
-                }
-                await privateAPI.initialize();
-                this.initializeAPI = undefined;  // can only be called once
-            } catch (cause) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $function: '$initializeAPI',
-                    $exception: '$unexpected',
-                    $account: account,
-                    $testMode: testDirectory ? true : false,
-                    $text: bali.text('An unexpected error occurred while attempting to initialize the API.')
-                }, cause);
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
+            await privateAPI.initializeAPI();
+            this.initializeAPI = undefined;  // can only be called once
         },
 
         /**
-         * This function (re)generates a private notary key and its associated public notary
-         * certificate. The private notary key is generated on the hardware security module
-         * and remains there. The associated public notary certificate is returned and a
-         * document citation for the certificate is stored in the local configuration
-         * directory.
+         * This function returns the notary certificate associated with this notary key.
          *
-         * @returns {Catalog} A new Bali Notarized Document™ containing the public
-         * notary certificate associated with the new private notary key.
-         */
-        generateKeyPair: async function() {
-            checkInitialization(this, '$generateKeyPair');
-            try {
-                var notaryCertificate = await privateAPI.generate();
-                return notaryCertificate;
-            } catch (cause) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $function: '$generateKeyPair',
-                    $exception: '$unexpected',
-                    $account: account,
-                    $testMode: testDirectory ? true : false,
-                    $text: bali.text('An unexpected error occurred while attempting to (re)generate a new key pair.')
-                }, cause);
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
-        },
-
-        /**
-         * This function returns a document citation referencing the Bali Notarized Document™
-         * containing the public certificate for this digital notary.
-         *
-         * @returns {Catalog} A document citation referencing the document containing the
-         * public certificate for this digital notary.
-         */
-        getCitation: async function() {
-            checkInitialization(this, '$getCitation');
-            try {
-                return await privateAPI.citation();
-            } catch (cause) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $function: '$getCitation',
-                    $exception: '$unexpected',
-                    $account: account,
-                    $testMode: testDirectory ? true : false,
-                    $text: bali.text('An unexpected error occurred while attempting to retrieve the notary certificate citation.')
-                }, cause);
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
-        },
-
-        /**
-         * This function returns a Bali Notarized Document™ containing the public certificate for
-         * this digital notary.
-         *
-         * @returns {Catalog} The notarized document containing the public certificate
-         * for this digital notary.
+         * @returns {Catalog} The notary certificate associated with this notary key.
          */
         getCertificate: async function() {
-            checkInitialization(this, '$getCertificate');
-            try {
-                return await privateAPI.certificate();
-            } catch (cause) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $function: '$getCertificate',
-                    $exception: '$unexpected',
-                    $account: account,
-                    $testMode: testDirectory ? true : false,
-                    $text: bali.text('An unexpected error occurred while attempting to retrieve the notary certificate.')
-                }, cause);
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
+            return await privateAPI.getCertificate();
         },
 
         /**
-         * This function digitally notarizes the specified document using the private notary
-         * key maintained inside the hardware security module. The specified document citation
-         * is updated with the digest of the notarized document. The newly notarized document
-         * is returned.
+         * This function returns a citation referencing the notary certificate associated
+         * with this notary key.
          *
-         * @param {Component} component The document content to be notarized.
-         * @param {Catalog} previous An optional document citation to the previous version of
-         * the notarized document.
-         * @returns {Catalog} A catalog that is the newly notarized document for the component.
+         * @returns {Catalog} A citation referencing the notary certificate associated
+         * with this notary key.
          */
-        notarizeDocument: async function(component, previous) {
-            checkInitialization(this, '$notarizeDocument');
+        getCitation: async function() {
+            return await privateAPI.getCitation();
+        },
 
-            // validate the parameters
-            if (!component || !component.getTypeId) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $function: '$notarizeDocument',
-                    $exception: '$invalidParameter',
-                    $account: account,
-                    $testMode: testDirectory ? true : false,
-                    $parameter: component ? bali.text(component.toString()) : bali.NONE,
-                    $text: bali.text('The previous document citation is invalid.')
-                });
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
-            if (previous && (!previous.getTypeId || previous.getTypeId() !== bali.types.CATALOG)) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $function: '$notarizeDocument',
-                    $exception: '$invalidParameter',
-                    $account: account,
-                    $testMode: testDirectory ? true : false,
-                    $parameter: bali.text(previous.toString()),
-                    $text: bali.text('The previous document citation is invalid.')
-                });
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
+        /**
+         * This function generates a new public-private key pair and uses the private key as the
+         * new notary key. It returns the new public notary certificate. Note, during regeneration
+         * the old private key is used to sign the new certificate before it is destroyed.
+         *
+         * @returns {Catalog} The new notary certificate.
+         */
+        generateKey: async function() {
+            return await privateAPI.generateKey();
+        },
 
-            try {
-                // retrieve the notary certificate citation
-                const citation = await privateAPI.citation();
-                if (!citation) {
-                    const exception = bali.exception({
-                        $module: '$DigitalNotary',
-                        $function: '$notarizeDocument',
-                        $exception: '$missingKey',
-                        $account: account,
-                        $testMode: testDirectory ? true : false,
-                        $text: bali.text('The notary key is missing.')
-                    });
-                    throw exception;
-                }
-
-                // set the component parameters if necessary
-                if (!component.isParameterized()) {
-                    const parameters = bali.parameters({
-                        $tag: bali.tag(),
-                        $version: bali.version()
-                    });
-                    // TODO: need to find a way not to require a setParameters() method
-                    component.setParameters(parameters);
-                }
-
-                // construct the notarized document
-                const document = bali.catalog();
-                document.setValue('$protocol', publicAPI.protocol);
-                document.setValue('$timestamp', bali.moment());  // now
-                if (previous) document.setValue('$previous', previous);
-                document.setValue('$component', component);
-                if (citation) document.setValue('$citation', citation);
-                const signature = await privateAPI.sign(document);
-                document.setValue('$signature', signature);
-
-                return document;
-            } catch (cause) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $function: '$notarizeDocument',
-                    $exception: '$unexpected',
-                    $account: account,
-                    $testMode: testDirectory ? true : false,
-                    $component: component,
-                    $previous: previous,
-                    $document: document,
-                    $text: bali.text('An unexpected error occurred while attempting to notarize a document.')
-                }, cause);
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
+        /**
+         * This function causes the digital notary to forget all information
+         * it knows about the current public-private key pair.
+         */
+        forgetKey: async function() {
+            return await privateAPI.forgetKey();
         },
 
         /**
@@ -325,62 +267,13 @@ exports.api = function(account, testDirectory, debug) {
          * @returns {Catalog} A document citation for the document.
          */
         citeDocument: async function(document) {
-            checkInitialization(this, '$citeDocument');
-
-            // validate the parameters
-            if (!document || !document.getTypeId || document.getTypeId() !== bali.types.CATALOG) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $function: '$citeDocument',
-                    $exception: '$invalidParameter',
-                    $account: account,
-                    $testMode: testDirectory ? true : false,
-                    $parameter: document ? bali.text(document.toString()) : bali.NONE,
-                    $text: bali.text('The previous document citation is invalid.')
-                });
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
-
-            // verify the document parameters
-            const parameters = document.getValue('$component').getParameters();
-            if (!parameters || !parameters.getParameter('$tag') || !parameters.getParameter('$version')) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $function: '$citeDocument',
-                    $exception: '$missingParameters',
-                    $document: document,
-                    $text: bali.text('The document parameters are missing.')
-                });
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
-
-            try {
-                const tag = parameters.getParameter('$tag');
-                const version = parameters.getParameter('$version');
-                const digest = publicAPI.digest(document);
-                const citation = publicAPI.citation(tag, version, digest);
-                return citation;
-            } catch (cause) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $function: '$citeDocument',
-                    $exception: '$unexpected',
-                    $account: account,
-                    $testMode: testDirectory ? true : false,
-                    $document: document,
-                    $text: bali.text('An unexpected error occurred while attempting to cite a document.')
-                }, cause);
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
+            return await publicAPI.citeDocument(document);
         },
 
         /**
          * This function determines whether or not the specified document citation matches
          * the specified document. The citation only matches if its digest matches the
-         * digest of the document.
+         * digest of the document exactly.
          *
          * @param {Catalog} citation A document citation allegedly referring to the
          * specified document.
@@ -388,57 +281,23 @@ exports.api = function(account, testDirectory, debug) {
          * @returns {Boolean} Whether or not the citation matches the specified document.
          */
         citationMatches: async function(citation, document) {
-            checkInitialization(this, '$citationMatches');
+            const api = getPublicAPI(debug, '$citationMatches', citation);
+            return await api.citationMatches(citation, document);
+        },
 
-            // validate the parameters
-            if (!citation || !citation.getTypeId || citation.getTypeId() !== bali.types.CATALOG) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $function: '$citationMatches',
-                    $exception: '$invalidParameter',
-                    $account: account,
-                    $testMode: testDirectory ? true : false,
-                    $parameter: citation ? bali.text(citation.toString()) : bali.NONE,
-                    $text: bali.text('The document citation is invalid.')
-                });
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
-            if (!document || !document.getTypeId || document.getTypeId() !== bali.types.CATALOG) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $function: '$citationMatches',
-                    $exception: '$invalidParameter',
-                    $account: account,
-                    $testMode: testDirectory ? true : false,
-                    $parameter: document ? bali.text(document.toString()) : bali.NONE,
-                    $text: bali.text('The document is invalid.')
-                });
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
-
-            try {
-                // verify the citation
-                const publicAPI = getPublicAPI('$citationMatches', citation);
-                var digest = publicAPI.digest(document);
-
-                return digest.isEqualTo(citation.getValue('$digest'));
-
-            } catch (cause) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $function: '$citationMatches',
-                    $exception: '$unexpected',
-                    $account: account,
-                    $testMode: testDirectory ? true : false,
-                    $document: document,
-                    $citation: citation,
-                    $text: bali.text('An unexpected error occurred while attempting to verify a document citation.')
-                }, cause);
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
+        /**
+         * This function digitally notarizes the specified document using the private notary
+         * key maintained inside the software security module. An optional document citation
+         * to the previous version of the document may be specified. The newly notarized
+         * document is returned.
+         *
+         * @param {Component} document The document to be notarized.
+         * @param {Catalog} previous An optional document citation to the previous version of
+         * the document.
+         * @returns {Catalog} The newly notarized document.
+         */
+        notarizeDocument: async function(document, previous) {
+            return await privateAPI.notarizeDocument(document, previous);
         },
 
         /**
@@ -446,203 +305,43 @@ exports.api = function(account, testDirectory, debug) {
          * is valid.
          *
          * @param {Catalog} document The notarized document to be tested.
-         * @param {Catalog} certificate A catalog containing the public notary key for the
+         * @param {Catalog} certificate A catalog containing the public certificate for the
          * private notary key that allegedly notarized the specified document.
          * @returns {Boolean} Whether or not the notary seal on the document is valid.
          */
         documentIsValid: async function(document, certificate) {
-            checkInitialization(this, '$documentIsValid');
-
-            // validate the parameters
-            if (!document || !document.getTypeId || document.getTypeId() !== bali.types.CATALOG) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $function: '$documentIsValid',
-                    $exception: '$invalidParameter',
-                    $account: account,
-                    $testMode: testDirectory ? true : false,
-                    $parameter: document ? bali.text(document.toString()) : bali.NONE,
-                    $text: bali.text('The document is invalid.')
-                });
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
-            if (!certificate || !certificate.getTypeId || certificate.getTypeId() !== bali.types.CATALOG) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $function: '$documentIsValid',
-                    $exception: '$invalidParameter',
-                    $account: account,
-                    $testMode: testDirectory ? true : false,
-                    $parameter: certificate ? bali.text(certificate.toString()) : bali.NONE,
-                    $text: bali.text('The certificate is invalid.')
-                });
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
-
-            try {
-                const publicAPI = getPublicAPI('$documentIsValid', certificate);
-                const catalog = bali.catalog.extraction(document, bali.list([
-                    '$protocol',
-                    '$timestamp',
-                    '$previous',
-                    '$component',
-                    '$citation'
-                ]));  // everything but the signature
-                const publicKey = certificate.getValue('$publicKey');
-                const signature = document.getValue('$signature');
-                const isValid = publicAPI.verify(catalog, publicKey, signature);
-                return isValid;
-            } catch (cause) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $function: '$documentIsValid',
-                    $exception: '$unexpected',
-                    $account: account,
-                    $testMode: testDirectory ? true : false,
-                    $document: document,
-                    $certificate: certificate,
-                    $text: bali.text('An unexpected error occurred while attempting to verify a notarized document.')
-                }, cause);
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
+            const api = getPublicAPI(debug, '$documentIsValid', certificate);
+            return await api.documentIsValid(document, certificate);
         },
 
         /**
          * This function uses the specified public notary certificate to encrypt the specified
-         * component in such a way that only the intended recipient of the encrypted component can
+         * document in such a way that only the intended recipient of the encrypted document can
          * decrypt it using their private notary key. The result is an authenticated encrypted
          * message (AEM) containing the ciphertext and other required attributes needed to
          * decrypt the message.
          *
-         * @param {Component} component The component to be encrypted using the specified
+         * @param {Component} document The document to be encrypted using the specified
          * public notary certificate.
-         * @param {Catalog} certificate A catalog containing the public notary key for the
-         * intended recipient of the encrypted component.
+         * @param {Catalog} certificate A catalog containing the public certificate for the
+         * intended recipient of the encrypted document.
          * @returns {Catalog} An authenticated encrypted message (AEM) containing the ciphertext
-         * and other required attributes for the encrypted component.
+         * and other required attributes for the encrypted document.
          */
-        encryptComponent: async function(component, certificate) {
-            checkInitialization(this, '$encryptComponent');
-
-            // validate the parameters
-            if (!component || !component.getTypeId) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $function: '$encryptComponent',
-                    $exception: '$invalidParameter',
-                    $account: account,
-                    $testMode: testDirectory ? true : false,
-                    $parameter: component ? bali.text(component.toString()) : bali.NONE,
-                    $text: bali.text('The component is invalid.')
-                });
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
-            if (!certificate || !certificate.getTypeId || certificate.getTypeId() !== bali.types.CATALOG) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $function: '$encryptComponent',
-                    $exception: '$invalidParameter',
-                    $account: account,
-                    $testMode: testDirectory ? true : false,
-                    $parameter: certificate ? bali.text(certificate.toString()) : bali.NONE,
-                    $text: bali.text('The certificate is invalid.')
-                });
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
-
-            try {
-                const publicAPI = getPublicAPI('$encryptComponent', certificate);
-                const publicKey = certificate.getValue('$publicKey');
-                const aem = publicAPI.encrypt(component, publicKey);
-                return aem;
-            } catch (cause) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $function: '$encryptComponent',
-                    $exception: '$unexpected',
-                    $account: account,
-                    $testMode: testDirectory ? true : false,
-                    $certificate: certificate,
-                    $text: bali.text('An unexpected error occurred while attempting to encrypt a component.')
-                }, cause);
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
+        encryptDocument: async function(document, certificate) {
+            const api = getPublicAPI(debug, '$encryptDocument', certificate);
+            return await api.encryptDocument(document, certificate);
         },
 
         /**
-         * This function uses the private notary key in the hardware security module to decrypt
-         * the ciphertext residing in the specified authenticated encrypted message (AEM). THe
-         * result is the decrypted component.
+         * This function uses the notary key to decrypt the specified authenticated
+         * encrypted message (AEM). The result is the decrypted document.
          *
-         * @param {Catalog} aem An authenticated encrypted message (AEM) containing the ciphertext
-         * and other required attributes required to decrypt the component.
-         * @returns {Component} The decrypted component.
+         * @param {Catalog} aem The authenticated encrypted message to be decrypted.
+         * @returns {Component} The decrypted document.
          */
-        decryptComponent: async function(aem) {
-            checkInitialization(this, '$decryptComponent');
-
-            // validate the parameters
-            if (!aem || !aem.getTypeId || aem.getTypeId() !== bali.types.CATALOG) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $function: '$decryptComponent',
-                    $exception: '$invalidParameter',
-                    $account: account,
-                    $testMode: testDirectory ? true : false,
-                    $parameter: aem ? bali.text(aem.toString()) : bali.NONE,
-                    $text: bali.text('The authenticated encrypted message is invalid.')
-                });
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
-
-            try {
-                const citation = await privateAPI.citation();
-                if (!citation) {
-                    const exception = bali.exception({
-                        $module: '$DigitalNotary',
-                        $function: '$decryptComponent',
-                        $exception: '$missingKey',
-                        $account: account,
-                        $text: bali.text('The notary key is missing.')
-                    });
-                    if (debug) console.error(exception.toString());
-                    throw exception;
-                }
-                const protocol = aem.getValue('$protocol');
-                if (!publicAPI.protocol.isEqualTo(protocol)) {
-                    const exception = bali.exception({
-                        $module: '$DigitalNotary',
-                        $function: '$decryptComponent',
-                        $exception: '$unsupportedProtocol',
-                        $expected: publicAPI.protocol,
-                        $actual: protocol,
-                        $text: bali.text('The component was encrypted using an unsupported version of the notary protocol.')
-                    });
-                    if (debug) console.error(exception.toString());
-                    throw exception;
-                }
-                const component = await privateAPI.decrypt(aem);
-                return component;
-            } catch (cause) {
-                const exception = bali.exception({
-                    $module: '$DigitalNotary',
-                    $function: '$decryptComponent',
-                    $exception: '$unexpected',
-                    $account: account,
-                    $testMode: testDirectory ? true : false,
-                    $aem: aem,
-                    $text: bali.text('An unexpected error occurred while attempting to decrypt an authenticated encrypted message.')
-                }, cause);
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
+        decryptDocument: async function(aem) {
+            return await privateAPI.decryptDocument(aem);
         }
 
     };
@@ -652,38 +351,49 @@ exports.api = function(account, testDirectory, debug) {
 // PRIVATE FUNCTIONS
 
 /**
- * This function throws an exception if the API has not yet been initialized.
- *
- * @param {Object} api The object that implements the API.
- * @param {String} functionName The name of the API function being called.
+ * This function returns a list of the protocol versions supported by this digital notary
+ * API.
+ * 
+ * @param {Boolean} debug An optional flag that determines whether or not exceptions
+ * will be logged to the error console.
+ * @returns {List} A list of the protocol versions supported by this digital notary API.
  */
-const checkInitialization = function(api, functionName) {
-    if (api.initializeAPI) {
+const getProtocols = function(debug) {
+    try {
+        return bali.list(Object.keys(protocols));
+    } catch (cause) {
         const exception = bali.exception({
             $module: '$DigitalNotary',
-            $function: functionName,
-            $exception: '$notInitialized',
-            $text: bali.text('The Bali Nebula API™ has not been initialized.')
-        });
-        console.error(exception.toString());  // log no matter what
+            $function: '$getProtocols',
+            $exception: '$unexpected',
+            $text: bali.text('An unexpected error occurred while attempting to retrieve the protocols for the notary API.')
+        }, cause);
+        if (debug) console.error(exception.toString());
         throw exception;
     }
 };
 
 
-/*
- * This function returns the requested version of the public API or throws an exception
- * if it does not exist.
+/**
+ * This function returns a reference to the public API that implements the version of
+ * the protocol required by the specified document.  If the required version is not
+ * supported by this digital notary then an exception is thrown.
+ * 
+ * @param {Boolean} debug An optional flag that determines whether or not exceptions
+ * will be logged to the error console.
+ * @param {String} functionName The name of the function making the request.
+ * @param {Catalog} document The document being analyzed.
+ * @returns {Object} An object that supports the required version of the API.
  */
-const getPublicAPI = function(functionName, document) {
+const getPublicAPI = function(debug, functionName, document) {
     const protocol = document.getValue('$protocol');
-    const publicAPI = supportedAPIs[protocol.toString()].HSMPublic;
+    const publicAPI = protocols[protocol.toString()].SSM.publicAPI(debug);
     if (!publicAPI) {
         const exception = bali.exception({
             $module: '$DigitalNotary',
             $function: functionName,
             $exception: '$unsupportedProtocol',
-            $expected: supportedProtocols,
+            $expected: Object.keys(protocols),
             $actual: protocol,
             $text: bali.text('Attempted to use an unsupported version of the notary protocol.')
         });
@@ -691,3 +401,4 @@ const getPublicAPI = function(functionName, document) {
     }
     return publicAPI;
 };
+

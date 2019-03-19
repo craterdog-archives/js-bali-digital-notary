@@ -10,17 +10,25 @@
 'use strict';
 
 /**
- * This attribute provides a handle to the version 1 security module functions that
- * do not require access to the private notary key.
+ * This function returns an object that implements the digital notary public API.
+ * The public API only deals with public certificates and is implemented using a
+ * software security module (SSM).
+ *
+ * @param {Boolean} debug An optional flag that determines whether or not exceptions
+ * will be logged to the error console.
+ * @returns {Object} A singleton object implementing the public API.
  */
-exports.v1Public = require('./src/v1/HSMPublic');
+exports.publicAPI = function(debug) {
+    const api = require('./src/DigitalNotary').publicAPI(debug);
+    return api;
+};
 
 
 /**
- * This function returns the digital notary API. If a test directory
- * is passed in as a parameter the test directory will be used to maintain
- * the configuration file. Otherwise, the configuration file will be in the
- * '~/.bali/' directory. When running in test mode, a local software security
+ * This function returns an object that implements the digital notary private API.
+ * If a test directory is passed in as a parameter the test directory will be used
+ * to maintain the configuration file. Otherwise, the configuration file will be in
+ * the '~/.bali/' directory. When running in test mode, a local software security
  * module will be used instead of a remote hardware security module (HSM)
  * for all operations that utilize the private notary key.
  *
@@ -29,9 +37,9 @@ exports.v1Public = require('./src/v1/HSMPublic');
  * maintain the configuration information for the digital notary API.
  * @param {Boolean} debug An optional flag that determines whether or not exceptions
  * will be logged to the error console.
- * @returns {Object} A singleton object containing the initialized digital notary API.
+ * @returns {Object} A singleton object implementing the private API.
  */
-exports.api = function(account, testDirectory, debug) {
-    const api = require('./src/DigitalNotary').api(account, testDirectory, debug);
+exports.privateAPI = function(account, testDirectory, debug) {
+    const api = require('./src/DigitalNotary').privateAPI(account, testDirectory, debug);
     return api;
 };

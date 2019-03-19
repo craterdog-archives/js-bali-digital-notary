@@ -9,6 +9,5 @@
  ************************************************************************/
 'use strict';
 
-exports.HSMPublic = require('./HSMPublic');
-exports.HSMProxy = require('./HSMProxy');
-exports.HSMTest = require('./HSMTest');
+exports.SSM = require('./SSM');
+exports.HSM = require('./HSM');

@@ -14,7 +14,7 @@ const assert = require('chai').assert;
 const expect = require('chai').expect;
 const bali = require('bali-component-framework');
 const account = bali.tag();
-const notary = require('../').api(account, 'test/config/', debug);
+const notary = require('../').privateAPI(account, 'test/config/', debug);
 
 describe('Bali Digital Notary™', function() {
 
@@ -45,12 +45,12 @@ describe('Bali Digital Notary™', function() {
         });
 
         it('should generate the keys', async function() {
-            certificateDocument = await notary.generateKeyPair();
+            certificateDocument = await notary.generateKey();
             expect(certificateDocument).to.exist;  // jshint ignore:line
         });
 
-        it('should retrieve the notary certificate', async function() {
-            notaryCertificate = certificateDocument.getValue('$component');
+        it('should retrieve the notary certificate', function() {
+            notaryCertificate = certificateDocument.getValue('$document');
             expect(notaryCertificate).to.exist;  // jshint ignore:line
         });
 
@@ -113,8 +113,8 @@ describe('Bali Digital Notary™', function() {
 
         it('should encrypt and decrypt a component properly', async function() {
             var component = bali.parse('"This is a test..."');
-            var encrypted = await notary.encryptComponent(component, notaryCertificate);
-            var decrypted = await notary.decryptComponent(encrypted);
+            var encrypted = await notary.encryptDocument(component, notaryCertificate);
+            var decrypted = await notary.decryptDocument(encrypted);
             expect(decrypted.isEqualTo(component)).to.equal(true);
         });
 
@@ -123,9 +123,9 @@ describe('Bali Digital Notary™', function() {
     describe('Test Key Regeneration', function() {
 
         it('should regenerate a notary key properly', async function() {
-            var newCertificateDocument = await notary.generateKeyPair();
+            var newCertificateDocument = await notary.generateKey();
             expect(newCertificateDocument).to.exist;  // jshint ignore:line
-            var newNotaryCertificate = newCertificateDocument.getValue('$component');
+            var newNotaryCertificate = newCertificateDocument.getValue('$document');
 
             var document = await notary.notarizeDocument(component);
             var citation = await notary.citeDocument(document);
