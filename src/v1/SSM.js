@@ -354,7 +354,7 @@ exports.privateAPI = function(account, testDirectory, debug) {
                 // create the configuration directory structure if necessary
                 configDirectory = await createDirectory(testDirectory, account);
                 keyFilename = configDirectory + 'NotaryKey.bali';
-                certificateFilename = configDirectory + 'NotaryCertificate.ndoc';
+                certificateFilename = configDirectory + 'NotaryCertificate.bali';
 
                 // read in the notary key attributes (if possible)
                 try {
