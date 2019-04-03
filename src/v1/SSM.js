@@ -80,6 +80,7 @@ exports.publicAPI = function(debug) {
                 if (debug) console.error(exception.toString());
                 throw exception;
             }
+            // TODO: check for undefined $document
             const parameters = document.getValue('$document').getParameters();
             if (!parameters || !parameters.getParameter('$tag') || !parameters.getParameter('$version')) {
                 const exception = bali.exception({
@@ -95,11 +96,12 @@ exports.publicAPI = function(debug) {
 
             // generate the document citation
             try {
+                // TODO: check tag and version component type?
                 const tag = parameters.getParameter('$tag');
                 const version = parameters.getParameter('$version');
                 const digest = generateDigest(document);
                 const citation = bali.catalog({
-                    $protocol: bali.parse(PROTOCOL),
+                    $protocol: bali.parse(PROTOCOL),  // parses the version number of the protocol
                     $timestamp: bali.moment(),  // now
                     $tag: tag,
                     $version: version,
