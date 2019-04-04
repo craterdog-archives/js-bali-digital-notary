@@ -406,8 +406,8 @@ exports.privateAPI = function(account, testDirectory, debug) {
          *
          * @returns {Catalog} The notary certificate associated with this notary key.
          */
-        getCertificate: function() {
-            checkInitialization(this, '$getCertificate');
+        getCertificate: async function() {
+            if (this.initializeAPI) await this.initializeAPI();
             return notaryCertificate;
         },
 
@@ -418,8 +418,8 @@ exports.privateAPI = function(account, testDirectory, debug) {
          * @returns {Catalog} A citation referencing the notary certificate associated
          * with this notary key.
          */
-        getCitation: function() {
-            checkInitialization(this, '$getCitation');
+        getCitation: async function() {
+            if (this.initializeAPI) await this.initializeAPI();
             return certificateCitation;
         },
 
@@ -431,7 +431,7 @@ exports.privateAPI = function(account, testDirectory, debug) {
          * @returns {Catalog} The new notary certificate.
          */
         generateKey: async function() {
-            checkInitialization(this, '$generateKey');
+            if (this.initializeAPI) await this.initializeAPI();
             try {
                 const isRegeneration = !!privateKey;
 
@@ -528,7 +528,7 @@ exports.privateAPI = function(account, testDirectory, debug) {
          * it knows about the current public-private key pair.
          */
         forgetKey: async function() {
-            checkInitialization(this, '$forgetKey');
+            if (this.initializeAPI) await this.initializeAPI();
             try {
                 version = undefined;
                 publicKey = undefined;
@@ -567,8 +567,8 @@ exports.privateAPI = function(account, testDirectory, debug) {
          * @param {Component} document The document to be notarized.
          * @returns {Catalog} The newly notarized document.
          */
-        notarizeDocument: function(document) {
-            checkInitialization(this, '$notarizeDocument');
+        notarizeDocument: async function(document) {
+            if (this.initializeAPI) await this.initializeAPI();
 
             // validate the parameters
             if (!document || !document.getTypeId) {
@@ -635,7 +635,7 @@ exports.privateAPI = function(account, testDirectory, debug) {
          * @returns {Component} The decrypted document.
          */
         decryptDocument: async function(aem) {
-            checkInitialization(this, '$decryptDocument');
+            if (this.initializeAPI) await this.initializeAPI();
 
             // validate the parameters
             if (!aem || !aem.getTypeId || aem.getTypeId() !== bali.types.CATALOG) {
@@ -819,26 +819,6 @@ const storeCertificate = async function(filename, certificate) {
  */
 const deleteCertificate = async function(filename) {
     await pfs.unlink(filename).catch(function() {});
-};
-
-
-/**
- * This function throws an exception if the specified API has not yet been initialized.
- * 
- * @param {Object} api A singleton object that defines an API that requires initialization.
- * @param {String} functionName The name of the function that is being called.
- */
-const checkInitialization = function(api, functionName) {
-    if (api.initializeAPI) {
-        const exception = bali.exception({
-            $module: '$DigitalNotary',
-            $function: functionName,
-            $exception: '$notInitialized',
-            $text: bali.text('The Bali Nebula API™ has not been initialized.')
-        });
-        console.error(exception.toString());  // log no matter what
-        throw exception;
-    }
 };
 
 

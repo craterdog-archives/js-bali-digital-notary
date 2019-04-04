@@ -42,12 +42,20 @@ exports.publicAPI = function(debug) {
         },
 
         /**
+         * This function initializes the API.
+         */
+        initializeAPI: async function() {
+            this.initializeAPI = undefined;
+        },
+
+        /**
          * This function generates a document citation for the specified document.
          *
          * @param {Catalog} document The document to be cited.
          * @returns {Catalog} A document citation for the document.
          */
-        citeDocument: function(document) {
+        citeDocument: async function(document) {
+            if (this.initializeAPI) await this.initializeAPI();
         },
 
         /**
@@ -60,7 +68,8 @@ exports.publicAPI = function(debug) {
          * @param {Catalog} document The document to be tested.
          * @returns {Boolean} Whether or not the citation matches the specified document.
          */
-        citationMatches: function(citation, document) {
+        citationMatches: async function(citation, document) {
+            if (this.initializeAPI) await this.initializeAPI();
         },
 
         /**
@@ -72,7 +81,8 @@ exports.publicAPI = function(debug) {
          * private notary key that allegedly notarized the specified document.
          * @returns {Boolean} Whether or not the notary seal on the document is valid.
          */
-        documentIsValid: function(document, certificate) {
+        documentIsValid: async function(document, certificate) {
+            if (this.initializeAPI) await this.initializeAPI();
         },
 
         /**
@@ -89,7 +99,8 @@ exports.publicAPI = function(debug) {
          * @returns {Catalog} An authenticated encrypted message (AEM) containing the ciphertext
          * and other required attributes for the encrypted document.
          */
-        encryptDocument: function(document, certificate) {
+        encryptDocument: async function(document, certificate) {
+            if (this.initializeAPI) await this.initializeAPI();
         }
     };
 };
@@ -121,6 +132,7 @@ exports.privateAPI = function(account, testDirectory, debug) {
          * This function initializes the API.
          */
         initializeAPI: async function() {
+            this.initializeAPI = undefined;
         },
 
         /**
@@ -128,7 +140,8 @@ exports.privateAPI = function(account, testDirectory, debug) {
          *
          * @returns {Catalog} The notary certificate associated with this notary key.
          */
-        getCertificate: function() {
+        getCertificate: async function() {
+            if (this.initializeAPI) await this.initializeAPI();
         },
 
         /**
@@ -138,7 +151,8 @@ exports.privateAPI = function(account, testDirectory, debug) {
          * @returns {Catalog} A citation referencing the notary certificate associated
          * with this notary key.
          */
-        getCitation: function() {
+        getCitation: async function() {
+            if (this.initializeAPI) await this.initializeAPI();
         },
 
         /**
@@ -149,6 +163,7 @@ exports.privateAPI = function(account, testDirectory, debug) {
          * @returns {Catalog} The new notary certificate.
          */
         generateKey: async function() {
+            if (this.initializeAPI) await this.initializeAPI();
         },
 
         /**
@@ -156,6 +171,7 @@ exports.privateAPI = function(account, testDirectory, debug) {
          * it knows about the current public-private key pair.
          */
         forgetKey: async function() {
+            if (this.initializeAPI) await this.initializeAPI();
         },
 
         /**
@@ -174,7 +190,8 @@ exports.privateAPI = function(account, testDirectory, debug) {
          * @param {Component} document The document to be notarized.
          * @returns {Catalog} The newly notarized document.
          */
-        notarizeDocument: function(document) {
+        notarizeDocument: async function(document) {
+            if (this.initializeAPI) await this.initializeAPI();
         },
 
         /**
@@ -185,6 +202,7 @@ exports.privateAPI = function(account, testDirectory, debug) {
          * @returns {Component} The decrypted document.
          */
         decryptDocument: async function(aem) {
+            if (this.initializeAPI) await this.initializeAPI();
         }
     };
 };

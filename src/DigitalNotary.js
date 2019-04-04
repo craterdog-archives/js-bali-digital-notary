@@ -216,14 +216,6 @@ exports.api = function(account, testDirectory, debug) {
         },
 
         /**
-         * This function initializes the API.
-         */
-        initializeAPI: async function() {
-            await privateAPI.initializeAPI();
-            this.initializeAPI = undefined;  // can only be called once
-        },
-
-        /**
          * This function returns the notary certificate associated with this notary key.
          *
          * @returns {Catalog} The notary certificate associated with this notary key.

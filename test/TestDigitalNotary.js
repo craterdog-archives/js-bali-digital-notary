@@ -38,16 +38,6 @@ describe('Bali Digital Notary™', function() {
             expect(versions.toString()).to.equal('[v1]');
         });
 
-        it('should initialize the API once and only once', async function() {
-            await notary.initializeAPI();
-            try {
-                await notary.initializeAPI();
-                assert.fail('The second attempt to initialize the API should have failed.');
-            } catch(error) {
-                // expected
-            };
-        });
-
         it('should generate the keys', async function() {
             certificateDocument = await notary.generateKey();
             expect(certificateDocument).to.exist;  // jshint ignore:line
