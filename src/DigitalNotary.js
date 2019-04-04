@@ -289,21 +289,22 @@ exports.api = function(account, testDirectory, debug) {
 
         /**
          * This function digitally notarizes the specified document using the private notary
-         * key maintained inside the software security module. An optional document citation
-         * to the previous version of the document may be specified. Also, an optional
-         * document citation to a document defining the permissions for accessing the document
-         * may be specified. If no permissions are specified, the document will be publicly
-         * available to anyone. The newly notarized document is returned.
+         * key maintained inside the software security module. The document must be parameterized
+         * with the following parameters:
+         * <pre>
+         *  * $tag - a unique identifier for the document
+         *  * $version - the version of the document
+         *  * $permissions - a citation to a document containing the permissions defining who can access the document
+         *  * $previous - a citation to the previous version of the document (or bali.NONE)
+         * </pre>
+         * 
+         * The newly notarized document is returned.
          *
          * @param {Component} document The document to be notarized.
-         * @param {Catalog} previous An optional document citation to the previous version of
-         * the document.
-         * @param {Catalog} permissions An optional document citation to a document defining
-         * the permissions for accessing the document.
          * @returns {Catalog} The newly notarized document.
          */
-        notarizeDocument: async function(document, previous, permissions) {
-            return await privateAPI.notarizeDocument(document, previous, permissions);
+        notarizeDocument: async function(document) {
+            return await privateAPI.notarizeDocument(document);
         },
 
         /**

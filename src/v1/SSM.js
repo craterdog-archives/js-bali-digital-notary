@@ -106,7 +106,9 @@ exports.publicAPI = function(debug) {
                     $tag: tag,
                     $version: version,
                     $digest: digest
-                });
+                }, bali.parameters({
+                    $type: '$Citation'
+                }));
                 return citation;
             } catch (cause) {
                 const exception = bali.exception({
@@ -213,8 +215,6 @@ exports.publicAPI = function(debug) {
                     '$document',
                     '$protocol',
                     '$timestamp',
-                    '$previous',
-                    '$permissions',
                     '$certificate'
                 ]));  // everything but the signature
                 const publicKey = certificate.getValue('$publicKey');
@@ -364,13 +364,12 @@ exports.privateAPI = function(account, testDirectory, debug) {
                     if (await doesExist(keyFilename)) {
                         // read in the notary key information
                         const keys = await loadKeys(keyFilename);
-                        const parameters = keys.getParameters();
-                        notaryTag = parameters.getParameter('$tag');
-                        version = parameters.getParameter('$version');
                         timestamp = keys.getValue('$timestamp');
                         publicKey = keys.getValue('$publicKey');
                         privateKey = keys.getValue('$privateKey');
                         certificateCitation = keys.getValue('$certificate');
+                        notaryTag = certificateCitation.getValue('$tag');
+                        version = certificateCitation.getValue('$version');
                     }
                     if (await doesExist(certificateFilename)) {
                         // read in the notary certificate information
@@ -444,24 +443,29 @@ exports.privateAPI = function(account, testDirectory, debug) {
                 publicKey = keys.getValue('$publicKey');  // done with existing public key
                 privateKey = privateKey || keys.getValue('$privateKey');  // but need existing private key
 
-                // create the new notary certificate
+                // create the new notary certificate document
                 const document = bali.catalog({
                     $protocol: bali.parse(PROTOCOL),
                     $timestamp: timestamp,
                     $account: account,
                     $publicKey: publicKey
                 }, bali.parameters({
+                    $type: '$Certificate',
                     $tag: notaryTag,
-                    $version: version
+                    $version: version,
+                    $permissions: '$Public',
+                    $previous: isRegeneration ? certificateCitation : bali.NONE
                 }));
 
-                // create the new notary certificate
-                notaryCertificate = bali.catalog({});
-                notaryCertificate.setValue('$document', document);
-                notaryCertificate.setValue('$protocol', bali.parse(PROTOCOL));
-                notaryCertificate.setValue('$timestamp', bali.moment());  // now
-                if (isRegeneration) notaryCertificate.setValue('$previous', certificateCitation);
-                if (isRegeneration) notaryCertificate.setValue('$certificate', certificateCitation);
+                // notarize the notary certificate document
+                notaryCertificate = bali.catalog({
+                    $document: document,
+                    $protocol: bali.parse(PROTOCOL),
+                    $timestamp: bali.moment(),  // now
+                    $certificate: isRegeneration ? certificateCitation : bali.NONE
+                }, bali.parameters({
+                    $type: '$Document'
+                }));
                 const signature = generateSignature(notaryCertificate, privateKey);
                 notaryCertificate.setValue('$signature', signature);
 
@@ -476,7 +480,9 @@ exports.privateAPI = function(account, testDirectory, debug) {
                     $tag: notaryTag,
                     $version: version,
                     $digest: digest
-                });
+                }, bali.parameters({
+                    $type: '$Citation'
+                }));
 
                 // save the state of this notary key and certificate in the local configuration
                 try {
@@ -488,8 +494,7 @@ exports.privateAPI = function(account, testDirectory, debug) {
                         $privateKey: privateKey,
                         $certificate: certificateCitation
                     }, bali.parameters({
-                        $tag: notaryTag,
-                        $version: version
+                        $type: '$Key'
                     }));
                     await storeKeys(keyFilename, notaryKey);
                     await storeCertificate(certificateFilename, notaryCertificate);
@@ -548,20 +553,21 @@ exports.privateAPI = function(account, testDirectory, debug) {
 
         /**
          * This function digitally notarizes the specified document using the private notary
-         * key maintained inside the hardware security module. An optional document citation
-         * to the previous version of the document may be specified. Also, an optional
-         * document citation to a document defining the permissions for accessing the document
-         * may be specified. If no permissions are specified, the document will be publicly
-         * available to anyone. The newly notarized document is returned.
+         * key maintained inside the software security module. The document must be parameterized
+         * with the following parameters:
+         * <pre>
+         *  * $tag - a unique identifier for the document
+         *  * $version - the version of the document
+         *  * $permissions - a citation to a document containing the permissions defining who can access the document
+         *  * $previous - a citation to the previous version of the document (or bali.NONE)
+         * </pre>
+         * 
+         * The newly notarized document is returned.
          *
          * @param {Component} document The document to be notarized.
-         * @param {Catalog} previous An optional document citation to the previous version of
-         * the document.
-         * @param {Catalog} permissions An optional document citation to a document defining
-         * the permissions for accessing the document.
          * @returns {Catalog} The newly notarized document.
          */
-        notarizeDocument: function(document, previous, permissions) {
+        notarizeDocument: function(document) {
             checkInitialization(this, '$notarizeDocument');
 
             // validate the parameters
@@ -577,50 +583,32 @@ exports.privateAPI = function(account, testDirectory, debug) {
                 if (debug) console.error(exception.toString());
                 throw exception;
             }
-            if (previous && (!previous.getTypeId || previous.getTypeId() !== bali.types.CATALOG)) {
+            const parameters = document.getParameters();
+            if (!parameters || !parameters.getParameter('$tag') || !parameters.getParameter('$version') ||
+                    !parameters.getParameter('$permissions') || !parameters.getParameter('$previous')) {
                 const exception = bali.exception({
                     $module: '$v1SSM',
                     $function: '$notarizeDocument',
                     $exception: '$invalidParameter',
                     $account: account,
-                    $parameter: bali.text(previous.toString()),
-                    $text: bali.text('The previous document citation is invalid.')
+                    $parameter: document,
+                    $text: bali.text('The document must be parameterized with tag, version, permissions, and previous parameters.')
                 });
                 if (debug) console.error(exception.toString());
                 throw exception;
             }
-            if (permissions && (!permissions.getTypeId || permissions.getTypeId() !== bali.types.CATALOG)) {
-                const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$notarizeDocument',
-                    $exception: '$invalidParameter',
-                    $account: account,
-                    $parameter: bali.text(permissions.toString()),
-                    $text: bali.text('The permissions document citation is invalid.')
-                });
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
+
 
             try {
-                // set the document parameters if necessary
-                if (!document.isParameterized()) {
-                    const parameters = bali.parameters({
-                        $tag: bali.tag(),
-                        $version: bali.version()
-                    });
-                    // TODO: need to find a way not to require a setParameters() method
-                    document.setParameters(parameters);
-                }
-
                 // construct the notarized document
-                const notarizedDocument = bali.catalog();
-                notarizedDocument.setValue('$document', document);
-                notarizedDocument.setValue('$protocol', PROTOCOL);
-                notarizedDocument.setValue('$timestamp', bali.moment());  // now
-                if (previous) notarizedDocument.setValue('$previous', previous);
-                if (permissions) notarizedDocument.setValue('$permissions', permissions);
-                notarizedDocument.setValue('$certificate', certificateCitation);
+                const notarizedDocument = bali.catalog({
+                    $document: document,
+                    $protocol: PROTOCOL,
+                    $timestamp: bali.moment(),  // now
+                    $certificate: certificateCitation
+                }, bali.parameters({
+                    $type: '$Document'
+                }));
                 const signature = generateSignature(notarizedDocument, privateKey);
                 notarizedDocument.setValue('$signature', signature);
 
@@ -865,7 +853,9 @@ const generateKeys = function() {
     return bali.catalog({
         $publicKey: bali.binary(curve.getPublicKey()),
         $privateKey: bali.binary(curve.getPrivateKey())
-    });
+    }, bali.parameters({
+        $type: '$KeyPair'
+    }));
 };
 
 
@@ -959,7 +949,9 @@ const encryptMessage = function(message, publicKey) {
         $iv: bali.binary(iv),
         $auth: bali.binary(auth),
         $ciphertext: bali.binary(ciphertext)
-    });
+    }, bali.parameters({
+        $type: '$AEM'
+    }));
 
     return aem;
 };

@@ -22,7 +22,7 @@ describe('Bali Digital Notary™', function() {
     var certificateDocument;
     var notaryCertificate;
     var certificateCitation;
-    var component = bali.parse('[$foo: "bar"]($tag: #MFPCRNKS2SG20CD7VQ6KD329X7382KJY, $version: v1)');
+    var component = bali.parse('[$foo: "bar"]($tag: #MFPCRNKS2SG20CD7VQ6KD329X7382KJY, $version: v1, $permissions: $Public, $previous: none)');
 
     describe('Test Key Generation', function() {
 
@@ -93,6 +93,15 @@ describe('Bali Digital Notary™', function() {
 
         it('should digitally sign a document properly', async function() {
             const tag = bali.tag();
+            const previous = bali.catalog({
+                $protocol: bali.version(),
+                $timestamp: bali.parse('<2019-02-24T22:41:18.843>'),
+                $tag: tag,
+                $version: bali.version([2, 3]),
+                $digest: bali.parse("'JB2NG73VTB957T9TZWT44KRZVQ467KWJ2MSJYT6YW2RQAYQMSR861XGM5ZCDCPNJYR612SJT9RFKHA9YZ5DJMLYC7N3127AY4QDVJ38'")
+            }, bali.parameters({
+                $type: '$Citation'
+            }));
             const transaction = bali.catalog({
                 $transactionId: bali.tag(),
                 $timestamp: bali.moment(),
@@ -100,17 +109,13 @@ describe('Bali Digital Notary™', function() {
                 $merchant: bali.reference('https://www.starbucks.com/'),
                 $amount: 4.95
             }, bali.parameters({
+                $type: '$Transaction',
                 $tag: tag,
-                $version: bali.version([2, 4])
+                $version: bali.version([2, 4]),
+                $permissions: '$Public',
+                $previous: previous
             }));
-            const previous = bali.catalog({
-                $protocol: bali.version(),
-                $timestamp: bali.parse('<2019-02-24T22:41:18.843>'),
-                $tag: tag,
-                $version: bali.version([2, 3]),
-                $digest: bali.parse("'JB2NG73VTB957T9TZWT44KRZVQ467KWJ2MSJYT6YW2RQAYQMSR861XGM5ZCDCPNJYR612SJT9RFKHA9YZ5DJMLYC7N3127AY4QDVJ38'")
-            });
-            var document = await notary.notarizeDocument(transaction, previous);
+            var document = await notary.notarizeDocument(transaction);
 
             var citation = publicAPI.citeDocument(document);
             var isValid = publicAPI.documentIsValid(document, notaryCertificate);
@@ -194,6 +199,12 @@ describe('Bali Digital Notary™', function() {
             matches = await notary.citationMatches(citation, document);
             expect(matches).to.equal(true);
 
+            document = bali.duplicate(document);
+            const parameters = document.getParameters();
+            parameters.setParameter('$tag', document.getValue('$document').getParameters().getParameter('$tag'));
+            parameters.setParameter('$version', 'v2');
+            parameters.setParameter('$permissions', '$Public');
+            parameters.setParameter('$previous', bali.NONE);
             document = await notary.notarizeDocument(document);
 
             citation = publicAPI.citeDocument(document);
