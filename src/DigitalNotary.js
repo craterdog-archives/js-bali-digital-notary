@@ -290,16 +290,20 @@ exports.api = function(account, testDirectory, debug) {
         /**
          * This function digitally notarizes the specified document using the private notary
          * key maintained inside the software security module. An optional document citation
-         * to the previous version of the document may be specified. The newly notarized
-         * document is returned.
+         * to the previous version of the document may be specified. Also, an optional
+         * document citation to a document defining the permissions for accessing the document
+         * may be specified. If no permissions are specified, the document will be publicly
+         * available to anyone. The newly notarized document is returned.
          *
          * @param {Component} document The document to be notarized.
          * @param {Catalog} previous An optional document citation to the previous version of
          * the document.
+         * @param {Catalog} permissions An optional document citation to a document defining
+         * the permissions for accessing the document.
          * @returns {Catalog} The newly notarized document.
          */
-        notarizeDocument: async function(document, previous) {
-            return await privateAPI.notarizeDocument(document, previous);
+        notarizeDocument: async function(document, previous, permissions) {
+            return await privateAPI.notarizeDocument(document, previous, permissions);
         },
 
         /**
