@@ -1,6 +1,6 @@
 {
   "name": "bali-digital-notary",
-  "version": "1.6.6",
+  "version": "1.6.7",
   "description": "This library provides a JavaScript based implementation of digital notary capabilities for the Bali Nebula™.",
   "repository": {
     "type": "git",
