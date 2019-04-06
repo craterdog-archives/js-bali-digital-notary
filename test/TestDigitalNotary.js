@@ -145,10 +145,16 @@ describe('Bali Digital Notary™', function() {
             expect(newCertificateDocument).to.exist;  // jshint ignore:line
             var newNotaryCertificate = newCertificateDocument.getValue('$document');
 
+            var isValid = publicAPI.documentIsValid(newCertificateDocument, notaryCertificate);
+            expect(isValid).to.equal(true);
+
+            isValid = await notary.documentIsValid(newCertificateDocument, notaryCertificate);
+            expect(isValid).to.equal(true);
+
             var document = await notary.notarizeDocument(component);
 
             var citation = publicAPI.citeDocument(document);
-            var isValid = publicAPI.documentIsValid(document, notaryCertificate);
+            isValid = publicAPI.documentIsValid(document, notaryCertificate);
             expect(isValid).to.equal(false);
 
             citation = await notary.citeDocument(document);
