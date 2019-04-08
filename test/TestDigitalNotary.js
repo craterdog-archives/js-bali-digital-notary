@@ -8,7 +8,7 @@
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
 
-const debug = false;  // set to true for exception logging
+const debug = true;  // set to true for exception logging
 const mocha = require('mocha');
 const assert = require('chai').assert;
 const expect = require('chai').expect;
@@ -30,11 +30,11 @@ describe('Bali Digital Notary™', function() {
             expect(notary.getAccount().isEqualTo(account)).to.equal(true);
         });
 
-        it('should support correct versions', function() {
-            var versions = publicAPI.getProtocols();
+        it('should support correct versions', async function() {
+            var versions = await publicAPI.getProtocols();
             expect(versions.toString()).to.equal('[v1]');
 
-            versions = notary.getProtocols();
+            versions = await notary.getProtocols();
             expect(versions.toString()).to.equal('[v1]');
         });
 

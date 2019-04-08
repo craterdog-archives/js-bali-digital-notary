@@ -34,12 +34,9 @@ const bali = require('bali-component-framework');
  * This function returns an object that implements the public certificate API for the 
  * software security module (SSM).
  *
- * @param {Boolean} debug An optional flag that determines whether or not exceptions
- * will be logged to the error console.
  * @returns {Object} A proxy to the public software security module.
  */
-exports.publicAPI = function(debug) {
-    debug = debug || false;
+exports.publicAPI = function() {
 
     return {
 
@@ -55,8 +52,7 @@ exports.publicAPI = function(debug) {
                 $curve: bali.text(CURVE),
                 $digest: bali.text(DIGEST),
                 $signature: bali.text(SIGNATURE),
-                $cipher: bali.text(CIPHER),
-                $debug: debug
+                $cipher: bali.text(CIPHER)
             });
             return catalog.toString();
         },
@@ -77,7 +73,6 @@ exports.publicAPI = function(debug) {
                     $parameter: document ? bali.text(document.toString()) : bali.NONE,
                     $text: bali.text('The document to be cited is invalid.')
                 });
-                if (debug) console.error(exception.toString());
                 throw exception;
             }
             // TODO: check for undefined $document
@@ -90,7 +85,6 @@ exports.publicAPI = function(debug) {
                     $document: document,
                     $text: bali.text('The document identity parameters are missing.')
                 });
-                if (debug) console.error(exception.toString());
                 throw exception;
             }
 
@@ -118,7 +112,6 @@ exports.publicAPI = function(debug) {
                     $document: document,
                     $text: bali.text('An unexpected error occurred while attempting to cite a document.')
                 }, cause);
-                if (debug) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -143,7 +136,6 @@ exports.publicAPI = function(debug) {
                     $parameter: citation ? bali.text(citation.toString()) : bali.NONE,
                     $text: bali.text('The document citation is invalid.')
                 });
-                if (debug) console.error(exception.toString());
                 throw exception;
             }
             if (!document || !document.getTypeId || document.getTypeId() !== bali.types.CATALOG) {
@@ -154,7 +146,6 @@ exports.publicAPI = function(debug) {
                     $parameter: document ? bali.text(document.toString()) : bali.NONE,
                     $text: bali.text('The document is invalid.')
                 });
-                if (debug) console.error(exception.toString());
                 throw exception;
             }
 
@@ -171,7 +162,6 @@ exports.publicAPI = function(debug) {
                     $citation: citation,
                     $text: bali.text('An unexpected error occurred while attempting to verify a document citation.')
                 }, cause);
-                if (debug) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -195,7 +185,6 @@ exports.publicAPI = function(debug) {
                     $parameter: document ? bali.text(document.toString()) : bali.NONE,
                     $text: bali.text('The document format is invalid.')
                 });
-                if (debug) console.error(exception.toString());
                 throw exception;
             }
             if (!certificate || !certificate.getTypeId || certificate.getTypeId() !== bali.types.CATALOG) {
@@ -206,7 +195,6 @@ exports.publicAPI = function(debug) {
                     $parameter: certificate ? bali.text(certificate.toString()) : bali.NONE,
                     $text: bali.text('The certificate format is invalid.')
                 });
-                if (debug) console.error(exception.toString());
                 throw exception;
             }
 
@@ -229,7 +217,6 @@ exports.publicAPI = function(debug) {
                     $certificate: certificate,
                     $text: bali.text('An unexpected error occurred while attempting to verify a notarized document.')
                 }, cause);
-                if (debug) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -258,7 +245,6 @@ exports.publicAPI = function(debug) {
                     $parameter: document ? bali.text(document.toString()) : bali.NONE,
                     $text: bali.text('The document format is invalid.')
                 });
-                if (debug) console.error(exception.toString());
                 throw exception;
             }
             if (!certificate || !certificate.getTypeId || certificate.getTypeId() !== bali.types.CATALOG) {
@@ -269,7 +255,6 @@ exports.publicAPI = function(debug) {
                     $parameter: certificate ? bali.text(certificate.toString()) : bali.NONE,
                     $text: bali.text('The certificate format is invalid.')
                 });
-                if (debug) console.error(exception.toString());
                 throw exception;
             }
 
@@ -291,7 +276,6 @@ exports.publicAPI = function(debug) {
                     $publicKey: publicKey || bali.NONE,
                     $text: bali.text('An unexpected error occurred while attempting to encrypt a document.')
                 }, cause);
-                if (debug) console.error(exception.toString());
                 throw exception;
             }
         }
@@ -306,13 +290,9 @@ exports.publicAPI = function(debug) {
  *
  * @param {Tag} account The unique tag for the account that owns the notary key.
  * @param {String} testDirectory An optional directory to use for local testing.
- * @param {Boolean} debug An optional flag that determines whether or not exceptions
- * will be logged to the error console.
  * @returns {Object} A proxy to the test software security module managing the private key.
  */
-exports.privateAPI = function(account, testDirectory, debug) {
-    debug = debug || false;
-
+exports.privateAPI = function(account, testDirectory) {
     var notaryTag;            // the unique tag for the notary key
     var version;              // the current version of the notary key
     var timestamp;            // the timestamp of when the key was generated
@@ -339,7 +319,6 @@ exports.privateAPI = function(account, testDirectory, debug) {
                 $digest: bali.text(DIGEST),
                 $signature: bali.text(SIGNATURE),
                 $cipher: bali.text(CIPHER),
-                $debug: debug,
                 $account: account,
                 $certificate: certificateCitation
             }, bali.parameters({
@@ -396,7 +375,6 @@ exports.privateAPI = function(account, testDirectory, debug) {
                     $directory: configDirectory ? bali.text(configDirectory) : bali.NONE,
                     $text: bali.text('An unexpected error occurred while attempting to initialize the API.')
                 }, cause);
-                if (debug) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -518,7 +496,6 @@ exports.privateAPI = function(account, testDirectory, debug) {
                     $account: account || bali.NONE,
                     $text: bali.text('An unexpected error occurred while attempting to (re)generate the key pair.')
                 }, cause);
-                if (debug) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -546,7 +523,6 @@ exports.privateAPI = function(account, testDirectory, debug) {
                     $account: account || bali.NONE,
                     $text: bali.text('An unexpected error occurred while attempting to forget the current key pair.')
                 }, cause);
-                if (debug) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -580,7 +556,6 @@ exports.privateAPI = function(account, testDirectory, debug) {
                     $parameter: document ? bali.text(document.toString()) : bali.NONE,
                     $text: bali.text('The document format is invalid.')
                 });
-                if (debug) console.error(exception.toString());
                 throw exception;
             }
             const parameters = document.getParameters();
@@ -594,7 +569,6 @@ exports.privateAPI = function(account, testDirectory, debug) {
                     $parameter: document,
                     $text: bali.text('The document must be parameterized with tag, version, permissions, and previous parameters.')
                 });
-                if (debug) console.error(exception.toString());
                 throw exception;
             }
 
@@ -622,7 +596,6 @@ exports.privateAPI = function(account, testDirectory, debug) {
                     $document: document || bali.NONE,
                     $text: bali.text('An unexpected error occurred while attempting to digitally sign a document.')
                 }, cause);
-                if (debug) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -647,7 +620,6 @@ exports.privateAPI = function(account, testDirectory, debug) {
                     $parameter: aem ? bali.text(aem.toString()) : bali.NONE,
                     $text: bali.text('The authenticated encrypted message is invalid.')
                 });
-                if (debug) console.error(exception.toString());
                 throw exception;
             }
 
@@ -661,7 +633,6 @@ exports.privateAPI = function(account, testDirectory, debug) {
                         $account: account,
                         $text: bali.text('A notary key has not been generated.')
                     });
-                    if (debug) console.error(exception.toString());
                     throw exception;
                 }
 
@@ -676,7 +647,6 @@ exports.privateAPI = function(account, testDirectory, debug) {
                         $actual: protocol,
                         $text: bali.text('The document was encrypted using an unsupported version of the notary protocol.')
                     });
-                    if (debug) console.error(exception.toString());
                     throw exception;
                 }
                 const document = decryptMessage(aem, privateKey);
@@ -690,7 +660,6 @@ exports.privateAPI = function(account, testDirectory, debug) {
                     $aem: aem || bali.NONE,
                     $text: bali.text('An unexpected error occurred while attempting to decrypt an authenticated encrypted message.')
                 }, cause);
-                if (debug) console.error(exception.toString());
                 throw exception;
             }
         }
@@ -744,9 +713,9 @@ const doesExist = async function(file) {
  */
 const createDirectory = async function(testDirectory, account) {
     var configDirectory = testDirectory || os.homedir() + '/.bali/';
-    pfs.mkdir(configDirectory, 0o700).catch(function() {});
+    try { await pfs.mkdir(configDirectory, 0o700); } catch (ignore) {};
     configDirectory += account.getValue() + '/';
-    pfs.mkdir(configDirectory, 0o700).catch(function() {});
+    try { await pfs.mkdir(configDirectory, 0o700); } catch (ignore) {};
     return configDirectory;
 };
 

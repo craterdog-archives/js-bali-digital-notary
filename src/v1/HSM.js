@@ -24,12 +24,9 @@ const bali = require('bali-component-framework');
  * This function returns an object that implements the API for the public hardware security
  * module (HSM).
  *
- * @param {Boolean} debug An optional flag that determines whether or not exceptions
- * will be logged to the error console.
  * @returns {Object} A proxy to the public hardware security module.
  */
-exports.publicAPI = function(debug) {
-    debug = debug || false;
+exports.publicAPI = function() {
 
     return {
 
@@ -111,12 +108,9 @@ exports.publicAPI = function(debug) {
  *
  * @param {Tag} account The unique tag for the account that owns the notary key.
  * @param {String} testDirectory An optional directory to use for local testing.
- * @param {Boolean} debug An optional flag that determines whether or not exceptions
- * will be logged to the error console.
  * @returns {Object} A proxy to the test hardware security module managing the private key.
  */
-exports.privateAPI = function(account, testDirectory, debug) {
-    debug = debug || false;
+exports.privateAPI = function(account, testDirectory) {
 
     return {
 

@@ -39,12 +39,10 @@ const preferredProtocol = protocols[Object.keys(protocols)[0]];  // the first pr
  * @returns {Object} An object that implements the API for a digital notary.
  */
 exports.publicAPI = function(debug) {
-
-    // validate the parameters
     debug = debug || false;
 
     // setup the public API implementation
-    const publicAPI = preferredProtocol.SSM.publicAPI(debug);
+    const publicAPI = preferredProtocol.SSM.publicAPI();
 
     // return a singleton object for the API
     return {
@@ -65,7 +63,18 @@ exports.publicAPI = function(debug) {
          * @returns {List} A list of the protocol versions supported by this digital notary API.
          */
         getProtocols: function() {
-            return getProtocols(debug);
+            try {
+                return bali.list(Object.keys(protocols));
+            } catch (cause) {
+                const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$getProtocols',
+                    $exception: '$unexpected',
+                    $text: bali.text('An unexpected error occurred while attempting to retrieve the supported security protocols.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
         },
    
         /**
@@ -75,7 +84,20 @@ exports.publicAPI = function(debug) {
          * @returns {Catalog} A document citation for the document.
          */
         citeDocument: function(document) {
-            return publicAPI.citeDocument(document);
+            try {
+                validateParameter('$citeDocument', document, 'document');
+                return publicAPI.citeDocument(document);
+            } catch (cause) {
+                const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$citeDocument',
+                    $exception: '$unexpected',
+                    $document: document,
+                    $text: bali.text('An unexpected error occurred while attempting to cite a document.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
         },
    
         /**
@@ -89,8 +111,23 @@ exports.publicAPI = function(debug) {
          * @returns {Boolean} Whether or not the citation matches the specified document.
          */
         citationMatches: function(citation, document) {
-            const api = getPublicAPI(debug, '$citationMatches', citation);
-            return api.citationMatches(citation, document);
+            try {
+                validateParameter('$citationMatches', citation, 'citation');
+                validateParameter('$citationMatches', document, 'document');
+                const api = getPublicAPI('$citationMatches', citation);
+                return api.citationMatches(citation, document);
+            } catch (cause) {
+                const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$citationMatches',
+                    $exception: '$unexpected',
+                    $citation: citation,
+                    $document: document,
+                    $text: bali.text('An unexpected error occurred while attempting to match a citation to a document.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
         },
    
         /**
@@ -103,8 +140,23 @@ exports.publicAPI = function(debug) {
          * @returns {Boolean} Whether or not the notary seal on the document is valid.
          */
         documentIsValid: function(document, certificate) {
-            const api = getPublicAPI(debug, '$documentIsValid', certificate);
-            return api.documentIsValid(document, certificate);
+            try {
+                validateParameter('$documentIsValid', document, 'document');
+                validateParameter('$documentIsValid', certificate, 'certificate');
+                const api = getPublicAPI('$documentIsValid', certificate);
+                return api.documentIsValid(document, certificate);
+            } catch (cause) {
+                const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$documentIsValid',
+                    $exception: '$unexpected',
+                    $document: document,
+                    $certificate: certificate,
+                    $text: bali.text('An unexpected error occurred while attempting to validate a document.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
         },
    
         /**
@@ -122,8 +174,23 @@ exports.publicAPI = function(debug) {
          * and other required attributes for the encrypted document.
          */
         encryptDocument: function(document, certificate) {
-            const api = getPublicAPI(debug, '$encryptDocument', certificate);
-            return api.encryptDocument(document, certificate);
+            try {
+                validateParameter('$encryptDocument', document, 'component');
+                validateParameter('$encryptDocument', certificate, 'certificate');
+                const api = getPublicAPI('$encryptDocument', certificate);
+                return api.encryptDocument(document, certificate);
+            } catch (cause) {
+                const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$encryptDocument',
+                    $exception: '$unexpected',
+                    $document: document,
+                    $certificate: certificate,
+                    $text: bali.text('An unexpected error occurred while attempting to encrypt a document.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
         }
    
     };
@@ -143,43 +210,21 @@ exports.publicAPI = function(debug) {
 exports.api = function(account, testDirectory, debug) {
 
     // validate the parameters
+    validateParameter('$api', account, 'tag');
+    validateParameter('$api', testDirectory, 'directory');
     debug = debug || false;
-    if (!account || !account.getTypeId || account.getTypeId() !== bali.types.TAG) {
-        const exception = bali.exception({
-            $module: '$DigitalNotary',
-            $function: '$privateAPI',
-            $exception: '$invalidParameter',
-            $parameter: account ? bali.text(account.toString()) : bali.NONE,
-            $text: bali.text('The account tag format is invalid.')
-        });
-        if (debug) console.error(exception.toString());
-        throw exception;
-    }
-    if (testDirectory && typeof testDirectory !== 'string') {
-        const exception = bali.exception({
-            $module: '$DigitalNotary',
-            $function: '$privateAPI',
-            $exception: '$invalidParameter',
-            $account: account,
-            $testMode: testDirectory ? true : false,
-            $parameter: bali.text(testDirectory.toString()),
-            $text: bali.text('The test directory string is invalid.')
-        });
-        if (debug) console.error(exception.toString());
-        throw exception;
-    }
 
     // setup the public and private API implementations
     var publicAPI;
     var privateAPI;
     if (testDirectory) {
         // use a test software security module (SSM)
-        publicAPI = preferredProtocol.SSM.publicAPI(debug);
-        privateAPI = preferredProtocol.SSM.privateAPI(account, testDirectory, debug);
+        publicAPI = preferredProtocol.SSM.publicAPI();
+        privateAPI = preferredProtocol.SSM.privateAPI(account, testDirectory);
     } else {
         // or, use a proxy to a hardware security module (HSM)
-        publicAPI = preferredProtocol.HSM.publicAPI(debug);
-        privateAPI = preferredProtocol.HSM.privateAPI(account, debug);
+        publicAPI = preferredProtocol.HSM.publicAPI();
+        privateAPI = preferredProtocol.HSM.privateAPI(account);
     }
 
     // return a singleton object for the API
@@ -211,8 +256,19 @@ exports.api = function(account, testDirectory, debug) {
          * 
          * @returns {List} A list of the protocol versions supported by this digital notary API.
          */
-        getProtocols: function() {
-            return getProtocols(debug);
+        getProtocols: async function() {
+            try {
+                return bali.list(Object.keys(protocols));
+            } catch (cause) {
+                const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$getProtocols',
+                    $exception: '$unexpected',
+                    $text: bali.text('An unexpected error occurred while attempting to retrieve the supported security protocols.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
         },
 
         /**
@@ -221,7 +277,18 @@ exports.api = function(account, testDirectory, debug) {
          * @returns {Catalog} The notary certificate associated with this notary key.
          */
         getCertificate: async function() {
-            return await privateAPI.getCertificate();
+            try {
+                return await privateAPI.getCertificate();
+            } catch (cause) {
+                const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$getCertificate',
+                    $exception: '$unexpected',
+                    $text: bali.text('An unexpected error occurred while attempting to retrieve the notary certificate.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
         },
 
         /**
@@ -232,7 +299,18 @@ exports.api = function(account, testDirectory, debug) {
          * with this notary key.
          */
         getCitation: async function() {
-            return await privateAPI.getCitation();
+            try {
+                return await privateAPI.getCitation();
+            } catch (cause) {
+                const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$getCitation',
+                    $exception: '$unexpected',
+                    $text: bali.text('An unexpected error occurred while attempting to retrieve the citation to the notary certificate.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
         },
 
         /**
@@ -243,7 +321,18 @@ exports.api = function(account, testDirectory, debug) {
          * @returns {Catalog} The new notary certificate.
          */
         generateKey: async function() {
-            return await privateAPI.generateKey();
+            try {
+                return await privateAPI.generateKey();
+            } catch (cause) {
+                const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$generateKey',
+                    $exception: '$unexpected',
+                    $text: bali.text('An unexpected error occurred while attempting to (re)generate the notary key.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
         },
 
         /**
@@ -251,7 +340,18 @@ exports.api = function(account, testDirectory, debug) {
          * it knows about the current public-private key pair.
          */
         forgetKey: async function() {
-            return await privateAPI.forgetKey();
+            try {
+                return await privateAPI.forgetKey();
+            } catch (cause) {
+                const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$forgetKey',
+                    $exception: '$unexpected',
+                    $text: bali.text('An unexpected error occurred while attempting to forget the notary key.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
         },
 
         /**
@@ -261,7 +361,20 @@ exports.api = function(account, testDirectory, debug) {
          * @returns {Catalog} A document citation for the document.
          */
         citeDocument: async function(document) {
-            return await publicAPI.citeDocument(document);
+            try {
+                validateParameter('$citeDocument', document, 'document');
+                return await publicAPI.citeDocument(document);
+            } catch (cause) {
+                const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$citeDocument',
+                    $exception: '$unexpected',
+                    $document: document,
+                    $text: bali.text('An unexpected error occurred while attempting to cite a document.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
         },
 
         /**
@@ -275,8 +388,23 @@ exports.api = function(account, testDirectory, debug) {
          * @returns {Boolean} Whether or not the citation matches the specified document.
          */
         citationMatches: async function(citation, document) {
-            const api = getPublicAPI(debug, '$citationMatches', citation);
-            return await api.citationMatches(citation, document);
+            try {
+                validateParameter('$citationMatches', citation, 'citation');
+                validateParameter('$citationMatches', document, 'document');
+                const api = getPublicAPI('$citationMatches', citation);
+                return await api.citationMatches(citation, document);
+            } catch (cause) {
+                const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$citationMatches',
+                    $exception: '$unexpected',
+                    $citation: citation,
+                    $document: document,
+                    $text: bali.text('An unexpected error occurred while attempting to match a citation to a document.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
         },
 
         /**
@@ -296,7 +424,20 @@ exports.api = function(account, testDirectory, debug) {
          * @returns {Catalog} The newly notarized document.
          */
         notarizeDocument: async function(document) {
-            return await privateAPI.notarizeDocument(document);
+            try {
+                validateParameter('$notarizeDocument', document, 'component');
+                return await privateAPI.notarizeDocument(document);
+            } catch (cause) {
+                const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$notarizeDocument',
+                    $exception: '$unexpected',
+                    $document: document,
+                    $text: bali.text('An unexpected error occurred while attempting to notarize a document.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
         },
 
         /**
@@ -309,8 +450,23 @@ exports.api = function(account, testDirectory, debug) {
          * @returns {Boolean} Whether or not the notary seal on the document is valid.
          */
         documentIsValid: async function(document, certificate) {
-            const api = getPublicAPI(debug, '$documentIsValid', certificate);
-            return await api.documentIsValid(document, certificate);
+            try {
+                validateParameter('$documentIsValid', document, 'document');
+                validateParameter('$documentIsValid', certificate, 'certificate');
+                const api = getPublicAPI('$documentIsValid', certificate);
+                return await api.documentIsValid(document, certificate);
+            } catch (cause) {
+                const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$documentIsValid',
+                    $exception: '$unexpected',
+                    $document: document,
+                    $certificate: certificate,
+                    $text: bali.text('An unexpected error occurred while attempting to validate a document.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
         },
 
         /**
@@ -328,8 +484,23 @@ exports.api = function(account, testDirectory, debug) {
          * and other required attributes for the encrypted document.
          */
         encryptDocument: async function(document, certificate) {
-            const api = getPublicAPI(debug, '$encryptDocument', certificate);
-            return await api.encryptDocument(document, certificate);
+            try {
+                validateParameter('$encryptDocument', document, 'component');
+                validateParameter('$encryptDocument', certificate, 'certificate');
+                const api = getPublicAPI('$encryptDocument', certificate);
+                return await api.encryptDocument(document, certificate);
+            } catch (cause) {
+                const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$encryptDocument',
+                    $exception: '$unexpected',
+                    $document: document,
+                    $certificate: certificate,
+                    $text: bali.text('An unexpected error occurred while attempting to encrypt a document.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
         },
 
         /**
@@ -340,7 +511,20 @@ exports.api = function(account, testDirectory, debug) {
          * @returns {Component} The decrypted document.
          */
         decryptDocument: async function(aem) {
-            return await privateAPI.decryptDocument(aem);
+            try {
+                validateParameter('$decryptDocument', aem, 'aem');
+                return await privateAPI.decryptDocument(aem);
+            } catch (cause) {
+                const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
+                    $module: '$DigitalNotary',
+                    $function: '$decryptDocument',
+                    $exception: '$unexpected',
+                    $aem: aem,
+                    $text: bali.text('An unexpected error occurred while attempting to decrypt a document.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
         }
 
     };
@@ -350,43 +534,17 @@ exports.api = function(account, testDirectory, debug) {
 // PRIVATE FUNCTIONS
 
 /**
- * This function returns a list of the protocol versions supported by this digital notary
- * API.
- * 
- * @param {Boolean} debug An optional flag that determines whether or not exceptions
- * will be logged to the error console.
- * @returns {List} A list of the protocol versions supported by this digital notary API.
- */
-const getProtocols = function(debug) {
-    try {
-        return bali.list(Object.keys(protocols));
-    } catch (cause) {
-        const exception = bali.exception({
-            $module: '$DigitalNotary',
-            $function: '$getProtocols',
-            $exception: '$unexpected',
-            $text: bali.text('An unexpected error occurred while attempting to retrieve the protocols for the notary API.')
-        }, cause);
-        if (debug) console.error(exception.toString());
-        throw exception;
-    }
-};
-
-
-/**
  * This function returns a reference to the public API that implements the version of
  * the protocol required by the specified document.  If the required version is not
  * supported by this digital notary then an exception is thrown.
  * 
- * @param {Boolean} debug An optional flag that determines whether or not exceptions
- * will be logged to the error console.
  * @param {String} functionName The name of the function making the request.
  * @param {Catalog} document The document being analyzed.
  * @returns {Object} An object that supports the required version of the API.
  */
-const getPublicAPI = function(debug, functionName, document) {
+const getPublicAPI = function(functionName, document) {
     const protocol = document.getValue('$protocol');
-    const publicAPI = protocols[protocol.toString()].SSM.publicAPI(debug);
+    const publicAPI = protocols[protocol.toString()].SSM.publicAPI();
     if (!publicAPI) {
         const exception = bali.exception({
             $module: '$DigitalNotary',
@@ -401,3 +559,72 @@ const getPublicAPI = function(debug, functionName, document) {
     return publicAPI;
 };
 
+
+const validateParameter = function(functionName, parameter, type) {
+    if (parameter) {
+        switch (type) {
+            case 'binary':
+            case 'moment':
+            case 'tag':
+            case 'version':
+                if (parameter.getTypeId && parameter.getTypeId() === bali.types[type.toUpperCase()]) return;
+                break;
+            case 'directory':
+                const pattern = new RegExp('/?(\\w+/)+');
+                if (typeof parameter === 'string' && pattern.test(parameter)) return;
+                break;
+            case 'component':
+                if (parameter.getTypeId) return;
+                break;
+            case 'citation':
+                if (parameter.getTypeId && parameter.isEqualTo(bali.NONE)) return;
+                if (parameter.getTypeId && parameter.getTypeId() === bali.types.CATALOG && parameter.getSize() === 5) {
+                    validateParameter(functionName, parameter.getValue('$protocol'), 'version');
+                    validateParameter(functionName, parameter.getValue('$timestamp'), 'moment');
+                    validateParameter(functionName, parameter.getValue('$tag'), 'tag');
+                    validateParameter(functionName, parameter.getValue('$version'), 'version');
+                    validateParameter(functionName, parameter.getValue('$digest'), 'binary');
+                    return;
+                }
+                break;
+            case 'certificate':
+                if (parameter.getTypeId && parameter.getTypeId() === bali.types.CATALOG && parameter.getSize() === 4) {
+                    validateParameter(functionName, parameter.getValue('$protocol'), 'version');
+                    validateParameter(functionName, parameter.getValue('$timestamp'), 'moment');
+                    validateParameter(functionName, parameter.getValue('$account'), 'tag');
+                    validateParameter(functionName, parameter.getValue('$publicKey'), 'binary');
+                    return;
+                }
+                break;
+            case 'aem':
+                if (parameter.getTypeId && parameter.getTypeId() === bali.types.CATALOG && parameter.getSize() === 6) {
+                    validateParameter(functionName, parameter.getValue('$protocol'), 'version');
+                    validateParameter(functionName, parameter.getValue('$timestamp'), 'moment');
+                    validateParameter(functionName, parameter.getValue('$seed'), 'binary');
+                    validateParameter(functionName, parameter.getValue('$iv'), 'binary');
+                    validateParameter(functionName, parameter.getValue('$auth'), 'binary');
+                    validateParameter(functionName, parameter.getValue('$ciphertext'), 'binary');
+                    return;
+                }
+                break;
+            case 'document':
+                if (parameter.getTypeId && parameter.getTypeId() === bali.types.CATALOG && parameter.getSize() === 5) {
+                    validateParameter(functionName, parameter.getValue('$document'), 'component');
+                    validateParameter(functionName, parameter.getValue('$protocol'), 'version');
+                    validateParameter(functionName, parameter.getValue('$timestamp'), 'moment');
+                    validateParameter(functionName, parameter.getValue('$certificate'), 'citation');
+                    validateParameter(functionName, parameter.getValue('$signature'), 'binary');
+                    return;
+                }
+                break;
+        }
+    }
+    const exception = bali.exception({
+        $module: '$DigitalNotary',
+        $function: functionName,
+        $exception: '$invalidParameter',
+        $parameter: parameter ? bali.text(parameter.toString()) : bali.NONE,
+        $text: bali.text('An invalid parameter was passed to the function.')
+    });
+    throw exception;
+};
