@@ -44,7 +44,7 @@ describe('Bali Digital Notary™', function() {
         });
 
         it('should retrieve the notary certificate', function() {
-            notaryCertificate = certificateDocument.getValue('$document');
+            notaryCertificate = certificateDocument.getValue('$component');
             expect(notaryCertificate).to.exist;  // jshint ignore:line
         });
 
@@ -105,7 +105,7 @@ describe('Bali Digital Notary™', function() {
                 $permissions: '$Public',
                 $previous: previous
             }));
-            var document = await notary.notarizeDocument(transaction);
+            var document = await notary.signComponent(transaction);
 
             var citation = publicAPI.citeDocument(document);
             var isValid = publicAPI.documentIsValid(document, notaryCertificate);
@@ -127,12 +127,12 @@ describe('Bali Digital Notary™', function() {
         it('should encrypt and decrypt a component properly', async function() {
             var component = bali.parse('"This is a test..."');
 
-            var encrypted = publicAPI.encryptDocument(component, notaryCertificate);
-            var decrypted = await notary.decryptDocument(encrypted);
+            var encrypted = publicAPI.encryptComponent(component, notaryCertificate);
+            var decrypted = await notary.decryptComponent(encrypted);
             expect(decrypted.isEqualTo(component)).to.equal(true);
 
-            encrypted = await notary.encryptDocument(component, notaryCertificate);
-            decrypted = await notary.decryptDocument(encrypted);
+            encrypted = await notary.encryptComponent(component, notaryCertificate);
+            decrypted = await notary.decryptComponent(encrypted);
             expect(decrypted.isEqualTo(component)).to.equal(true);
         });
 
@@ -143,7 +143,7 @@ describe('Bali Digital Notary™', function() {
         it('should regenerate a notary key properly', async function() {
             var newCertificateDocument = await notary.generateKey();
             expect(newCertificateDocument).to.exist;  // jshint ignore:line
-            var newNotaryCertificate = newCertificateDocument.getValue('$document');
+            var newNotaryCertificate = newCertificateDocument.getValue('$component');
 
             var isValid = publicAPI.documentIsValid(newCertificateDocument, notaryCertificate);
             expect(isValid).to.equal(true);
@@ -151,7 +151,7 @@ describe('Bali Digital Notary™', function() {
             isValid = await notary.documentIsValid(newCertificateDocument, notaryCertificate);
             expect(isValid).to.equal(true);
 
-            var document = await notary.notarizeDocument(component);
+            var document = await notary.signComponent(component);
 
             var citation = publicAPI.citeDocument(document);
             isValid = publicAPI.documentIsValid(document, notaryCertificate);
@@ -181,7 +181,7 @@ describe('Bali Digital Notary™', function() {
     describe('Test Multiple Notarizations', function() {
 
         it('should notarized a component twice properly', async function() {
-            var document = await notary.notarizeDocument(component);
+            var document = await notary.signComponent(component);
 
             var citation = publicAPI.citeDocument(document);
             var isValid = publicAPI.documentIsValid(document, notaryCertificate);
@@ -197,11 +197,11 @@ describe('Bali Digital Notary™', function() {
 
             document = bali.duplicate(document);
             const parameters = document.getParameters();
-            parameters.setParameter('$tag', document.getValue('$document').getParameters().getParameter('$tag'));
+            parameters.setParameter('$tag', document.getValue('$component').getParameters().getParameter('$tag'));
             parameters.setParameter('$version', 'v2');
             parameters.setParameter('$permissions', '$Public');
             parameters.setParameter('$previous', bali.NONE);
-            document = await notary.notarizeDocument(document);
+            document = await notary.signComponent(document);
 
             citation = publicAPI.citeDocument(document);
             isValid = publicAPI.documentIsValid(document, notaryCertificate);

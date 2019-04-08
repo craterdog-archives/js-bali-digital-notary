@@ -46,10 +46,10 @@ exports.publicAPI = function() {
         },
 
         /**
-         * This function generates a document citation for the specified document.
+         * This function generates a document citation for the specified notarized document.
          *
-         * @param {Catalog} document The document to be cited.
-         * @returns {Catalog} A document citation for the document.
+         * @param {Catalog} document The notarized document to be cited.
+         * @returns {Catalog} A document citation for the notarized document.
          */
         citeDocument: async function(document) {
             if (this.initializeAPI) await this.initializeAPI();
@@ -57,26 +57,26 @@ exports.publicAPI = function() {
 
         /**
          * This function determines whether or not the specified document citation matches
-         * the specified document. The citation only matches if its digest matches the
-         * digest of the document exactly.
+         * the specified notarized document. The citation only matches if its digest matches
+         * the digest of the notarized document exactly.
          *
          * @param {Catalog} citation A document citation allegedly referring to the
-         * specified document.
-         * @param {Catalog} document The document to be tested.
-         * @returns {Boolean} Whether or not the citation matches the specified document.
+         * specified notarized document.
+         * @param {Catalog} document The notarized document to be tested.
+         * @returns {Boolean} Whether or not the citation matches the specified notarized document.
          */
         citationMatches: async function(citation, document) {
             if (this.initializeAPI) await this.initializeAPI();
         },
 
         /**
-         * This function determines whether or not the notary seal on the specified document
-         * is valid.
+         * This function determines whether or not the notary seal on the specified notarized
+         * document is valid.
          *
          * @param {Catalog} document The notarized document to be tested.
          * @param {Catalog} certificate A catalog containing the public certificate for the
          * private notary key that allegedly notarized the specified document.
-         * @returns {Boolean} Whether or not the notary seal on the document is valid.
+         * @returns {Boolean} Whether or not the notary seal on the notarized document is valid.
          */
         documentIsValid: async function(document, certificate) {
             if (this.initializeAPI) await this.initializeAPI();
@@ -84,19 +84,19 @@ exports.publicAPI = function() {
 
         /**
          * This function uses the specified public notary certificate to encrypt the specified
-         * document in such a way that only the intended recipient of the encrypted document can
+         * component in such a way that only the intended recipient of the encrypted component can
          * decrypt it using their private notary key. The result is an authenticated encrypted
          * message (AEM) containing the ciphertext and other required attributes needed to
          * decrypt the message.
          *
-         * @param {Component} document The document to be encrypted using the specified
+         * @param {Component} component The component to be encrypted using the specified
          * public notary certificate.
          * @param {Catalog} certificate A catalog containing the public certificate for the
-         * intended recipient of the encrypted document.
+         * intended recipient of the encrypted component.
          * @returns {Catalog} An authenticated encrypted message (AEM) containing the ciphertext
-         * and other required attributes for the encrypted document.
+         * and other required attributes for the encrypted component.
          */
-        encryptDocument: async function(document, certificate) {
+        encryptComponent: async function(component, certificate) {
             if (this.initializeAPI) await this.initializeAPI();
         }
     };
@@ -169,33 +169,34 @@ exports.privateAPI = function(account, testDirectory) {
         },
 
         /**
-         * This function digitally notarizes the specified document using the private notary
-         * key maintained inside the software security module. The document must be parameterized
+         * This function digitally notarizes the specified component using the private notary
+         * key maintained inside the software security module. The component must be parameterized
          * with the following parameters:
          * <pre>
-         *  * $tag - a unique identifier for the document
-         *  * $version - the version of the document
-         *  * $permissions - a citation to a document containing the permissions defining who can access the document
-         *  * $previous - a citation to the previous version of the document (or bali.NONE)
+         *  * $tag - a unique identifier for the component
+         *  * $version - the version of the component
+         *  * $permissions - a citation to a notarized document containing the permissions defining
+         *                   who can access the component
+         *  * $previous - a citation to the previous version of the component (or bali.NONE)
          * </pre>
          * 
-         * The newly notarized document is returned.
+         * The newly notarized component is returned.
          *
-         * @param {Component} document The document to be notarized.
-         * @returns {Catalog} The newly notarized document.
+         * @param {Component} component The component to be notarized.
+         * @returns {Catalog} The newly notarized component.
          */
-        notarizeDocument: async function(document) {
+        signComponent: async function(component) {
             if (this.initializeAPI) await this.initializeAPI();
         },
 
         /**
          * This function uses the notary key to decrypt the specified authenticated
-         * encrypted message (AEM). The result is the decrypted document.
+         * encrypted message (AEM). The result is the decrypted component.
          *
          * @param {Catalog} aem The authenticated encrypted message to be decrypted.
-         * @returns {Component} The decrypted document.
+         * @returns {Component} The decrypted component.
          */
-        decryptDocument: async function(aem) {
+        decryptComponent: async function(aem) {
             if (this.initializeAPI) await this.initializeAPI();
         }
     };

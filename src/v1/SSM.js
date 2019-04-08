@@ -58,226 +58,82 @@ exports.publicAPI = function() {
         },
 
         /**
-         * This function generates a document citation for the specified document.
+         * This function generates a document citation for the specified notarized document.
          *
-         * @param {Catalog} document The document to be cited.
-         * @returns {Catalog} A document citation for the document.
+         * @param {Catalog} document The notarized document to be cited.
+         * @returns {Catalog} A document citation for the notarized document.
          */
         citeDocument: function(document) {
-            // validate the parameters
-            if (!document || !document.getTypeId || document.getTypeId() !== bali.types.CATALOG) {
-                const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$citeDocument',
-                    $exception: '$invalidParameter',
-                    $parameter: document ? bali.text(document.toString()) : bali.NONE,
-                    $text: bali.text('The document to be cited is invalid.')
-                });
-                throw exception;
-            }
-            // TODO: check for undefined $document
-            const parameters = document.getValue('$document').getParameters();
-            if (!parameters || !parameters.getParameter('$tag') || !parameters.getParameter('$version')) {
-                const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$citeDocument',
-                    $exception: '$missingParameters',
-                    $document: document,
-                    $text: bali.text('The document identity parameters are missing.')
-                });
-                throw exception;
-            }
-
-            // generate the document citation
-            try {
-                // TODO: check tag and version component type?
-                const tag = parameters.getParameter('$tag');
-                const version = parameters.getParameter('$version');
-                const digest = generateDigest(document);
-                const citation = bali.catalog({
-                    $protocol: bali.parse(PROTOCOL),  // parses the version number of the protocol
-                    $timestamp: bali.moment(),  // now
-                    $tag: tag,
-                    $version: version,
-                    $digest: digest
-                }, bali.parameters({
-                    $type: '$Citation'
-                }));
-                return citation;
-            } catch (cause) {
-                const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$citeDocument',
-                    $exception: '$unexpected',
-                    $document: document,
-                    $text: bali.text('An unexpected error occurred while attempting to cite a document.')
-                }, cause);
-                throw exception;
-            }
+            const parameters = document.getValue('$component').getParameters();
+            const tag = parameters.getParameter('$tag');
+            const version = parameters.getParameter('$version');
+            const digest = generateDigest(document);
+            const citation = bali.catalog({
+                $protocol: bali.parse(PROTOCOL),  // parses the version number of the protocol
+                $timestamp: bali.moment(),  // now
+                $tag: tag,
+                $version: version,
+                $digest: digest
+            }, bali.parameters({
+                $type: '$Citation'
+            }));
+            return citation;
         },
 
         /**
          * This function determines whether or not the specified document citation matches
-         * the specified document. The citation only matches if its digest matches the
-         * digest of the document exactly.
+         * the specified notarized document. The citation only matches if its digest matches
+         * the digest of the notarized document exactly.
          *
          * @param {Catalog} citation A document citation allegedly referring to the
-         * specified document.
-         * @param {Catalog} document The document to be tested.
-         * @returns {Boolean} Whether or not the citation matches the specified document.
+         * specified notarized document.
+         * @param {Catalog} document The notarized document to be tested.
+         * @returns {Boolean} Whether or not the citation matches the specified notarized document.
          */
         citationMatches: function(citation, document) {
-            // validate the parameters
-            if (!citation || !citation.getTypeId || citation.getTypeId() !== bali.types.CATALOG) {
-                const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$citationMatches',
-                    $exception: '$invalidParameter',
-                    $parameter: citation ? bali.text(citation.toString()) : bali.NONE,
-                    $text: bali.text('The document citation is invalid.')
-                });
-                throw exception;
-            }
-            if (!document || !document.getTypeId || document.getTypeId() !== bali.types.CATALOG) {
-                const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$citationMatches',
-                    $exception: '$invalidParameter',
-                    $parameter: document ? bali.text(document.toString()) : bali.NONE,
-                    $text: bali.text('The document is invalid.')
-                });
-                throw exception;
-            }
-
-            // check the citation
-            try {
-                var digest = generateDigest(document);
-                return digest.isEqualTo(citation.getValue('$digest'));
-            } catch (cause) {
-                const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$citationMatches',
-                    $exception: '$unexpected',
-                    $document: document,
-                    $citation: citation,
-                    $text: bali.text('An unexpected error occurred while attempting to verify a document citation.')
-                }, cause);
-                throw exception;
-            }
+            var digest = generateDigest(document);
+            return digest.isEqualTo(citation.getValue('$digest'));
         },
 
         /**
-         * This function determines whether or not the notary seal on the specified document
-         * is valid.
+         * This function determines whether or not the notary seal on the specified notarized
+         * document is valid.
          *
          * @param {Catalog} document The notarized document to be tested.
          * @param {Catalog} certificate A catalog containing the public certificate for the
          * private notary key that allegedly notarized the specified document.
-         * @returns {Boolean} Whether or not the notary seal on the document is valid.
+         * @returns {Boolean} Whether or not the notary seal on the notarized document is valid.
          */
         documentIsValid: function(document, certificate) {
-            // validate the parameters
-            if (!document || !document.getTypeId || document.getTypeId() !== bali.types.CATALOG) {
-                const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$documentIsValid',
-                    $exception: '$invalidParameter',
-                    $parameter: document ? bali.text(document.toString()) : bali.NONE,
-                    $text: bali.text('The document format is invalid.')
-                });
-                throw exception;
-            }
-            if (!certificate || !certificate.getTypeId || certificate.getTypeId() !== bali.types.CATALOG) {
-                const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$documentIsValid',
-                    $exception: '$invalidParameter',
-                    $parameter: certificate ? bali.text(certificate.toString()) : bali.NONE,
-                    $text: bali.text('The certificate format is invalid.')
-                });
-                throw exception;
-            }
-
-            try {
-                const catalog = bali.catalog.extraction(document, bali.list([
-                    '$document',
-                    '$protocol',
-                    '$timestamp',
-                    '$certificate'
-                ]));  // everything but the signature
-                const publicKey = certificate.getValue('$publicKey');
-                const signature = document.getValue('$signature');
-                return signatureIsValid(catalog, publicKey, signature);
-            } catch (cause) {
-                const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$documentIsValid',
-                    $exception: '$unexpected',
-                    $document: document,
-                    $certificate: certificate,
-                    $text: bali.text('An unexpected error occurred while attempting to verify a notarized document.')
-                }, cause);
-                throw exception;
-            }
+            const catalog = bali.catalog.extraction(document, bali.list([
+                '$component',
+                '$protocol',
+                '$timestamp',
+                '$certificate'
+            ]));  // everything but the signature
+            const publicKey = certificate.getValue('$publicKey');
+            const signature = document.getValue('$signature');
+            return signatureIsValid(catalog, publicKey, signature);
         },
 
         /**
          * This function uses the specified public notary certificate to encrypt the specified
-         * document in such a way that only the intended recipient of the encrypted document can
+         * component in such a way that only the intended recipient of the encrypted component can
          * decrypt it using their private notary key. The result is an authenticated encrypted
          * message (AEM) containing the ciphertext and other required attributes needed to
          * decrypt the message.
          *
-         * @param {Component} document The document to be encrypted using the specified
+         * @param {Component} component The component to be encrypted using the specified
          * public notary certificate.
          * @param {Catalog} certificate A catalog containing the public certificate for the
-         * intended recipient of the encrypted document.
+         * intended recipient of the encrypted component.
          * @returns {Catalog} An authenticated encrypted message (AEM) containing the ciphertext
-         * and other required attributes for the encrypted document.
+         * and other required attributes for the encrypted component.
          */
-        encryptDocument: function(document, certificate) {
-            // validate the parameters
-            if (!document || !document.getTypeId) {
-                const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$encryptDocument',
-                    $exception: '$invalidParameter',
-                    $parameter: document ? bali.text(document.toString()) : bali.NONE,
-                    $text: bali.text('The document format is invalid.')
-                });
-                throw exception;
-            }
-            if (!certificate || !certificate.getTypeId || certificate.getTypeId() !== bali.types.CATALOG) {
-                const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$encryptDocument',
-                    $exception: '$invalidParameter',
-                    $parameter: certificate ? bali.text(certificate.toString()) : bali.NONE,
-                    $text: bali.text('The certificate format is invalid.')
-                });
-                throw exception;
-            }
-
-            try {
-                const publicKey = certificate.getValue('$publicKey');
-                const aem = encryptMessage(document, publicKey);
-                return aem;
-            } catch (cause) {
-                // create a digest of the document to maintain privacy
-                var digest;
-                if (document) {
-                    const digest = generateDigest(document);
-                }
-                const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$encryptDocument',
-                    $exception: '$unexpected',
-                    $digest: digest || bali.NONE,
-                    $publicKey: publicKey || bali.NONE,
-                    $text: bali.text('An unexpected error occurred while attempting to encrypt a document.')
-                }, cause);
-                throw exception;
-            }
+        encryptComponent: function(component, certificate) {
+            const publicKey = certificate.getValue('$publicKey');
+            const aem = encryptMessage(component, publicKey);
+            return aem;
         }
     };
 };
@@ -410,94 +266,83 @@ exports.privateAPI = function(account, testDirectory) {
          */
         generateKey: async function() {
             if (this.initializeAPI) await this.initializeAPI();
-            try {
                 const isRegeneration = !!privateKey;
 
-                // generate a new public-private key pair
-                const keys = generateKeys();
-                notaryTag = notaryTag || bali.tag();  // generate a new tag if necessary
-                version = version ? bali.version.nextVersion(version) : bali.version();
-                timestamp = bali.moment();
-                publicKey = keys.getValue('$publicKey');  // done with existing public key
-                privateKey = privateKey || keys.getValue('$privateKey');  // but need existing private key
+            // generate a new public-private key pair
+            const keys = generateKeys();
+            notaryTag = notaryTag || bali.tag();  // generate a new tag if necessary
+            version = version ? bali.version.nextVersion(version) : bali.version();
+            timestamp = bali.moment();
+            publicKey = keys.getValue('$publicKey');  // done with existing public key
+            privateKey = privateKey || keys.getValue('$privateKey');  // but need existing private key
 
-                // create the new notary certificate document
-                const document = bali.catalog({
+            // create the new notary certificate document
+            const component = bali.catalog({
+                $protocol: bali.parse(PROTOCOL),
+                $timestamp: timestamp,
+                $account: account,
+                $publicKey: publicKey
+            }, bali.parameters({
+                $type: '$Certificate',
+                $tag: notaryTag,
+                $version: version,
+                $permissions: '$Public',
+                $previous: isRegeneration ? certificateCitation : bali.NONE
+            }));
+
+            // notarize the notary certificate document
+            notaryCertificate = bali.catalog({
+                $component: component,
+                $protocol: bali.parse(PROTOCOL),
+                $timestamp: bali.moment(),  // now
+                $certificate: isRegeneration ? certificateCitation : bali.NONE
+            }, bali.parameters({
+                $type: '$Document'
+            }));
+            const signature = generateSignature(notaryCertificate, privateKey);
+            notaryCertificate.setValue('$signature', signature);
+
+            // now we can save the new key
+            privateKey = keys.getValue('$privateKey');
+
+            // cache the new certificate citation
+            const digest = generateDigest(notaryCertificate);
+            certificateCitation = bali.catalog({
+                $protocol: bali.parse(PROTOCOL),
+                $timestamp: bali.moment(),  // now
+                $tag: notaryTag,
+                $version: version,
+                $digest: digest
+            }, bali.parameters({
+                $type: '$Citation'
+            }));
+
+            // save the state of this notary key and certificate in the local configuration
+            try {
+                const notaryKey = bali.catalog({
                     $protocol: bali.parse(PROTOCOL),
                     $timestamp: timestamp,
                     $account: account,
-                    $publicKey: publicKey
+                    $publicKey: publicKey,
+                    $privateKey: privateKey,
+                    $certificate: certificateCitation
                 }, bali.parameters({
-                    $type: '$Certificate',
-                    $tag: notaryTag,
-                    $version: version,
-                    $permissions: '$Public',
-                    $previous: isRegeneration ? certificateCitation : bali.NONE
+                    $type: '$Key'
                 }));
-
-                // notarize the notary certificate document
-                notaryCertificate = bali.catalog({
-                    $document: document,
-                    $protocol: bali.parse(PROTOCOL),
-                    $timestamp: bali.moment(),  // now
-                    $certificate: isRegeneration ? certificateCitation : bali.NONE
-                }, bali.parameters({
-                    $type: '$Document'
-                }));
-                const signature = generateSignature(notaryCertificate, privateKey);
-                notaryCertificate.setValue('$signature', signature);
-
-                // now we can save the new key
-                privateKey = keys.getValue('$privateKey');
-
-                // cache the new certificate citation
-                const digest = generateDigest(notaryCertificate);
-                certificateCitation = bali.catalog({
-                    $protocol: bali.parse(PROTOCOL),
-                    $timestamp: bali.moment(),  // now
-                    $tag: notaryTag,
-                    $version: version,
-                    $digest: digest
-                }, bali.parameters({
-                    $type: '$Citation'
-                }));
-
-                // save the state of this notary key and certificate in the local configuration
-                try {
-                    const notaryKey = bali.catalog({
-                        $protocol: bali.parse(PROTOCOL),
-                        $timestamp: timestamp,
-                        $account: account,
-                        $publicKey: publicKey,
-                        $privateKey: privateKey,
-                        $certificate: certificateCitation
-                    }, bali.parameters({
-                        $type: '$Key'
-                    }));
-                    await storeKeys(keyFilename, notaryKey);
-                    await storeCertificate(certificateFilename, notaryCertificate);
-                } catch (cause) {
-                    const exception = bali.exception({
-                        $module: '$v1SSM',
-                        $function: '$generateKey',
-                        $exception: '$directoryAccess',
-                        $account: account || bali.NONE,
-                        $text: bali.text('The configuration directory could not be accessed.')
-                    }, cause);
-                    throw exception;
-                }
-
-                return notaryCertificate;
+                await storeKeys(keyFilename, notaryKey);
+                await storeCertificate(certificateFilename, notaryCertificate);
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '$v1SSM',
                     $function: '$generateKey',
-                    $exception: '$unexpected',
+                    $exception: '$directoryAccess',
                     $account: account || bali.NONE,
-                    $text: bali.text('An unexpected error occurred while attempting to (re)generate the key pair.')
+                    $text: bali.text('The configuration directory could not be accessed.')
                 }, cause);
                 throw exception;
             }
+
+            return notaryCertificate;
         },
 
         /**
@@ -506,162 +351,80 @@ exports.privateAPI = function(account, testDirectory) {
          */
         forgetKey: async function() {
             if (this.initializeAPI) await this.initializeAPI();
-            try {
-                version = undefined;
-                publicKey = undefined;
-                privateKey = undefined;
-                certificateCitation = undefined;
-                notaryCertificate = undefined;
-                // remove the configuration files
-                await deleteKeys(keyFilename);
-                await deleteCertificate(certificateFilename);
-            } catch (cause) {
-                const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$forget',
-                    $exception: '$unexpected',
-                    $account: account || bali.NONE,
-                    $text: bali.text('An unexpected error occurred while attempting to forget the current key pair.')
-                }, cause);
-                throw exception;
-            }
+            version = undefined;
+            publicKey = undefined;
+            privateKey = undefined;
+            certificateCitation = undefined;
+            notaryCertificate = undefined;
+            await deleteKeys(keyFilename);
+            await deleteCertificate(certificateFilename);
         },
 
         /**
-         * This function digitally notarizes the specified document using the private notary
-         * key maintained inside the software security module. The document must be parameterized
+         * This function digitally notarizes the specified component using the private notary
+         * key maintained inside the software security module. The component must be parameterized
          * with the following parameters:
          * <pre>
-         *  * $tag - a unique identifier for the document
-         *  * $version - the version of the document
-         *  * $permissions - a citation to a document containing the permissions defining who can access the document
-         *  * $previous - a citation to the previous version of the document (or bali.NONE)
+         *  * $tag - a unique identifier for the component
+         *  * $version - the version of the component
+         *  * $permissions - a citation to a notarized document containing the permissions defining
+         *                   who can access the component
+         *  * $previous - a citation to the previous version of the component (or bali.NONE)
          * </pre>
          * 
-         * The newly notarized document is returned.
+         * The newly notarized component is returned.
          *
-         * @param {Component} document The document to be notarized.
-         * @returns {Catalog} The newly notarized document.
+         * @param {Component} component The component to be notarized.
+         * @returns {Catalog} The newly notarized component.
          */
-        notarizeDocument: async function(document) {
+        signComponent: async function(component) {
             if (this.initializeAPI) await this.initializeAPI();
-
-            // validate the parameters
-            if (!document || !document.getTypeId) {
-                const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$notarizeDocument',
-                    $exception: '$invalidParameter',
-                    $account: account,
-                    $parameter: document ? bali.text(document.toString()) : bali.NONE,
-                    $text: bali.text('The document format is invalid.')
-                });
-                throw exception;
-            }
-            const parameters = document.getParameters();
-            if (!parameters || !parameters.getParameter('$tag') || !parameters.getParameter('$version') ||
-                    !parameters.getParameter('$permissions') || !parameters.getParameter('$previous')) {
-                const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$notarizeDocument',
-                    $exception: '$invalidParameter',
-                    $account: account,
-                    $parameter: document,
-                    $text: bali.text('The document must be parameterized with tag, version, permissions, and previous parameters.')
-                });
-                throw exception;
-            }
-
-
-            try {
-                // construct the notarized document
-                const notarizedDocument = bali.catalog({
-                    $document: document,
-                    $protocol: PROTOCOL,
-                    $timestamp: bali.moment(),  // now
-                    $certificate: certificateCitation
-                }, bali.parameters({
-                    $type: '$Document'
-                }));
-                const signature = generateSignature(notarizedDocument, privateKey);
-                notarizedDocument.setValue('$signature', signature);
-
-                return notarizedDocument;
-            } catch (cause) {
-                const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$notarizeDocument',
-                    $exception: '$unexpected',
-                    $account: account || bali.NONE,
-                    $document: document || bali.NONE,
-                    $text: bali.text('An unexpected error occurred while attempting to digitally sign a document.')
-                }, cause);
-                throw exception;
-            }
+            const notarizedComponent = bali.catalog({
+                $component: component,
+                $protocol: PROTOCOL,
+                $timestamp: bali.moment(),  // now
+                $certificate: certificateCitation
+            }, bali.parameters({
+                $type: '$Document'
+            }));
+            const signature = generateSignature(notarizedComponent, privateKey);
+            notarizedComponent.setValue('$signature', signature);
+            return notarizedComponent;
         },
 
         /**
          * This function uses the notary key to decrypt the specified authenticated
-         * encrypted message (AEM). The result is the decrypted document.
+         * encrypted message (AEM). The result is the decrypted component.
          *
          * @param {Catalog} aem The authenticated encrypted message to be decrypted.
-         * @returns {Component} The decrypted document.
+         * @returns {Component} The decrypted component.
          */
-        decryptDocument: async function(aem) {
+        decryptComponent: async function(aem) {
             if (this.initializeAPI) await this.initializeAPI();
-
-            // validate the parameters
-            if (!aem || !aem.getTypeId || aem.getTypeId() !== bali.types.CATALOG) {
+            if (!privateKey) {
                 const exception = bali.exception({
                     $module: '$v1SSM',
-                    $function: '$decryptDocument',
-                    $exception: '$invalidParameter',
+                    $function: '$decryptComponent',
+                    $exception: '$missingKey',
                     $account: account,
-                    $parameter: aem ? bali.text(aem.toString()) : bali.NONE,
-                    $text: bali.text('The authenticated encrypted message is invalid.')
+                    $text: bali.text('A notary key has not been generated.')
                 });
                 throw exception;
             }
-
-            try {
-                // make sure there is a private key
-                if (!privateKey) {
-                    const exception = bali.exception({
-                        $module: '$v1SSM',
-                        $function: '$decryptDocument',
-                        $exception: '$missingKey',
-                        $account: account,
-                        $text: bali.text('A notary key has not been generated.')
-                    });
-                    throw exception;
-                }
-
-                // check the protocol version
-                const protocol = aem.getValue('$protocol');
-                if (!protocol || protocol.toString() !== PROTOCOL) {
-                    const exception = bali.exception({
-                        $module: '$v1SSM',
-                        $function: '$decryptDocument',
-                        $exception: '$unsupportedProtocol',
-                        $expected:  bali.parse(PROTOCOL),
-                        $actual: protocol,
-                        $text: bali.text('The document was encrypted using an unsupported version of the notary protocol.')
-                    });
-                    throw exception;
-                }
-                const document = decryptMessage(aem, privateKey);
-                return document;
-            } catch (cause) {
+            const protocol = aem.getValue('$protocol');
+            if (!protocol || protocol.toString() !== PROTOCOL) {
                 const exception = bali.exception({
                     $module: '$v1SSM',
-                    $function: '$decryptDocument',
-                    $exception: '$unexpected',
-                    $account: account || bali.NONE,
-                    $aem: aem || bali.NONE,
-                    $text: bali.text('An unexpected error occurred while attempting to decrypt an authenticated encrypted message.')
-                }, cause);
+                    $function: '$decryptComponent',
+                    $exception: '$unsupportedProtocol',
+                    $expected:  bali.parse(PROTOCOL),
+                    $actual: protocol,
+                    $text: bali.text('The component was encrypted using an unsupported version of the notary protocol.')
+                });
                 throw exception;
             }
+            const component = decryptMessage(aem, privateKey);
+            return component;
         }
     };
 };
