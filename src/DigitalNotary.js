@@ -85,7 +85,7 @@ exports.publicAPI = function(debug) {
          */
         citeDocument: function(document) {
             try {
-                validateParameter('$citeDocument', 'document', document, 'document');
+                validateParameter('$citeDocument', 'document', document);
                 return publicAPI.citeDocument(document);
             } catch (cause) {
                 const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
@@ -112,8 +112,8 @@ exports.publicAPI = function(debug) {
          */
         citationMatches: function(citation, document) {
             try {
-                validateParameter('$citationMatches', 'citation', citation, 'citation');
-                validateParameter('$citationMatches', 'document', document, 'document');
+                validateParameter('$citationMatches', 'citation', citation);
+                validateParameter('$citationMatches', 'document', document);
                 const api = getPublicAPI('$citationMatches', citation);
                 return api.citationMatches(citation, document);
             } catch (cause) {
@@ -141,8 +141,8 @@ exports.publicAPI = function(debug) {
          */
         documentIsValid: function(document, certificate) {
             try {
-                validateParameter('$documentIsValid', 'document', document, 'document');
-                validateParameter('$documentIsValid', 'certificate', certificate, 'certificate');
+                validateParameter('$documentIsValid', 'document', document);
+                validateParameter('$documentIsValid', 'certificate', certificate);
                 const api = getPublicAPI('$documentIsValid', certificate);
                 return api.documentIsValid(document, certificate);
             } catch (cause) {
@@ -175,8 +175,8 @@ exports.publicAPI = function(debug) {
          */
         encryptComponent: function(component, certificate) {
             try {
-                validateParameter('$encryptComponent', 'component', component, 'component');
-                validateParameter('$encryptComponent', 'certificate', certificate, 'certificate');
+                validateParameter('$encryptComponent', 'component', component);
+                validateParameter('$encryptComponent', 'certificate', certificate);
                 const api = getPublicAPI('$encryptComponent', certificate);
                 return api.encryptComponent(component, certificate);
             } catch (cause) {
@@ -201,26 +201,26 @@ exports.publicAPI = function(debug) {
  * This function returns an object that implements the full API for a digital notary.
  *
  * @param {Tag} account The unique account tag for the owner of the digital notary.
- * @param {String} testDirectory An optional location of the test directory to be used for local
+ * @param {String} directory An optional location of the test directory to be used for local
  * configuration storage. If not specified, the location of the configuration is in '~/.bali/'.
  * @param {Boolean} debug An optional flag that determines whether or not exceptions
  * will be logged to the error console.
  * @returns {Object} An object that implements the API for a digital notary.
  */
-exports.api = function(account, testDirectory, debug) {
+exports.api = function(account, directory, debug) {
 
     // validate the parameters
     validateParameter('$api', 'account', account, 'tag');
-    validateParameter('$api', 'testDirectory', testDirectory, 'directory');
+    validateParameter('$api', 'directory', directory);
     debug = debug || false;
 
     // setup the public and private API implementations
     var publicAPI;
     var privateAPI;
-    if (testDirectory) {
+    if (directory) {
         // use a test software security module (SSM)
         publicAPI = preferredProtocol.SSM.publicAPI();
-        privateAPI = preferredProtocol.SSM.privateAPI(account, testDirectory);
+        privateAPI = preferredProtocol.SSM.privateAPI(account, directory);
     } else {
         // or, use a proxy to a hardware security module (HSM)
         publicAPI = preferredProtocol.HSM.publicAPI();
@@ -362,7 +362,7 @@ exports.api = function(account, testDirectory, debug) {
          */
         citeDocument: async function(document) {
             try {
-                validateParameter('$citeDocument', 'document', document, 'document');
+                validateParameter('$citeDocument', 'document', document);
                 return await publicAPI.citeDocument(document);
             } catch (cause) {
                 const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
@@ -389,8 +389,8 @@ exports.api = function(account, testDirectory, debug) {
          */
         citationMatches: async function(citation, document) {
             try {
-                validateParameter('$citationMatches', 'citation', citation, 'citation');
-                validateParameter('$citationMatches', 'document', document, 'document');
+                validateParameter('$citationMatches', 'citation', citation);
+                validateParameter('$citationMatches', 'document', document);
                 const api = getPublicAPI('$citationMatches', citation);
                 return await api.citationMatches(citation, document);
             } catch (cause) {
@@ -426,7 +426,7 @@ exports.api = function(account, testDirectory, debug) {
          */
         signComponent: async function(component) {
             try {
-                validateParameter('$signComponent', 'component', component, 'component');
+                validateParameter('$signComponent', 'component', component);
                 return await privateAPI.signComponent(component);
             } catch (cause) {
                 const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
@@ -452,8 +452,8 @@ exports.api = function(account, testDirectory, debug) {
          */
         documentIsValid: async function(document, certificate) {
             try {
-                validateParameter('$documentIsValid', 'document', document, 'document');
-                validateParameter('$documentIsValid', 'certificate', certificate, 'certificate');
+                validateParameter('$documentIsValid', 'document', document);
+                validateParameter('$documentIsValid', 'certificate', certificate);
                 const api = getPublicAPI('$documentIsValid', certificate);
                 return await api.documentIsValid(document, certificate);
             } catch (cause) {
@@ -486,8 +486,8 @@ exports.api = function(account, testDirectory, debug) {
          */
         encryptComponent: async function(component, certificate) {
             try {
-                validateParameter('$encryptComponent', 'component', component, 'component');
-                validateParameter('$encryptComponent', 'certificate', certificate, 'certificate');
+                validateParameter('$encryptComponent', 'component', component);
+                validateParameter('$encryptComponent', 'certificate', certificate);
                 const api = getPublicAPI('$encryptComponent', certificate);
                 return await api.encryptComponent(component, certificate);
             } catch (cause) {
@@ -513,7 +513,7 @@ exports.api = function(account, testDirectory, debug) {
          */
         decryptComponent: async function(aem) {
             try {
-                validateParameter('$decryptComponent', 'aem', aem, 'aem');
+                validateParameter('$decryptComponent', 'aem', aem);
                 return await privateAPI.decryptComponent(aem);
             } catch (cause) {
                 const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
@@ -561,8 +561,9 @@ const getPublicAPI = function(functionName, document) {
 };
 
 
-const validateParameter = function(functionName, parameterName, parameter, type) {
-    if (parameter) {
+const validateParameter = function(functionName, parameterName, parameterValue, type) {
+    type = type || parameterName;
+    if (parameterValue) {
         switch (type) {
             case 'binary':
             case 'moment':
@@ -570,29 +571,29 @@ const validateParameter = function(functionName, parameterName, parameter, type)
             case 'tag':
             case 'version':
                 // Primitive types must have a typeId and their type must match the passed in type
-                if (parameter.getTypeId && parameter.getTypeId() === bali.types[type.toUpperCase()]) return;
+                if (parameterValue.getTypeId && parameterValue.getTypeId() === bali.types[type.toUpperCase()]) return;
                 break;
             case 'directory':
                 // A directory must be a string that matches a specific pattern
                 const pattern = new RegExp('/?(\\w+/)+');
-                if (typeof parameter === 'string' && pattern.test(parameter)) return;
+                if (typeof parameterValue === 'string' && pattern.test(parameterValue)) return;
                 break;
             case 'component':
                 // A component must just have a typeId
-                if (parameter.getTypeId) return;
+                if (parameterValue.getTypeId) return;
                 break;
             case 'citation':
                 // A certificate must have the following:
                 //  * a parameterized type of /bali/types/Citation/v...
                 //  * exactly five specific attributes
-                if (parameter.getTypeId && parameter.isEqualTo(bali.NONE)) return;
-                if (parameter.getTypeId && parameter.getTypeId() === bali.types.CATALOG && parameter.getSize() === 5) {
-                    validateParameter(functionName, parameterName + '.protocol', parameter.getValue('$protocol'), 'version');
-                    validateParameter(functionName, parameterName + '.timestamp', parameter.getValue('$timestamp'), 'moment');
-                    validateParameter(functionName, parameterName + '.tag', parameter.getValue('$tag'), 'tag');
-                    validateParameter(functionName, parameterName + '.version', parameter.getValue('$version'), 'version');
-                    validateParameter(functionName, parameterName + '.digest', parameter.getValue('$digest'), 'binary');
-                    const parameters = parameter.getParameters();
+                if (parameterValue.getTypeId && parameterValue.isEqualTo(bali.NONE)) return;
+                if (parameterValue.getTypeId && parameterValue.getTypeId() === bali.types.CATALOG && parameterValue.getSize() === 5) {
+                    validateParameter(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
+                    validateParameter(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
+                    validateParameter(functionName, parameterName + '.tag', parameterValue.getValue('$tag'), 'tag');
+                    validateParameter(functionName, parameterName + '.version', parameterValue.getValue('$version'), 'version');
+                    validateParameter(functionName, parameterName + '.digest', parameterValue.getValue('$digest'), 'binary');
+                    const parameters = parameterValue.getParameters();
                     if (parameters && parameters.getSize() === 1) {
                         validateParameter(functionName, parameterName + '.parameters.type', parameters.getParameter('$type'), 'name');
                         if (parameters.getParameter('$type').toString().startsWith('/bali/types/Citation/v')) return;
@@ -604,12 +605,12 @@ const validateParameter = function(functionName, parameterName, parameter, type)
                 //  * a parameterized type of /bali/types/Certificate/v...
                 //  * exactly four specific attributes
                 //  * and be parameterized with exactly 5 specific parameters
-                if (parameter.getTypeId && parameter.getTypeId() === bali.types.CATALOG && parameter.getSize() === 4) {
-                    validateParameter(functionName, parameterName + '.protocol', parameter.getValue('$protocol'), 'version');
-                    validateParameter(functionName, parameterName + '.timestamp', parameter.getValue('$timestamp'), 'moment');
-                    validateParameter(functionName, parameterName + '.account', parameter.getValue('$account'), 'tag');
-                    validateParameter(functionName, parameterName + '.publicKey', parameter.getValue('$publicKey'), 'binary');
-                    const parameters = parameter.getParameters();
+                if (parameterValue.getTypeId && parameterValue.getTypeId() === bali.types.CATALOG && parameterValue.getSize() === 4) {
+                    validateParameter(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
+                    validateParameter(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
+                    validateParameter(functionName, parameterName + '.account', parameterValue.getValue('$account'), 'tag');
+                    validateParameter(functionName, parameterName + '.publicKey', parameterValue.getValue('$publicKey'), 'binary');
+                    const parameters = parameterValue.getParameters();
                     if (parameters && parameters.getSize() === 5) {
                         validateParameter(functionName, parameterName + '.parameters.type', parameters.getParameter('$type'), 'name');
                         validateParameter(functionName, parameterName + '.parameters.tag', parameters.getParameter('$tag'), 'tag');
@@ -625,14 +626,14 @@ const validateParameter = function(functionName, parameterName, parameter, type)
                 // An authenticated encrypted message (AEM) must have the following:
                 //  * a parameterized type of /bali/types/AEM/v...
                 //  * exactly six specific attributes
-                if (parameter.getTypeId && parameter.getTypeId() === bali.types.CATALOG && parameter.getSize() === 6) {
-                    validateParameter(functionName, parameterName + '.protocol', parameter.getValue('$protocol'), 'version');
-                    validateParameter(functionName, parameterName + '.timestamp', parameter.getValue('$timestamp'), 'moment');
-                    validateParameter(functionName, parameterName + '.seed', parameter.getValue('$seed'), 'binary');
-                    validateParameter(functionName, parameterName + '.iv', parameter.getValue('$iv'), 'binary');
-                    validateParameter(functionName, parameterName + '.auth', parameter.getValue('$auth'), 'binary');
-                    validateParameter(functionName, parameterName + '.ciphertext', parameter.getValue('$ciphertext'), 'binary');
-                    const parameters = parameter.getParameters();
+                if (parameterValue.getTypeId && parameterValue.getTypeId() === bali.types.CATALOG && parameterValue.getSize() === 6) {
+                    validateParameter(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
+                    validateParameter(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
+                    validateParameter(functionName, parameterName + '.seed', parameterValue.getValue('$seed'), 'binary');
+                    validateParameter(functionName, parameterName + '.iv', parameterValue.getValue('$iv'), 'binary');
+                    validateParameter(functionName, parameterName + '.auth', parameterValue.getValue('$auth'), 'binary');
+                    validateParameter(functionName, parameterName + '.ciphertext', parameterValue.getValue('$ciphertext'), 'binary');
+                    const parameters = parameterValue.getParameters();
                     if (parameters && parameters.getSize() === 1) {
                         validateParameter(functionName, parameterName + '.parameters.type', parameters.getParameter('$type'), 'name');
                         if (parameters.getParameter('$type').toString().startsWith('/bali/types/AEM/v')) return;
@@ -645,20 +646,20 @@ const validateParameter = function(functionName, parameterName, parameter, type)
                 //  * exactly five specific attributes including a $component attribute
                 //  * the $component attribute must be parameterized with at least four parameters
                 //  * the $component attribute may have a parameterized type as well
-                if (parameter.getTypeId && parameter.getTypeId() === bali.types.CATALOG && parameter.getSize() === 5) {
-                    validateParameter(functionName, parameterName + '.component', parameter.getValue('$component'), 'component');
-                    validateParameter(functionName, parameterName + '.protocol', parameter.getValue('$protocol'), 'version');
-                    validateParameter(functionName, parameterName + '.timestamp', parameter.getValue('$timestamp'), 'moment');
-                    validateParameter(functionName, parameterName + '.certificate', parameter.getValue('$certificate'), 'citation');
-                    validateParameter(functionName, parameterName + '.signature', parameter.getValue('$signature'), 'binary');
-                    var parameters = parameter.getValue('$component').getParameters();
+                if (parameterValue.getTypeId && parameterValue.getTypeId() === bali.types.CATALOG && parameterValue.getSize() === 5) {
+                    validateParameter(functionName, parameterName + '.component', parameterValue.getValue('$component'), 'component');
+                    validateParameter(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
+                    validateParameter(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
+                    validateParameter(functionName, parameterName + '.certificate', parameterValue.getValue('$certificate'), 'citation');
+                    validateParameter(functionName, parameterName + '.signature', parameterValue.getValue('$signature'), 'binary');
+                    var parameters = parameterValue.getValue('$component').getParameters();
                     if (parameters) {
                         if (parameters.getParameter('$type')) validateParameter(functionName, parameterName + '.parameters.type', parameters.getParameter('$type'), 'name');
                         validateParameter(functionName, parameterName + '.parameters.tag', parameters.getParameter('$tag'), 'tag');
                         validateParameter(functionName, parameterName + '.parameters.version', parameters.getParameter('$version'), 'version');
                         validateParameter(functionName, parameterName + '.parameters.permissions', parameters.getParameter('$permissions'), 'name');
                         validateParameter(functionName, parameterName + '.parameters.previous', parameters.getParameter('$previous'), 'citation');
-                        parameters = parameter.getParameters();
+                        parameters = parameterValue.getParameters();
                         if (parameters && parameters.getSize() === 1) {
                             if (parameters.getParameter('$type').toString().startsWith('/bali/types/Document/v')) return;
                         }
@@ -672,8 +673,8 @@ const validateParameter = function(functionName, parameterName, parameter, type)
         $function: functionName,
         $exception: '$invalidParameter',
         $parameter: bali.text(parameterName),
-        $value: parameter ? bali.text(parameter.toString()) : bali.NONE,
-        $text: bali.text('An invalid parameter was passed to the function.')
+        $value: parameterValue ? bali.text(parameterValue.toString()) : bali.NONE,
+        $text: bali.text('An invalid parameter value was passed to the function.')
     });
     throw exception;
 };
