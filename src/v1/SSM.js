@@ -67,7 +67,7 @@ exports.publicAPI = function() {
             const parameters = document.getValue('$component').getParameters();
             const tag = parameters.getParameter('$tag');
             const version = parameters.getParameter('$version');
-            const digest = generateDigest(document);
+            const digest = digestMessage(document.toString());
             const citation = bali.catalog({
                 $protocol: bali.parse(PROTOCOL),  // parses the version number of the protocol
                 $timestamp: bali.moment(),  // now
@@ -75,7 +75,7 @@ exports.publicAPI = function() {
                 $version: version,
                 $digest: digest
             }, bali.parameters({
-                $type: '$Citation'
+                $type: bali.parse('/bali/types/Citation/v1')
             }));
             return citation;
         },
@@ -91,7 +91,7 @@ exports.publicAPI = function() {
          * @returns {Boolean} Whether or not the citation matches the specified notarized document.
          */
         citationMatches: function(citation, document) {
-            var digest = generateDigest(document);
+            var digest = digestMessage(document.toString());
             return digest.isEqualTo(citation.getValue('$digest'));
         },
 
@@ -113,7 +113,7 @@ exports.publicAPI = function() {
             ]));  // everything but the signature
             const publicKey = certificate.getValue('$publicKey');
             const signature = document.getValue('$signature');
-            return signatureIsValid(catalog, publicKey, signature);
+            return signatureIsValid(catalog.toString(), publicKey, signature);
         },
 
         /**
@@ -132,7 +132,7 @@ exports.publicAPI = function() {
          */
         encryptComponent: function(component, certificate) {
             const publicKey = certificate.getValue('$publicKey');
-            const aem = encryptMessage(component, publicKey);
+            const aem = encryptMessage(component.toString(), publicKey);
             return aem;
         }
     };
@@ -198,17 +198,19 @@ exports.privateAPI = function(account, testDirectory) {
                 try {
                     if (await doesExist(keyFilename)) {
                         // read in the notary key information
-                        const keys = await loadKeys(keyFilename);
-                        timestamp = keys.getValue('$timestamp');
-                        publicKey = keys.getValue('$publicKey');
-                        privateKey = keys.getValue('$privateKey');
-                        certificateCitation = keys.getValue('$certificate');
+                        const source = await loadKey(keyFilename);
+                        const key = bali.parse(source);
+                        timestamp = key.getValue('$timestamp');
+                        publicKey = key.getValue('$publicKey');
+                        privateKey = key.getValue('$privateKey');
+                        certificateCitation = key.getValue('$certificate');
                         notaryTag = certificateCitation.getValue('$tag');
                         version = certificateCitation.getValue('$version');
                     }
                     if (await doesExist(certificateFilename)) {
                         // read in the notary certificate information
-                        notaryCertificate = await loadCertificate(certificateFilename);
+                        source = await loadCertificate(certificateFilename);
+                        notaryCertificate = bali.parse(source);
                     }
                 } catch (cause) {
                     const exception = bali.exception({
@@ -266,7 +268,7 @@ exports.privateAPI = function(account, testDirectory) {
          */
         generateKey: async function() {
             if (this.initializeAPI) await this.initializeAPI();
-                const isRegeneration = !!privateKey;
+            const isRegeneration = !!privateKey;
 
             // generate a new public-private key pair
             const keys = generateKeys();
@@ -283,10 +285,10 @@ exports.privateAPI = function(account, testDirectory) {
                 $account: account,
                 $publicKey: publicKey
             }, bali.parameters({
-                $type: '$Certificate',
+                $type: bali.parse('/bali/types/Certificate/v1'),
                 $tag: notaryTag,
                 $version: version,
-                $permissions: '$Public',
+                $permissions: '/bali/permissions/Public/v1',
                 $previous: isRegeneration ? certificateCitation : bali.NONE
             }));
 
@@ -297,16 +299,16 @@ exports.privateAPI = function(account, testDirectory) {
                 $timestamp: bali.moment(),  // now
                 $certificate: isRegeneration ? certificateCitation : bali.NONE
             }, bali.parameters({
-                $type: '$Document'
+                $type: bali.parse('/bali/types/Document/v1')
             }));
-            const signature = generateSignature(notaryCertificate, privateKey);
+            const signature = signMessage(notaryCertificate.toString(), privateKey);
             notaryCertificate.setValue('$signature', signature);
 
             // now we can save the new key
             privateKey = keys.getValue('$privateKey');
 
             // cache the new certificate citation
-            const digest = generateDigest(notaryCertificate);
+            const digest = digestMessage(notaryCertificate.toString());
             certificateCitation = bali.catalog({
                 $protocol: bali.parse(PROTOCOL),
                 $timestamp: bali.moment(),  // now
@@ -314,7 +316,7 @@ exports.privateAPI = function(account, testDirectory) {
                 $version: version,
                 $digest: digest
             }, bali.parameters({
-                $type: '$Citation'
+                $type: bali.parse('/bali/types/Citation/v1')
             }));
 
             // save the state of this notary key and certificate in the local configuration
@@ -327,10 +329,10 @@ exports.privateAPI = function(account, testDirectory) {
                     $privateKey: privateKey,
                     $certificate: certificateCitation
                 }, bali.parameters({
-                    $type: '$Key'
+                    $type: bali.parse('/bali/types/Key/v1')
                 }));
-                await storeKeys(keyFilename, notaryKey);
-                await storeCertificate(certificateFilename, notaryCertificate);
+                await storeKey(keyFilename, notaryKey.toString());
+                await storeCertificate(certificateFilename, notaryCertificate.toString());
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '$v1SSM',
@@ -356,7 +358,7 @@ exports.privateAPI = function(account, testDirectory) {
             privateKey = undefined;
             certificateCitation = undefined;
             notaryCertificate = undefined;
-            await deleteKeys(keyFilename);
+            await deleteKey(keyFilename);
             await deleteCertificate(certificateFilename);
         },
 
@@ -379,15 +381,25 @@ exports.privateAPI = function(account, testDirectory) {
          */
         signComponent: async function(component) {
             if (this.initializeAPI) await this.initializeAPI();
+            if (!privateKey) {
+                const exception = bali.exception({
+                    $module: '$v1SSM',
+                    $function: '$signComponent',
+                    $exception: '$missingKey',
+                    $account: account,
+                    $text: bali.text('A notary key has not been generated.')
+                });
+                throw exception;
+            }
             const notarizedComponent = bali.catalog({
                 $component: component,
                 $protocol: PROTOCOL,
                 $timestamp: bali.moment(),  // now
                 $certificate: certificateCitation
             }, bali.parameters({
-                $type: '$Document'
+                $type: bali.parse('/bali/types/Document/v1')
             }));
-            const signature = generateSignature(notarizedComponent, privateKey);
+            const signature = signMessage(notarizedComponent.toString(), privateKey);
             notarizedComponent.setValue('$signature', signature);
             return notarizedComponent;
         },
@@ -423,7 +435,8 @@ exports.privateAPI = function(account, testDirectory) {
                 });
                 throw exception;
             }
-            const component = decryptMessage(aem, privateKey);
+            const message = decryptMessage(aem, privateKey);
+            const component = bali.parse(message);
             return component;
         }
     };
@@ -487,12 +500,11 @@ const createDirectory = async function(testDirectory, account) {
  * This function loads the public and private key attributes from the specified file.
  * 
  * @param {String} filename The name of the file containing the key definitions.
- * @returns {Catalog} A catalog containing the public and private key attributes.
+ * @returns {String} A string containing the public and private key attributes.
  */
-const loadKeys = async function(filename) {
-    const keySource = await pfs.readFile(filename, 'utf8');
-    const keys = bali.parse(keySource);
-    return keys;
+const loadKey = async function(filename) {
+    const key = await pfs.readFile(filename, 'utf8');
+    return key;
 };
 
 
@@ -500,11 +512,11 @@ const loadKeys = async function(filename) {
  * This function stores the public and private key attributes in the specified file.
  * 
  * @param {String} filename The name of the file containing the key definitions.
- * @param {Catalog} keys A catalog containing the public and private key attributes.
+ * @param {String} key A string containing the public and private key attributes.
  */
-const storeKeys = async function(filename, keys) {
-    const keySource = keys.toString() + EOL;  // add POSIX compliant <EOL>
-    await pfs.writeFile(filename, keySource, {encoding: 'utf8', mode: 0o600});
+const storeKey = async function(filename, key) {
+    key += EOL;  // add POSIX compliant <EOL>
+    await pfs.writeFile(filename, key, {encoding: 'utf8', mode: 0o600});
 };
 
 
@@ -514,7 +526,7 @@ const storeKeys = async function(filename, keys) {
  * 
  * @param {String} filename The name of the file containing the key definitions.
  */
-const deleteKeys = async function(filename) {
+const deleteKey = async function(filename) {
     await pfs.unlink(filename).catch(function() {});
 };
 
@@ -523,11 +535,10 @@ const deleteKeys = async function(filename) {
  * This function loads the public certificate attributes from the specified file.
  * 
  * @param {String} filename The name of the file containing the certificate attributes.
- * @returns {Catalog} A catalog containing the public certificate attributes.
+ * @returns {String} A string containing the public certificate attributes.
  */
 const loadCertificate = async function(filename) {
-    const certificateSource = await pfs.readFile(filename, 'utf8');
-    const certificate = bali.parse(certificateSource);
+    const certificate = await pfs.readFile(filename, 'utf8');
     return certificate;
 };
 
@@ -536,11 +547,11 @@ const loadCertificate = async function(filename) {
  * This function stores the public certificate attributes in the specified file.
  * 
  * @param {String} filename The name of the file containing the certificate attributes.
- * @param {Catalog} certificate A catalog containing the public certificate attributes.
+ * @param {String} certificate A string containing the public certificate attributes.
  */
 const storeCertificate = async function(filename, certificate) {
-    const certificateSource = certificate.toString() + EOL;  // add POSIX compliant <EOL>
-    await pfs.writeFile(filename, certificateSource, {encoding: 'utf8', mode: 0o600});
+    certificate += EOL;  // add POSIX compliant <EOL>
+    await pfs.writeFile(filename, certificate, {encoding: 'utf8', mode: 0o600});
 };
 
 
@@ -566,7 +577,7 @@ const generateKeys = function() {
         $publicKey: bali.binary(curve.getPublicKey()),
         $privateKey: bali.binary(curve.getPrivateKey())
     }, bali.parameters({
-        $type: '$KeyPair'
+        $type: bali.parse('/bali/types/KeyPair/v1')
     }));
 };
 
@@ -576,13 +587,13 @@ const generateKeys = function() {
  * specified message. The generated digital digest will always be the same
  * for the same message.
  *
- * @param {Component} message The component to be digested.
+ * @param {String} message The message to be digested.
  * @returns {Binary} A base 32 encoded binary string for the digital digest
  * of the message.
  */
-const generateDigest = function(message) {
+const digestMessage = function(message) {
     const hasher = crypto.createHash(DIGEST);
-    hasher.update(message.toString());
+    hasher.update(message);
     const digest = bali.binary(hasher.digest());
     return digest;
 };
@@ -593,16 +604,16 @@ const generateDigest = function(message) {
  * the specified private key. The resulting digital signature can then be
  * verified using the corresponding public key.
  * 
- * @param {Component} message The message to be digitally signed.
+ * @param {String} message The message to be digitally signed.
  * @param {Binary} privateKey A base 32 encoded binary string for the private key.
  * @returns {Binary} A base 32 encoded binary string for the digital signature.
  */
-const generateSignature = function(message, privateKey) {
+const signMessage = function(message, privateKey) {
     const curve = crypto.createECDH(CURVE);
     curve.setPrivateKey(privateKey.getValue());
     const pem = ec_pem(curve, CURVE);
     const signer = crypto.createSign(SIGNATURE);
-    signer.update(message.toString());
+    signer.update(message);
     const signature = bali.binary(signer.sign(pem.encodePrivateKey()));
     return signature;
 };
@@ -613,7 +624,7 @@ const generateSignature = function(message, privateKey) {
  * the specified digital signature was generated using the corresponding
  * private key on the specified message.
  *
- * @param {Component} message The digitally signed message.
+ * @param {String} message The digitally signed message.
  * @param {Binary} publicKey A base 32 encoded binary string for the public key.
  * @param {Binary} signature A base 32 encoded binary string for the digital
  * signature generated using the corresponding private key.
@@ -624,7 +635,7 @@ const signatureIsValid = function(message, publicKey, signature) {
     curve.setPublicKey(publicKey.getValue());
     const pem = ec_pem(curve, CURVE);
     const verifier = crypto.createVerify(SIGNATURE);
-    verifier.update(message.toString());
+    verifier.update(message);
     return verifier.verify(pem.encodePublicKey(), signature.getValue());
 };
 
@@ -634,7 +645,7 @@ const signatureIsValid = function(message, publicKey, signature) {
  * is then used to encrypt the specified message. The resulting authenticated
  * encrypted message (AEM) can be decrypted using the corresponding private key.
  * 
- * @param {Component} message The message to be encrypted. 
+ * @param {String} message The message to be encrypted. 
  * @param {Binary} publicKey A base 32 encoded binary string for the public key
  * to be used to generate the symmetric key.
  * @returns {Catalog} The resulting authenticated encrypted message (AEM).
@@ -649,7 +660,7 @@ const encryptMessage = function(message, publicKey) {
     // encrypt the message using the symmetric key
     const iv = crypto.randomBytes(12);
     const cipher = crypto.createCipheriv(CIPHER, symmetricKey, iv);
-    var ciphertext = cipher.update(message.toString(), 'utf8');
+    var ciphertext = cipher.update(message, 'utf8');
     ciphertext = Buffer.concat([ciphertext, cipher.final()]);
     const auth = cipher.getAuthTag();
 
@@ -662,7 +673,7 @@ const encryptMessage = function(message, publicKey) {
         $auth: bali.binary(auth),
         $ciphertext: bali.binary(ciphertext)
     }, bali.parameters({
-        $type: '$AEM'
+        $type: bali.parse('/bali/types/AEM/v1')
     }));
 
     return aem;
@@ -677,7 +688,7 @@ const encryptMessage = function(message, publicKey) {
  * @param {Catalog} aem The authenticated encrypted message to be decrypted. 
  * @param {Binary} privateKey A base 32 encoded binary string for the private key
  * used to regenerate the symmetric key that was used to encrypt the message.
- * @returns {Component} The decrypted message.
+ * @returns {String} The decrypted message.
  */
 const decryptMessage = function(aem, privateKey) {
     // extract the AEM attributes
@@ -696,7 +707,6 @@ const decryptMessage = function(aem, privateKey) {
     decipher.setAuthTag(auth);
     var message = decipher.update(ciphertext, undefined, 'utf8');
     message += decipher.final('utf8');
-    const component = bali.parse(message);
 
-    return component;
+    return message;
 };

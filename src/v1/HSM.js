@@ -175,7 +175,7 @@ exports.privateAPI = function(account, testDirectory) {
          * <pre>
          *  * $tag - a unique identifier for the component
          *  * $version - the version of the component
-         *  * $permissions - a citation to a notarized document containing the permissions defining
+         *  * $permissions - the name of a notarized document containing the permissions defining
          *                   who can access the component
          *  * $previous - a citation to the previous version of the component (or bali.NONE)
          * </pre>
