@@ -106,11 +106,11 @@ exports.publicAPI = function() {
  * This function returns an object that implements the private key API for the proxy to
  * the hardware security module (HSM). 
  *
- * @param {Tag} account The unique tag for the account that owns the notary key.
+ * @param {Tag} accountId The unique tag for the account that owns the notary key.
  * @param {String} testDirectory An optional directory to use for local testing.
  * @returns {Object} A proxy to the test hardware security module managing the private key.
  */
-exports.privateAPI = function(account, testDirectory) {
+exports.privateAPI = function(accountId, testDirectory) {
 
     return {
 

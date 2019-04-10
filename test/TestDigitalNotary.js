@@ -13,8 +13,8 @@ const mocha = require('mocha');
 const assert = require('chai').assert;
 const expect = require('chai').expect;
 const bali = require('bali-component-framework');
-const account = bali.tag();
-const notary = require('../').api(account, 'test/config/', debug);
+const accountId = bali.tag();
+const notary = require('../').api(accountId, 'test/config/', debug);
 const publicAPI = require('../').publicAPI(debug);
 
 describe('Bali Digital Notary™', function() {
@@ -26,8 +26,8 @@ describe('Bali Digital Notary™', function() {
 
     describe('Test Key Generation', function() {
 
-        it('should return the correct account', function() {
-            expect(notary.getAccount().isEqualTo(account)).to.equal(true);
+        it('should return the correct accountId', function() {
+            expect(notary.getAccountId().isEqualTo(accountId)).to.equal(true);
         });
 
         it('should support correct versions', async function() {

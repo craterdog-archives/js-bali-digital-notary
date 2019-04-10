@@ -144,11 +144,11 @@ exports.publicAPI = function() {
  * the code that is using the notary key, but it is NOT fool-proof. It should only be
  * used for testing purposes.
  *
- * @param {Tag} account The unique tag for the account that owns the notary key.
+ * @param {Tag} accountId The unique tag for the account that owns the notary key.
  * @param {String} testDirectory An optional directory to use for local testing.
  * @returns {Object} A proxy to the test software security module managing the private key.
  */
-exports.privateAPI = function(account, testDirectory) {
+exports.privateAPI = function(accountId, testDirectory) {
     var notaryTag;            // the unique tag for the notary key
     var version;              // the current version of the notary key
     var timestamp;            // the timestamp of when the key was generated
@@ -175,7 +175,7 @@ exports.privateAPI = function(account, testDirectory) {
                 $digest: bali.text(DIGEST),
                 $signature: bali.text(SIGNATURE),
                 $cipher: bali.text(CIPHER),
-                $account: account,
+                $accountId: accountId,
                 $certificate: certificateCitation
             }, bali.parameters({
                 $tag: notaryTag,
@@ -190,7 +190,7 @@ exports.privateAPI = function(account, testDirectory) {
         initializeAPI: async function() {
             try {
                 // create the configuration directory structure if necessary
-                configDirectory = await createDirectory(testDirectory, account);
+                configDirectory = await createDirectory(testDirectory, accountId);
                 keyFilename = configDirectory + 'NotaryKey.bali';
                 certificateFilename = configDirectory + 'NotaryCertificate.bali';
 
@@ -217,7 +217,7 @@ exports.privateAPI = function(account, testDirectory) {
                         $module: '$v1SSM',
                         $function: '$initializeAPI',
                         $exception: '$directoryAccess',
-                        $account: account || bali.NONE,
+                        $accountId: accountId || bali.NONE,
                         $directory: configDirectory ? bali.text(configDirectory) : bali.NONE,
                         $text: bali.text('The configuration directory could not be accessed.')
                     }, cause);
@@ -229,7 +229,7 @@ exports.privateAPI = function(account, testDirectory) {
                     $module: '$v1SSM',
                     $function: '$initializeAPI',
                     $exception: '$unexpected',
-                    $account: account || bali.NONE,
+                    $accountId: accountId || bali.NONE,
                     $directory: configDirectory ? bali.text(configDirectory) : bali.NONE,
                     $text: bali.text('An unexpected error occurred while attempting to initialize the API.')
                 }, cause);
@@ -282,7 +282,7 @@ exports.privateAPI = function(account, testDirectory) {
             const component = bali.catalog({
                 $protocol: bali.parse(PROTOCOL),
                 $timestamp: timestamp,
-                $account: account,
+                $accountId: accountId,
                 $publicKey: publicKey
             }, bali.parameters({
                 $type: bali.parse('/bali/types/Certificate/v1'),
@@ -324,7 +324,7 @@ exports.privateAPI = function(account, testDirectory) {
                 const notaryKey = bali.catalog({
                     $protocol: bali.parse(PROTOCOL),
                     $timestamp: timestamp,
-                    $account: account,
+                    $accountId: accountId,
                     $publicKey: publicKey,
                     $privateKey: privateKey,
                     $certificate: certificateCitation
@@ -338,7 +338,7 @@ exports.privateAPI = function(account, testDirectory) {
                     $module: '$v1SSM',
                     $function: '$generateKey',
                     $exception: '$directoryAccess',
-                    $account: account || bali.NONE,
+                    $accountId: accountId || bali.NONE,
                     $text: bali.text('The configuration directory could not be accessed.')
                 }, cause);
                 throw exception;
@@ -386,7 +386,7 @@ exports.privateAPI = function(account, testDirectory) {
                     $module: '$v1SSM',
                     $function: '$signComponent',
                     $exception: '$missingKey',
-                    $account: account,
+                    $accountId: accountId,
                     $text: bali.text('A notary key has not been generated.')
                 });
                 throw exception;
@@ -418,7 +418,7 @@ exports.privateAPI = function(account, testDirectory) {
                     $module: '$v1SSM',
                     $function: '$decryptComponent',
                     $exception: '$missingKey',
-                    $account: account,
+                    $accountId: accountId,
                     $text: bali.text('A notary key has not been generated.')
                 });
                 throw exception;
@@ -483,14 +483,14 @@ const doesExist = async function(file) {
  * 
  * @param {String} testDirectory An optional directory path to be used as the
  * base configuration directory.
- * @param {Tag} account The unique tag for the account associated with the
+ * @param {Tag} accountId The unique tag for the account associated with the
  * notary key.
  * @returns {String} The full configuration directory path for this account.
  */
-const createDirectory = async function(testDirectory, account) {
+const createDirectory = async function(testDirectory, accountId) {
     var configDirectory = testDirectory || os.homedir() + '/.bali/';
     try { await pfs.mkdir(configDirectory, 0o700); } catch (ignore) {};
-    configDirectory += account.getValue() + '/';
+    configDirectory += accountId.getValue() + '/';
     try { await pfs.mkdir(configDirectory, 0o700); } catch (ignore) {};
     return configDirectory;
 };

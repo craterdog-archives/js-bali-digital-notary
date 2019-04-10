@@ -200,17 +200,17 @@ exports.publicAPI = function(debug) {
 /**
  * This function returns an object that implements the full API for a digital notary.
  *
- * @param {Tag} account The unique account tag for the owner of the digital notary.
+ * @param {Tag} accountId The unique account tag for the owner of the digital notary.
  * @param {String} directory An optional location of the test directory to be used for local
  * configuration storage. If not specified, the location of the configuration is in '~/.bali/'.
  * @param {Boolean} debug An optional flag that determines whether or not exceptions
  * will be logged to the error console.
  * @returns {Object} An object that implements the API for a digital notary.
  */
-exports.api = function(account, directory, debug) {
+exports.api = function(accountId, directory, debug) {
 
     // validate the parameters
-    validateParameter('$api', 'account', account, 'tag');
+    validateParameter('$api', 'accountId', accountId, 'tag');
     validateParameter('$api', 'directory', directory);
     debug = debug || false;
 
@@ -220,11 +220,11 @@ exports.api = function(account, directory, debug) {
     if (directory) {
         // use a test software security module (SSM)
         publicAPI = preferredProtocol.SSM.publicAPI();
-        privateAPI = preferredProtocol.SSM.privateAPI(account, directory);
+        privateAPI = preferredProtocol.SSM.privateAPI(accountId, directory);
     } else {
         // or, use a proxy to a hardware security module (HSM)
         publicAPI = preferredProtocol.HSM.publicAPI();
-        privateAPI = preferredProtocol.HSM.privateAPI(account);
+        privateAPI = preferredProtocol.HSM.privateAPI(accountId);
     }
 
     // return a singleton object for the API
@@ -246,8 +246,8 @@ exports.api = function(account, directory, debug) {
          * @returns {Tag} The unique tag for the account that is associated with this digital
          * notary.
          */
-        getAccount: function() {
-            return account;
+        getAccountId: function() {
+            return accountId;
         },
 
         /**
@@ -608,7 +608,7 @@ const validateParameter = function(functionName, parameterName, parameterValue, 
                 if (parameterValue.getTypeId && parameterValue.getTypeId() === bali.types.CATALOG && parameterValue.getSize() === 4) {
                     validateParameter(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
                     validateParameter(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
-                    validateParameter(functionName, parameterName + '.account', parameterValue.getValue('$account'), 'tag');
+                    validateParameter(functionName, parameterName + '.accountId', parameterValue.getValue('$accountId'), 'tag');
                     validateParameter(functionName, parameterName + '.publicKey', parameterValue.getValue('$publicKey'), 'binary');
                     const parameters = parameterValue.getParameters();
                     if (parameters && parameters.getSize() === 5) {

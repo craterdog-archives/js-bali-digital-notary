@@ -32,14 +32,14 @@ exports.publicAPI = function(debug) {
  * module will be used instead of a remote hardware security module (HSM)
  * for all operations that utilize the private notary key.
  *
- * @param {Tag} account The unique account tag for the owner of the digital notary.
+ * @param {Tag} accountId The unique account tag for the owner of the digital notary.
  * @param {String} testDirectory The optional local directory to be used to
  * maintain the configuration information for the digital notary API.
  * @param {Boolean} debug An optional flag that determines whether or not exceptions
  * will be logged to the error console.
  * @returns {Object} A singleton object implementing the private API.
  */
-exports.api = function(account, testDirectory, debug) {
-    const api = require('./src/DigitalNotary').api(account, testDirectory, debug);
+exports.api = function(accountId, testDirectory, debug) {
+    const api = require('./src/DigitalNotary').api(accountId, testDirectory, debug);
     return api;
 };
