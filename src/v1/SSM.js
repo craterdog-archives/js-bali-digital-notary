@@ -145,10 +145,10 @@ exports.publicAPI = function() {
  * used for testing purposes.
  *
  * @param {Tag} accountId The unique tag for the account that owns the notary key.
- * @param {String} testDirectory An optional directory to use for local testing.
+ * @param {String} directory An optional directory to use for local testing.
  * @returns {Object} A proxy to the test software security module managing the private key.
  */
-exports.privateAPI = function(accountId, testDirectory) {
+exports.privateAPI = function(accountId, directory) {
     var notaryTag;            // the unique tag for the notary key
     var version;              // the current version of the notary key
     var timestamp;            // the timestamp of when the key was generated
@@ -190,7 +190,7 @@ exports.privateAPI = function(accountId, testDirectory) {
         initializeAPI: async function() {
             try {
                 // create the configuration directory structure if necessary
-                configDirectory = await createDirectory(testDirectory, accountId);
+                configDirectory = await createDirectory(directory, accountId);
                 keyFilename = configDirectory + 'NotaryKey.bali';
                 certificateFilename = configDirectory + 'NotaryCertificate.bali';
 
@@ -481,14 +481,14 @@ const doesExist = async function(file) {
 /**
  * This function creates the configuration directories for the specified account.
  * 
- * @param {String} testDirectory An optional directory path to be used as the
+ * @param {String} directory An optional directory path to be used as the
  * base configuration directory.
  * @param {Tag} accountId The unique tag for the account associated with the
  * notary key.
  * @returns {String} The full configuration directory path for this account.
  */
-const createDirectory = async function(testDirectory, accountId) {
-    var configDirectory = testDirectory || os.homedir() + '/.bali/';
+const createDirectory = async function(directory, accountId) {
+    var configDirectory = directory || os.homedir() + '/.bali/';
     try { await pfs.mkdir(configDirectory, 0o700); } catch (ignore) {};
     configDirectory += accountId.getValue() + '/';
     try { await pfs.mkdir(configDirectory, 0o700); } catch (ignore) {};

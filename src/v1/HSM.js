@@ -107,10 +107,10 @@ exports.publicAPI = function() {
  * the hardware security module (HSM). 
  *
  * @param {Tag} accountId The unique tag for the account that owns the notary key.
- * @param {String} testDirectory An optional directory to use for local testing.
+ * @param {String} directory An optional directory to use for local testing.
  * @returns {Object} A proxy to the test hardware security module managing the private key.
  */
-exports.privateAPI = function(accountId, testDirectory) {
+exports.privateAPI = function(accountId, directory) {
 
     return {
 
