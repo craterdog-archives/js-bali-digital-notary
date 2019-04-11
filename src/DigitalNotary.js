@@ -135,14 +135,15 @@ exports.publicAPI = function(debug) {
          * document is valid.
          *
          * @param {Catalog} document The notarized document to be tested.
-         * @param {Catalog} certificate A catalog containing the public certificate for the
-         * private notary key that allegedly notarized the specified notarized document.
+         * @param {Catalog} certificate A notarized document containing the public certificate
+         * for the private notary key that allegedly notarized the specified notarized document.
          * @returns {Boolean} Whether or not the notary seal on the notarized document is valid.
          */
         documentIsValid: function(document, certificate) {
             try {
                 validateParameter('$documentIsValid', 'document', document);
-                validateParameter('$documentIsValid', 'certificate', certificate);
+                validateParameter('$documentIsValid', 'certificate', certificate, 'document');
+                validateParameter('$documentIsValid', 'certificate', certificate.getValue('$component'));
                 const api = getPublicAPI('$documentIsValid', certificate);
                 return api.documentIsValid(document, certificate);
             } catch (cause) {
@@ -168,15 +169,16 @@ exports.publicAPI = function(debug) {
          *
          * @param {Component} component The component to be encrypted using the specified
          * public notary certificate.
-         * @param {Catalog} certificate A catalog containing the public certificate for the
-         * intended recipient of the encrypted component.
+         * @param {Catalog} certificate A notarized document containing the public certificate
+         * for the intended recipient of the encrypted component.
          * @returns {Catalog} An authenticated encrypted message (AEM) containing the ciphertext
          * and other required attributes for the encrypted component.
          */
         encryptComponent: function(component, certificate) {
             try {
                 validateParameter('$encryptComponent', 'component', component);
-                validateParameter('$encryptComponent', 'certificate', certificate);
+                validateParameter('$encryptComponent', 'certificate', certificate, 'document');
+                validateParameter('$encryptComponent', 'certificate', certificate.getValue('$component'));
                 const api = getPublicAPI('$encryptComponent', certificate);
                 return api.encryptComponent(component, certificate);
             } catch (cause) {
@@ -446,14 +448,15 @@ exports.api = function(accountId, directory, debug) {
          * is valid.
          *
          * @param {Catalog} document The notarized document to be tested.
-         * @param {Catalog} certificate A catalog containing the public certificate for the
-         * private notary key that allegedly notarized the specified document.
+         * @param {Catalog} certificate A notarized document containing the public certificate
+         * for the private notary key that allegedly notarized the specified document.
          * @returns {Boolean} Whether or not the notary seal on the notarized document is valid.
          */
         documentIsValid: async function(document, certificate) {
             try {
                 validateParameter('$documentIsValid', 'document', document);
-                validateParameter('$documentIsValid', 'certificate', certificate);
+                validateParameter('$documentIsValid', 'certificate', certificate, 'document');
+                validateParameter('$documentIsValid', 'certificate', certificate.getValue('$component'));
                 const api = getPublicAPI('$documentIsValid', certificate);
                 return await api.documentIsValid(document, certificate);
             } catch (cause) {
@@ -479,15 +482,16 @@ exports.api = function(accountId, directory, debug) {
          *
          * @param {Component} component The component to be encrypted using the specified
          * public notary certificate.
-         * @param {Catalog} certificate A catalog containing the public certificate for the
-         * intended recipient of the encrypted component.
+         * @param {Catalog} certificate A notarized document containing the public certificate
+         * for the intended recipient of the encrypted component.
          * @returns {Catalog} An authenticated encrypted message (AEM) containing the ciphertext
          * and other required attributes for the encrypted component.
          */
         encryptComponent: async function(component, certificate) {
             try {
                 validateParameter('$encryptComponent', 'component', component);
-                validateParameter('$encryptComponent', 'certificate', certificate);
+                validateParameter('$encryptComponent', 'certificate', certificate, 'document');
+                validateParameter('$encryptComponent', 'certificate', certificate.getValue('$component'));
                 const api = getPublicAPI('$encryptComponent', certificate);
                 return await api.encryptComponent(component, certificate);
             } catch (cause) {
@@ -583,7 +587,7 @@ const validateParameter = function(functionName, parameterName, parameterValue, 
                 if (parameterValue.getTypeId) return;
                 break;
             case 'citation':
-                // A certificate must have the following:
+                // A citation must have the following:
                 //  * a parameterized type of /bali/types/Citation/v...
                 //  * exactly five specific attributes
                 if (parameterValue.getTypeId && parameterValue.isEqualTo(bali.NONE)) return;

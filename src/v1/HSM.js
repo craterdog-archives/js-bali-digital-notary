@@ -74,8 +74,8 @@ exports.publicAPI = function() {
          * document is valid.
          *
          * @param {Catalog} document The notarized document to be tested.
-         * @param {Catalog} certificate A catalog containing the public certificate for the
-         * private notary key that allegedly notarized the specified document.
+         * @param {Catalog} certificate A notarized document containing the public certificate
+         * for the private notary key that allegedly notarized the specified document.
          * @returns {Boolean} Whether or not the notary seal on the notarized document is valid.
          */
         documentIsValid: async function(document, certificate) {
@@ -91,8 +91,8 @@ exports.publicAPI = function() {
          *
          * @param {Component} component The component to be encrypted using the specified
          * public notary certificate.
-         * @param {Catalog} certificate A catalog containing the public certificate for the
-         * intended recipient of the encrypted component.
+         * @param {Catalog} certificate A notarized document containing the public certificate
+         * for the intended recipient of the encrypted component.
          * @returns {Catalog} An authenticated encrypted message (AEM) containing the ciphertext
          * and other required attributes for the encrypted component.
          */
