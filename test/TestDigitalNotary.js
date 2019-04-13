@@ -21,7 +21,7 @@ describe('Bali Digital Notary™', function() {
 
     var notaryCertificate;
     var certificateCitation;
-    var component = bali.parse('[$foo: "bar"]($tag: #MFPCRNKS2SG20CD7VQ6KD329X7382KJY, $version: v1, $permissions: /bali/permissions/Public/v1, $previous: none)');
+    var component = bali.parse('[$foo: "bar"]($tag: #MFPCRNKS2SG20CD7VQ6KD329X7382KJY, $version: v1, $permissions: /bali/permissions/public/v1, $previous: none)');
 
     describe('Test Key Generation', function() {
 
@@ -84,7 +84,7 @@ describe('Bali Digital Notary™', function() {
                 $version: bali.version([2, 3]),
                 $digest: bali.parse("'JB2NG73VTB957T9TZWT44KRZVQ467KWJ2MSJYT6YW2RQAYQMSR861XGM5ZCDCPNJYR612SJT9RFKHA9YZ5DJMLYC7N3127AY4QDVJ38'")
             }, bali.parameters({
-                $type: bali.parse('/bali/types/Citation/v1')
+                $type: bali.parse('/bali/composites/Citation/v1')
             }));
             const transaction = bali.catalog({
                 $transactionId: bali.tag(),
@@ -96,7 +96,7 @@ describe('Bali Digital Notary™', function() {
                 $type: bali.parse('/acme/types/Transaction/v2.3'),
                 $tag: tag,
                 $version: bali.version([2, 4]),
-                $permissions: bali.parse('/bali/permissions/Public/v1'),
+                $permissions: bali.parse('/bali/permissions/public/v1'),
                 $previous: previous
             }));
             var document = await notary.signComponent(transaction);
@@ -192,7 +192,7 @@ describe('Bali Digital Notary™', function() {
             const parameters = document.getParameters();
             parameters.setParameter('$tag', document.getValue('$component').getParameters().getParameter('$tag'));
             parameters.setParameter('$version', 'v2');
-            parameters.setParameter('$permissions', bali.parse('/bali/permissions/Public/v1'));
+            parameters.setParameter('$permissions', bali.parse('/bali/permissions/public/v1'));
             parameters.setParameter('$previous', bali.NONE);
             document = await notary.signComponent(document);
 

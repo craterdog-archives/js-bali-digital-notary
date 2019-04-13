@@ -47,7 +47,7 @@ exports.publicAPI = function() {
          */
         toString: function() {
             const catalog = bali.catalog({
-                $module: '$v1SSM',
+                $module: '/bali/crypto/SSM/publicAPI',
                 $protocol: bali.parse(PROTOCOL),
                 $curve: bali.text(CURVE),
                 $digest: bali.text(DIGEST),
@@ -75,7 +75,7 @@ exports.publicAPI = function() {
                 $version: version,
                 $digest: digest
             }, bali.parameters({
-                $type: bali.parse('/bali/types/Citation/v1')
+                $type: bali.parse('/bali/composites/Citation/v1')
             }));
             return citation;
         },
@@ -171,7 +171,7 @@ exports.privateAPI = function(accountId, directory) {
          */
         toString: function() {
             const catalog = bali.catalog({
-                $module: '$v1SSM',
+                $module: '/bali/crypto/SSM/privateAPI',
                 $protocol: bali.parse(PROTOCOL),
                 $curve: bali.text(CURVE),
                 $digest: bali.text(DIGEST),
@@ -198,9 +198,10 @@ exports.privateAPI = function(accountId, directory) {
 
                 // read in the notary key attributes (if possible)
                 try {
+                    var source;
                     if (await doesExist(keyFilename)) {
                         // read in the notary key information
-                        const source = await loadKey(keyFilename);
+                        source = await loadKey(keyFilename);
                         const key = bali.parse(source);
                         timestamp = key.getValue('$timestamp');
                         publicKey = key.getValue('$publicKey');
@@ -216,8 +217,8 @@ exports.privateAPI = function(accountId, directory) {
                     }
                 } catch (cause) {
                     const exception = bali.exception({
-                        $module: '$v1SSM',
-                        $function: '$initializeAPI',
+                        $module: '/bali/crypto/SSM/privateAPI',
+                        $procedure: '$initializeAPI',
                         $exception: '$directoryAccess',
                         $accountId: accountId || bali.NONE,
                         $directory: configDirectory ? bali.text(configDirectory) : bali.NONE,
@@ -228,8 +229,8 @@ exports.privateAPI = function(accountId, directory) {
                 this.initializeAPI = undefined;  // can only be called once
             } catch (cause) {
                 const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$initializeAPI',
+                    $module: '/bali/crypto/SSM/privateAPI',
+                    $procedure: '$initializeAPI',
                     $exception: '$unexpected',
                     $accountId: accountId || bali.NONE,
                     $directory: configDirectory ? bali.text(configDirectory) : bali.NONE,
@@ -277,8 +278,8 @@ exports.privateAPI = function(accountId, directory) {
             notaryTag = notaryTag || bali.tag();  // generate a new tag if necessary
             version = version ? bali.version.nextVersion(version) : bali.version();
             timestamp = bali.moment();
-            publicKey = keys.getValue('$publicKey');  // done with existing public key
-            privateKey = privateKey || keys.getValue('$privateKey');  // but need existing private key
+            publicKey = keys.publicKey;  // done with existing public key
+            privateKey = privateKey || keys.privateKey;  // but need existing private key
 
             // create the new notary certificate document
             const component = bali.catalog({
@@ -287,10 +288,10 @@ exports.privateAPI = function(accountId, directory) {
                 $accountId: accountId,
                 $publicKey: publicKey
             }, bali.parameters({
-                $type: bali.parse('/bali/types/Certificate/v1'),
+                $type: bali.parse('/bali/composites/Certificate/v1'),
                 $tag: notaryTag,
                 $version: version,
-                $permissions: '/bali/permissions/Public/v1',
+                $permissions: '/bali/permissions/public/v1',
                 $previous: isRegeneration ? certificateCitation : bali.NONE
             }));
 
@@ -301,13 +302,13 @@ exports.privateAPI = function(accountId, directory) {
                 $timestamp: bali.moment(),  // now
                 $certificate: isRegeneration ? certificateCitation : bali.NONE
             }, bali.parameters({
-                $type: bali.parse('/bali/types/Document/v1')
+                $type: bali.parse('/bali/composites/Document/v1')
             }));
             const signature = signMessage(notaryCertificate.toString(), privateKey);
             notaryCertificate.setValue('$signature', signature);
 
             // now we can save the new key
-            privateKey = keys.getValue('$privateKey');
+            privateKey = keys.privateKey;
 
             // cache the new certificate citation
             const digest = digestMessage(notaryCertificate.toString());
@@ -318,7 +319,7 @@ exports.privateAPI = function(accountId, directory) {
                 $version: version,
                 $digest: digest
             }, bali.parameters({
-                $type: bali.parse('/bali/types/Citation/v1')
+                $type: bali.parse('/bali/composites/Citation/v1')
             }));
 
             // save the state of this notary key and certificate in the local configuration
@@ -331,14 +332,14 @@ exports.privateAPI = function(accountId, directory) {
                     $privateKey: privateKey,
                     $certificate: certificateCitation
                 }, bali.parameters({
-                    $type: bali.parse('/bali/types/Key/v1')
+                    $type: bali.parse('/bali/composites/NotaryKey/v1')
                 }));
                 await storeKey(keyFilename, notaryKey.toString());
                 await storeCertificate(certificateFilename, notaryCertificate.toString());
             } catch (cause) {
                 const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$generateKey',
+                    $module: '/bali/crypto/SSM/privateAPI',
+                    $procedure: '$generateKey',
                     $exception: '$directoryAccess',
                     $accountId: accountId || bali.NONE,
                     $text: bali.text('The configuration directory could not be accessed.')
@@ -385,8 +386,8 @@ exports.privateAPI = function(accountId, directory) {
             if (this.initializeAPI) await this.initializeAPI();
             if (!privateKey) {
                 const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$signComponent',
+                    $module: '/bali/crypto/SSM/privateAPI',
+                    $procedure: '$signComponent',
                     $exception: '$missingKey',
                     $accountId: accountId,
                     $text: bali.text('A notary key has not been generated.')
@@ -399,7 +400,7 @@ exports.privateAPI = function(accountId, directory) {
                 $timestamp: bali.moment(),  // now
                 $certificate: certificateCitation
             }, bali.parameters({
-                $type: bali.parse('/bali/types/Document/v1')
+                $type: bali.parse('/bali/composites/Document/v1')
             }));
             const signature = signMessage(notarizedComponent.toString(), privateKey);
             notarizedComponent.setValue('$signature', signature);
@@ -417,8 +418,8 @@ exports.privateAPI = function(accountId, directory) {
             if (this.initializeAPI) await this.initializeAPI();
             if (!privateKey) {
                 const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$decryptComponent',
+                    $module: '/bali/crypto/SSM/privateAPI',
+                    $procedure: '$decryptComponent',
                     $exception: '$missingKey',
                     $accountId: accountId,
                     $text: bali.text('A notary key has not been generated.')
@@ -428,8 +429,8 @@ exports.privateAPI = function(accountId, directory) {
             const protocol = aem.getValue('$protocol');
             if (!protocol || protocol.toString() !== PROTOCOL) {
                 const exception = bali.exception({
-                    $module: '$v1SSM',
-                    $function: '$decryptComponent',
+                    $module: '/bali/crypto/SSM/privateAPI',
+                    $procedure: '$decryptComponent',
                     $exception: '$unsupportedProtocol',
                     $expected:  bali.parse(PROTOCOL),
                     $actual: protocol,
@@ -575,12 +576,10 @@ const deleteCertificate = async function(filename) {
 const generateKeys = function() {
     const curve = crypto.createECDH(CURVE);
     curve.generateKeys();
-    return bali.catalog({
-        $publicKey: bali.binary(curve.getPublicKey()),
-        $privateKey: bali.binary(curve.getPrivateKey())
-    }, bali.parameters({
-        $type: bali.parse('/bali/types/KeyPair/v1')
-    }));
+    return {
+        publicKey: bali.binary(curve.getPublicKey()),
+        privateKey: bali.binary(curve.getPrivateKey())
+    };
 };
 
 
@@ -675,7 +674,7 @@ const encryptMessage = function(message, publicKey) {
         $auth: bali.binary(auth),
         $ciphertext: bali.binary(ciphertext)
     }, bali.parameters({
-        $type: bali.parse('/bali/types/AEM/v1')
+        $type: bali.parse('/bali/composites/AEM/v1')
     }));
 
     return aem;
