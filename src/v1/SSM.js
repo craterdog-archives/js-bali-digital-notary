@@ -47,7 +47,7 @@ exports.publicAPI = function() {
          */
         toString: function() {
             const catalog = bali.catalog({
-                $module: '/bali/crypto/SSM/publicAPI',
+                $module: '/bali/notary/PublicSSM',
                 $protocol: bali.parse(PROTOCOL),
                 $curve: bali.text(CURVE),
                 $digest: bali.text(DIGEST),
@@ -75,7 +75,7 @@ exports.publicAPI = function() {
                 $version: version,
                 $digest: digest
             }, bali.parameters({
-                $type: bali.parse('/bali/composites/Citation/v1')
+                $type: '/bali/notary/Citation/v1'
             }));
             return citation;
         },
@@ -171,7 +171,7 @@ exports.privateAPI = function(accountId, directory) {
          */
         toString: function() {
             const catalog = bali.catalog({
-                $module: '/bali/crypto/SSM/privateAPI',
+                $module: '/bali/notary/PrivateSSM',
                 $protocol: bali.parse(PROTOCOL),
                 $curve: bali.text(CURVE),
                 $digest: bali.text(DIGEST),
@@ -217,7 +217,7 @@ exports.privateAPI = function(accountId, directory) {
                     }
                 } catch (cause) {
                     const exception = bali.exception({
-                        $module: '/bali/crypto/SSM/privateAPI',
+                        $module: '/bali/notary/PrivateSSM',
                         $procedure: '$initializeAPI',
                         $exception: '$directoryAccess',
                         $accountId: accountId || bali.NONE,
@@ -229,7 +229,7 @@ exports.privateAPI = function(accountId, directory) {
                 this.initializeAPI = undefined;  // can only be called once
             } catch (cause) {
                 const exception = bali.exception({
-                    $module: '/bali/crypto/SSM/privateAPI',
+                    $module: '/bali/notary/PrivateSSM',
                     $procedure: '$initializeAPI',
                     $exception: '$unexpected',
                     $accountId: accountId || bali.NONE,
@@ -288,7 +288,7 @@ exports.privateAPI = function(accountId, directory) {
                 $accountId: accountId,
                 $publicKey: publicKey
             }, bali.parameters({
-                $type: bali.parse('/bali/composites/Certificate/v1'),
+                $type: bali.parse('/bali/notary/Certificate/v1'),
                 $tag: notaryTag,
                 $version: version,
                 $permissions: '/bali/permissions/public/v1',
@@ -302,7 +302,7 @@ exports.privateAPI = function(accountId, directory) {
                 $timestamp: bali.moment(),  // now
                 $certificate: isRegeneration ? certificateCitation : bali.NONE
             }, bali.parameters({
-                $type: bali.parse('/bali/composites/Document/v1')
+                $type: bali.parse('/bali/notary/Document/v1')
             }));
             const signature = signMessage(notaryCertificate.toString(), privateKey);
             notaryCertificate.setValue('$signature', signature);
@@ -319,7 +319,7 @@ exports.privateAPI = function(accountId, directory) {
                 $version: version,
                 $digest: digest
             }, bali.parameters({
-                $type: bali.parse('/bali/composites/Citation/v1')
+                $type: bali.parse('/bali/notary/Citation/v1')
             }));
 
             // save the state of this notary key and certificate in the local configuration
@@ -332,13 +332,13 @@ exports.privateAPI = function(accountId, directory) {
                     $privateKey: privateKey,
                     $certificate: certificateCitation
                 }, bali.parameters({
-                    $type: bali.parse('/bali/composites/NotaryKey/v1')
+                    $type: bali.parse('/bali/notary/NotaryKey/v1')
                 }));
                 await storeKey(keyFilename, notaryKey.toString());
                 await storeCertificate(certificateFilename, notaryCertificate.toString());
             } catch (cause) {
                 const exception = bali.exception({
-                    $module: '/bali/crypto/SSM/privateAPI',
+                    $module: '/bali/notary/PrivateSSM',
                     $procedure: '$generateKey',
                     $exception: '$directoryAccess',
                     $accountId: accountId || bali.NONE,
@@ -386,7 +386,7 @@ exports.privateAPI = function(accountId, directory) {
             if (this.initializeAPI) await this.initializeAPI();
             if (!privateKey) {
                 const exception = bali.exception({
-                    $module: '/bali/crypto/SSM/privateAPI',
+                    $module: '/bali/notary/PrivateSSM',
                     $procedure: '$signComponent',
                     $exception: '$missingKey',
                     $accountId: accountId,
@@ -400,7 +400,7 @@ exports.privateAPI = function(accountId, directory) {
                 $timestamp: bali.moment(),  // now
                 $certificate: certificateCitation
             }, bali.parameters({
-                $type: bali.parse('/bali/composites/Document/v1')
+                $type: bali.parse('/bali/notary/Document/v1')
             }));
             const signature = signMessage(notarizedComponent.toString(), privateKey);
             notarizedComponent.setValue('$signature', signature);
@@ -418,7 +418,7 @@ exports.privateAPI = function(accountId, directory) {
             if (this.initializeAPI) await this.initializeAPI();
             if (!privateKey) {
                 const exception = bali.exception({
-                    $module: '/bali/crypto/SSM/privateAPI',
+                    $module: '/bali/notary/PrivateSSM',
                     $procedure: '$decryptComponent',
                     $exception: '$missingKey',
                     $accountId: accountId,
@@ -429,7 +429,7 @@ exports.privateAPI = function(accountId, directory) {
             const protocol = aem.getValue('$protocol');
             if (!protocol || protocol.toString() !== PROTOCOL) {
                 const exception = bali.exception({
-                    $module: '/bali/crypto/SSM/privateAPI',
+                    $module: '/bali/notary/PrivateSSM',
                     $procedure: '$decryptComponent',
                     $exception: '$unsupportedProtocol',
                     $expected:  bali.parse(PROTOCOL),
@@ -674,7 +674,7 @@ const encryptMessage = function(message, publicKey) {
         $auth: bali.binary(auth),
         $ciphertext: bali.binary(ciphertext)
     }, bali.parameters({
-        $type: bali.parse('/bali/composites/AEM/v1')
+        $type: bali.parse('/bali/notary/AEM/v1')
     }));
 
     return aem;

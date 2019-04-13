@@ -84,7 +84,7 @@ describe('Bali Digital Notary™', function() {
                 $version: bali.version([2, 3]),
                 $digest: bali.parse("'JB2NG73VTB957T9TZWT44KRZVQ467KWJ2MSJYT6YW2RQAYQMSR861XGM5ZCDCPNJYR612SJT9RFKHA9YZ5DJMLYC7N3127AY4QDVJ38'")
             }, bali.parameters({
-                $type: bali.parse('/bali/composites/Citation/v1')
+                $type: bali.parse('/bali/notary/Citation/v1')
             }));
             const transaction = bali.catalog({
                 $transactionId: bali.tag(),

@@ -67,7 +67,7 @@ exports.publicAPI = function(debug) {
                 return bali.list(Object.keys(protocols));
             } catch (cause) {
                 const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
-                    $module: '/bali/utilities/DigitalNotary',
+                    $module: '/bali/notary/DigitalNotary',
                     $procedure: '$getProtocols',
                     $exception: '$unexpected',
                     $text: bali.text('An unexpected error occurred while attempting to retrieve the supported security protocols.')
@@ -89,7 +89,7 @@ exports.publicAPI = function(debug) {
                 return publicAPI.citeDocument(document);
             } catch (cause) {
                 const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
-                    $module: '/bali/utilities/DigitalNotary',
+                    $module: '/bali/notary/DigitalNotary',
                     $procedure: '$citeDocument',
                     $exception: '$unexpected',
                     $document: document,
@@ -118,7 +118,7 @@ exports.publicAPI = function(debug) {
                 return api.citationMatches(citation, document);
             } catch (cause) {
                 const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
-                    $module: '/bali/utilities/DigitalNotary',
+                    $module: '/bali/notary/DigitalNotary',
                     $procedure: '$citationMatches',
                     $exception: '$unexpected',
                     $citation: citation,
@@ -148,7 +148,7 @@ exports.publicAPI = function(debug) {
                 return api.documentIsValid(document, certificate);
             } catch (cause) {
                 const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
-                    $module: '/bali/utilities/DigitalNotary',
+                    $module: '/bali/notary/DigitalNotary',
                     $procedure: '$documentIsValid',
                     $exception: '$unexpected',
                     $document: document,
@@ -183,7 +183,7 @@ exports.publicAPI = function(debug) {
                 return api.encryptComponent(component, certificate);
             } catch (cause) {
                 const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
-                    $module: '/bali/utilities/DigitalNotary',
+                    $module: '/bali/notary/DigitalNotary',
                     $procedure: '$encryptComponent',
                     $exception: '$unexpected',
                     $component: component,
@@ -263,7 +263,7 @@ exports.api = function(accountId, directory, debug) {
                 return bali.list(Object.keys(protocols));
             } catch (cause) {
                 const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
-                    $module: '/bali/utilities/DigitalNotary',
+                    $module: '/bali/notary/DigitalNotary',
                     $procedure: '$getProtocols',
                     $exception: '$unexpected',
                     $text: bali.text('An unexpected error occurred while attempting to retrieve the supported security protocols.')
@@ -283,7 +283,7 @@ exports.api = function(accountId, directory, debug) {
                 return await privateAPI.getCertificate();
             } catch (cause) {
                 const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
-                    $module: '/bali/utilities/DigitalNotary',
+                    $module: '/bali/notary/DigitalNotary',
                     $procedure: '$getCertificate',
                     $exception: '$unexpected',
                     $text: bali.text('An unexpected error occurred while attempting to retrieve the notary certificate.')
@@ -305,7 +305,7 @@ exports.api = function(accountId, directory, debug) {
                 return await privateAPI.getCitation();
             } catch (cause) {
                 const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
-                    $module: '/bali/utilities/DigitalNotary',
+                    $module: '/bali/notary/DigitalNotary',
                     $procedure: '$getCitation',
                     $exception: '$unexpected',
                     $text: bali.text('An unexpected error occurred while attempting to retrieve the citation to the notary certificate.')
@@ -327,7 +327,7 @@ exports.api = function(accountId, directory, debug) {
                 return await privateAPI.generateKey();
             } catch (cause) {
                 const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
-                    $module: '/bali/utilities/DigitalNotary',
+                    $module: '/bali/notary/DigitalNotary',
                     $procedure: '$generateKey',
                     $exception: '$unexpected',
                     $text: bali.text('An unexpected error occurred while attempting to (re)generate the notary key.')
@@ -346,7 +346,7 @@ exports.api = function(accountId, directory, debug) {
                 return await privateAPI.forgetKey();
             } catch (cause) {
                 const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
-                    $module: '/bali/utilities/DigitalNotary',
+                    $module: '/bali/notary/DigitalNotary',
                     $procedure: '$forgetKey',
                     $exception: '$unexpected',
                     $text: bali.text('An unexpected error occurred while attempting to forget the notary key.')
@@ -368,7 +368,7 @@ exports.api = function(accountId, directory, debug) {
                 return await publicAPI.citeDocument(document);
             } catch (cause) {
                 const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
-                    $module: '/bali/utilities/DigitalNotary',
+                    $module: '/bali/notary/DigitalNotary',
                     $procedure: '$citeDocument',
                     $exception: '$unexpected',
                     $document: document,
@@ -397,7 +397,7 @@ exports.api = function(accountId, directory, debug) {
                 return await api.citationMatches(citation, document);
             } catch (cause) {
                 const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
-                    $module: '/bali/utilities/DigitalNotary',
+                    $module: '/bali/notary/DigitalNotary',
                     $procedure: '$citationMatches',
                     $exception: '$unexpected',
                     $citation: citation,
@@ -432,7 +432,7 @@ exports.api = function(accountId, directory, debug) {
                 return await privateAPI.signComponent(component);
             } catch (cause) {
                 const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
-                    $module: '/bali/utilities/DigitalNotary',
+                    $module: '/bali/notary/DigitalNotary',
                     $procedure: '$signComponent',
                     $exception: '$unexpected',
                     $component: component,
@@ -461,7 +461,7 @@ exports.api = function(accountId, directory, debug) {
                 return await api.documentIsValid(document, certificate);
             } catch (cause) {
                 const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
-                    $module: '/bali/utilities/DigitalNotary',
+                    $module: '/bali/notary/DigitalNotary',
                     $procedure: '$documentIsValid',
                     $exception: '$unexpected',
                     $document: document,
@@ -496,7 +496,7 @@ exports.api = function(accountId, directory, debug) {
                 return await api.encryptComponent(component, certificate);
             } catch (cause) {
                 const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
-                    $module: '/bali/utilities/DigitalNotary',
+                    $module: '/bali/notary/DigitalNotary',
                     $procedure: '$encryptComponent',
                     $exception: '$unexpected',
                     $component: component,
@@ -521,7 +521,7 @@ exports.api = function(accountId, directory, debug) {
                 return await privateAPI.decryptComponent(aem);
             } catch (cause) {
                 const exception = cause.constructor.name === 'Exception' ? cause : bali.exception({
-                    $module: '/bali/utilities/DigitalNotary',
+                    $module: '/bali/notary/DigitalNotary',
                     $procedure: '$decryptComponent',
                     $exception: '$unexpected',
                     $aem: aem,
@@ -552,7 +552,7 @@ const getPublicAPI = function(functionName, document) {
     const publicAPI = protocols[protocol.toString()].SSM.publicAPI();
     if (!publicAPI) {
         const exception = bali.exception({
-            $module: '/bali/utilities/DigitalNotary',
+            $module: '/bali/notary/DigitalNotary',
             $procedure: functionName,
             $exception: '$unsupportedProtocol',
             $expected: Object.keys(protocols),
@@ -588,7 +588,7 @@ const validateParameter = function(functionName, parameterName, parameterValue, 
                 break;
             case 'citation':
                 // A citation must have the following:
-                //  * a parameterized type of /bali/composites/Citation/v...
+                //  * a parameterized type of /bali/notary/Citation/v...
                 //  * exactly five specific attributes
                 if (parameterValue.getTypeId && parameterValue.isEqualTo(bali.NONE)) return;
                 if (parameterValue.getTypeId && parameterValue.getTypeId() === bali.types.CATALOG && parameterValue.getSize() === 5) {
@@ -600,13 +600,13 @@ const validateParameter = function(functionName, parameterName, parameterValue, 
                     const parameters = parameterValue.getParameters();
                     if (parameters && parameters.getSize() === 1) {
                         validateParameter(functionName, parameterName + '.parameters.type', parameters.getParameter('$type'), 'name');
-                        if (parameters.getParameter('$type').toString().startsWith('/bali/composites/Citation/v')) return;
+                        if (parameters.getParameter('$type').toString().startsWith('/bali/notary/Citation/v')) return;
                     }
                 }
                 break;
             case 'certificate':
                 // A certificate must have the following:
-                //  * a parameterized type of /bali/composites/Certificate/v...
+                //  * a parameterized type of /bali/notary/Certificate/v...
                 //  * exactly four specific attributes
                 //  * and be parameterized with exactly 5 specific parameters
                 if (parameterValue.getTypeId && parameterValue.getTypeId() === bali.types.CATALOG && parameterValue.getSize() === 4) {
@@ -621,14 +621,14 @@ const validateParameter = function(functionName, parameterName, parameterValue, 
                         validateParameter(functionName, parameterName + '.parameters.version', parameters.getParameter('$version'), 'version');
                         validateParameter(functionName, parameterName + '.parameters.permissions', parameters.getParameter('$permissions'), 'name');
                         validateParameter(functionName, parameterName + '.parameters.previous', parameters.getParameter('$previous'), 'citation');
-                        if (parameters.getParameter('$type').toString().startsWith('/bali/composites/Certificate/v') &&
+                        if (parameters.getParameter('$type').toString().startsWith('/bali/notary/Certificate/v') &&
                             parameters.getParameter('$permissions').toString().startsWith('/bali/permissions/public/v')) return;
                     }
                 }
                 break;
             case 'aem':
                 // An authenticated encrypted message (AEM) must have the following:
-                //  * a parameterized type of /bali/composites/AEM/v...
+                //  * a parameterized type of /bali/notary/AEM/v...
                 //  * exactly six specific attributes
                 if (parameterValue.getTypeId && parameterValue.getTypeId() === bali.types.CATALOG && parameterValue.getSize() === 6) {
                     validateParameter(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
@@ -640,13 +640,13 @@ const validateParameter = function(functionName, parameterName, parameterValue, 
                     const parameters = parameterValue.getParameters();
                     if (parameters && parameters.getSize() === 1) {
                         validateParameter(functionName, parameterName + '.parameters.type', parameters.getParameter('$type'), 'name');
-                        if (parameters.getParameter('$type').toString().startsWith('/bali/composites/AEM/v')) return;
+                        if (parameters.getParameter('$type').toString().startsWith('/bali/notary/AEM/v')) return;
                     }
                 }
                 break;
             case 'document':
                 // A document must have the following:
-                //  * a parameterized type of /bali/composites/Document/v...
+                //  * a parameterized type of /bali/notary/Document/v...
                 //  * exactly five specific attributes including a $component attribute
                 //  * the $component attribute must be parameterized with at least four parameters
                 //  * the $component attribute may have a parameterized type as well
@@ -665,7 +665,7 @@ const validateParameter = function(functionName, parameterName, parameterValue, 
                         validateParameter(functionName, parameterName + '.parameters.previous', parameters.getParameter('$previous'), 'citation');
                         parameters = parameterValue.getParameters();
                         if (parameters && parameters.getSize() === 1) {
-                            if (parameters.getParameter('$type').toString().startsWith('/bali/composites/Document/v')) return;
+                            if (parameters.getParameter('$type').toString().startsWith('/bali/notary/Document/v')) return;
                         }
                     }
                 }
@@ -673,7 +673,7 @@ const validateParameter = function(functionName, parameterName, parameterValue, 
         }
     }
     const exception = bali.exception({
-        $module: '/bali/utilities/DigitalNotary',
+        $module: '/bali/notary/DigitalNotary',
         $procedure: functionName,
         $exception: '$invalidParameter',
         $parameter: bali.text(parameterName),
