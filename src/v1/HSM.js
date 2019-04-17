@@ -10,194 +10,167 @@
 'use strict';
 
 /*
- * This module uses the singleton pattern to provide a proxy object that communicates
- * with a hardware security module (HSM) for all cryptographic operations involving the
- * associated private key. The private key itself is created on the HSM and never leaves
- * it.  All operations requiring the private key are performed in hardware on the HSM.
+ * This module uses the singleton pattern to provide an object that acts as a PROXY to
+ * a hardware security module (HSM) for all cryptographic operations.  All cryptographic
+ * operations are done on the actual HSM.
  */
-const bali = require('bali-component-framework');
 
 
-// PUBLIC APIs
+// PUBLIC API
 
 /**
- * This function returns an object that implements the API for the public hardware security
- * module (HSM).
+ * This function returns a singleton object that implements the API for the hardware
+ * security module (HSM).
  *
- * @returns {Object} A proxy to the public hardware security module.
+ * @param {Buffer} secret A byte buffer containing 32 random bytes to be used to protect
+ * the private key within the HSM when not in use.
+ * @returns {Object} An object that implements the security module API.
  */
-exports.publicAPI = function() {
+exports.api = function(secret) {
 
     return {
 
         /**
-         * This function returns a string providing attributes about this hardware security module.
-         *
-         * @returns {String} A string providing attributes about this hardware security module.
-         */
-        toString: function() {
-        },
-
-        /**
-         * This function initializes the API.
-         */
-        initializeAPI: async function() {
-            this.initializeAPI = undefined;
-        },
-
-        /**
-         * This function generates a document citation for the specified notarized document.
-         *
-         * @param {Catalog} document The notarized document to be cited.
-         * @returns {Catalog} A document citation for the notarized document.
-         */
-        citeDocument: async function(document) {
-            if (this.initializeAPI) await this.initializeAPI();
-        },
-
-        /**
-         * This function determines whether or not the specified document citation matches
-         * the specified notarized document. The citation only matches if its digest matches
-         * the digest of the notarized document exactly.
-         *
-         * @param {Catalog} citation A document citation allegedly referring to the
-         * specified notarized document.
-         * @param {Catalog} document The notarized document to be tested.
-         * @returns {Boolean} Whether or not the citation matches the specified notarized document.
-         */
-        citationMatches: async function(citation, document) {
-            if (this.initializeAPI) await this.initializeAPI();
-        },
-
-        /**
-         * This function determines whether or not the notary seal on the specified notarized
-         * document is valid.
-         *
-         * @param {Catalog} document The notarized document to be tested.
-         * @param {Catalog} certificate A notarized document containing the public certificate
-         * for the private notary key that allegedly notarized the specified document.
-         * @returns {Boolean} Whether or not the notary seal on the notarized document is valid.
-         */
-        documentIsValid: async function(document, certificate) {
-            if (this.initializeAPI) await this.initializeAPI();
-        },
-
-        /**
-         * This function uses the specified public notary certificate to encrypt the specified
-         * component in such a way that only the intended recipient of the encrypted component can
-         * decrypt it using their private notary key. The result is an authenticated encrypted
-         * message (AEM) containing the ciphertext and other required attributes needed to
-         * decrypt the message.
-         *
-         * @param {Component} component The component to be encrypted using the specified
-         * public notary certificate.
-         * @param {Catalog} certificate A notarized document containing the public certificate
-         * for the intended recipient of the encrypted component.
-         * @returns {Catalog} An authenticated encrypted message (AEM) containing the ciphertext
-         * and other required attributes for the encrypted component.
-         */
-        encryptComponent: async function(component, certificate) {
-            if (this.initializeAPI) await this.initializeAPI();
-        }
-    };
-};
-
-/**
- * This function returns an object that implements the private key API for the proxy to
- * the hardware security module (HSM). 
- *
- * @param {Tag} accountId The unique tag for the account that owns the notary key.
- * @param {String} directory An optional directory to use for local testing.
- * @returns {Object} A proxy to the test hardware security module managing the private key.
- */
-exports.privateAPI = function(accountId, directory) {
-
-    return {
-
-        /**
-         * This function returns a string providing attributes about this hardware security module.
-         *
-         * @returns {String} A string providing attributes about this hardware security module.
-         */
-        toString: function() {
-        },
-
-        /**
-         * This function initializes the API.
-         */
-        initializeAPI: async function() {
-            this.initializeAPI = undefined;
-        },
-
-        /**
-         * This function returns the notary certificate associated with this notary key.
-         *
-         * @returns {Catalog} The notary certificate associated with this notary key.
-         */
-        getCertificate: async function() {
-            if (this.initializeAPI) await this.initializeAPI();
-        },
-
-        /**
-         * This function returns a citation referencing the notary certificate associated
-         * with this notary key.
-         *
-         * @returns {Catalog} A citation referencing the notary certificate associated
-         * with this notary key.
-         */
-        getCitation: async function() {
-            if (this.initializeAPI) await this.initializeAPI();
-        },
-
-        /**
-         * This function generates a new public-private key pair and uses the private key as the
-         * new notary key. It returns the new public notary certificate. Note, during regeneration
-         * the old private key is used to sign the new certificate before it is destroyed.
-         *
-         * @returns {Catalog} The new notary certificate.
-         */
-        generateKey: async function() {
-            if (this.initializeAPI) await this.initializeAPI();
-        },
-
-        /**
-         * This function causes the digital notary to forget all information
-         * it knows about the current public-private key pair.
-         */
-        forgetKey: async function() {
-            if (this.initializeAPI) await this.initializeAPI();
-        },
-
-        /**
-         * This function digitally notarizes the specified component using the private notary
-         * key maintained inside the software security module. The component must be parameterized
-         * with the following parameters:
-         * <pre>
-         *  * $tag - a unique identifier for the component
-         *  * $version - the version of the component
-         *  * $permissions - the name of a notarized document containing the permissions defining
-         *                   who can access the component
-         *  * $previous - a citation to the previous version of the component (or bali.NONE)
-         * </pre>
+         * This function returns a string describing the attributes of the HSM.
          * 
-         * The newly notarized component is returned.
-         *
-         * @param {Component} component The component to be notarized.
-         * @returns {Catalog} The newly notarized component.
+         * @returns {String} A string describing the attributes of the HSM.
          */
-        signComponent: async function(component) {
-            if (this.initializeAPI) await this.initializeAPI();
+        toString: function() {
+            const string =
+                '[\n' +
+                '    $module: /bali/notary/HSM\n' +
+                '    $protocol: v1\n' +
+                '    $curve: "prime256v1"\n' +
+                '    $digest: "sha512"\n' +
+                '    $signature: "sha512"\n' +
+                '    $cipher: "aes-256-gcm"\n' +
+                ']';
         },
 
         /**
-         * This function uses the notary key to decrypt the specified authenticated
-         * encrypted message (AEM). The result is the decrypted component.
-         *
-         * @param {Catalog} aem The authenticated encrypted message to be decrypted.
-         * @returns {Component} The decrypted component.
+         * This function initializes the API.
          */
-        decryptComponent: async function(aem) {
+        initializeAPI: async function() {
+            try {
+                throw Error('This function has not yet been implemented.');
+                this.initializeAPI = undefined;  // can only be called once
+            } catch (cause) {
+                throw Error('The HSM could not be contacted: ' + cause);
+            }
+        },
+
+        /**
+         * This function generates a new public-private key pair.
+         * 
+         * @returns {Buffer} A byte buffer containing the new public key.
+         */
+        generateKeyPair: async function() {
             if (this.initializeAPI) await this.initializeAPI();
+            try {
+                throw Error('This function has not yet been implemented.');
+            } catch (cause) {
+                throw Error('A new key pair could not be generated: ' + cause);
+            }
+        },
+
+        /**
+         * This function returns a cryptographically secure digital digest of the
+         * specified message. The generated digital digest will always be the same
+         * for the same message.
+         *
+         * @param {String} message The message to be digested.
+         * @returns {Buffer} A byte buffer containing a digital digest of the message.
+         */
+        digestMessage: async function(message) {
+            if (this.initializeAPI) await this.initializeAPI();
+            try {
+                throw Error('This function has not yet been implemented.');
+            } catch (cause) {
+                throw Error('A digest of the message could not be generated: ' + cause);
+            }
+        },
+
+        /**
+         * This function generates a digital signature of the specified message using
+         * the current private key (or the old private key, one time only, if it exists).
+         * This allows a new certificate to be signed using the previous private key.
+         * The resulting digital signature can then be verified using the corresponding
+         * public key.
+         * 
+         * @param {String} message The message to be digitally signed.
+         * @returns {Buffer} A byte buffer containing the resulting digital signature.
+         */
+        signMessage: async function(message) {
+            if (this.initializeAPI) await this.initializeAPI();
+            try {
+                throw Error('This function has not yet been implemented.');
+            } catch (cause) {
+                throw Error('A digital signature of the message could not be generated: ' + cause);
+            }
+        },
+
+        /**
+         * This function uses the specified public key to determine whether or not
+         * the specified digital signature was generated using the corresponding
+         * private key on the specified message.
+         *
+         * @param {String} message The digitally signed message.
+         * @param {Buffer} publicKey A byte buffer containing the public key.
+         * @param {Buffer} signature A byte buffer containing the digital signature
+         * allegedly generated using the corresponding private key.
+         * @returns {Boolean} Whether or not the digital signature is valid.
+         */
+        signatureIsValid: async function(message, publicKey, signature) {
+            if (this.initializeAPI) await this.initializeAPI();
+            try {
+                throw Error('This function has not yet been implemented.');
+            } catch (cause) {
+                throw Error('The digital signature of the message could not be validated: ' + cause);
+            }
+        },
+
+        /**
+         * This function uses the specified public key to generate a symmetric key that
+         * is then used to encrypt the specified message. The resulting authenticated
+         * encrypted message (AEM) can be decrypted using the corresponding private key.
+         * 
+         * @param {String} message The message to be encrypted. 
+         * @param {Buffer} publicKey A byte buffer containing the public key to be used
+         * to generate the symmetric key.
+         * @returns {Object} The resulting authenticated encrypted message (AEM).
+         */
+        encryptMessage: async function(message, publicKey) {
+            if (this.initializeAPI) await this.initializeAPI();
+            try {
+                throw Error('This function has not yet been implemented.');
+            } catch (cause) {
+                throw Error('The message could not be encrypted: ' + cause);
+            }
+        },
+
+        /**
+         * This function uses the private key and the attributes from the specified
+         * authenticated encrypted message (AEM) object to generate a symmetric key that
+         * is then used to decrypt the encrypted message.
+         * 
+         * @param {Object} aem The authenticated encrypted message to be decrypted. 
+         * @returns {String} The decrypted message.
+         */
+        decryptMessage: async function(aem) {
+            if (this.initializeAPI) await this.initializeAPI();
+            try {
+                throw Error('This function has not yet been implemented.');
+            } catch (cause) {
+                throw Error('The message could not be decrypted: ' + cause);
+            }
+        },
+
+        /**
+         * This function deletes any existing public-private key pairs.
+         */
+        deleteKeyPair: async function() {
+            throw Error('This function has not yet been implemented.');
         }
+
     };
 };

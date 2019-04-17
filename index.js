@@ -10,36 +10,44 @@
 'use strict';
 
 /**
- * This function returns an object that implements the public certificate API for
- * the digital notary. The public API only deals with public certificates and is
- * implemented using a software security module (SSM).
- *
- * @param {Boolean} debug An optional flag that determines whether or not exceptions
- * will be logged to the error console.
- * @returns {Object} A singleton object implementing the public API.
+ * This function returns an object that implements the API for a software security module.
+ * 
+ * @param {Buffer} secret A byte buffer containing 32 random bytes that are used to help
+ * protect the private key when not in use.
+ * @param {String} keyfile An optional filename for a file containing the key information.
+ * @returns {Object} An object that implements the API for a software security module.
  */
-exports.publicAPI = function(debug) {
-    const api = require('./src/DigitalNotary').publicAPI(debug);
-    return api;
+exports.ssm = function(secret, keyfile) {
+    const securityModule = require('./src/v1/SSM').api(secret, keyfile);
+    return securityModule;
 };
 
 
 /**
- * This function returns an object that implements the full API for the digital notary.
- * If a test directory is passed in as a parameter the test directory will be used
- * to maintain the configuration file. Otherwise, the configuration file will be in
- * the '~/.bali/' directory. When running in test mode, a local software security
- * module will be used instead of a remote hardware security module (HSM)
- * for all operations that utilize the private notary key.
+ * This function returns an object that implements the API for a hardware security module.
+ * 
+ * @param {Buffer} secret A byte buffer containing 32 random bytes that are used to help
+ * protect the private key when not in use.
+ * @returns {Object} An object that implements the API for a hardware security module.
+ */
+exports.hsm = function(secret) {
+    const securityModule = require('./src/v1/HSM').api(secret);
+    return securityModule;
+};
+
+
+/**
+ * This function returns an object that implements the API for a digital notary including
+ * the functions that require access to the private key.
  *
- * @param {Tag} accountId The unique account tag for the owner of the digital notary.
- * @param {String} directory The optional local directory to be used to
- * maintain the configuration information for the digital notary API.
+ * @param {Object} securityModule An object that implements the security module interface.
+ * @param {Tag} accountId An optional unique account tag for the owner of the digital notary.
+ * @param {String} directory An optional directory to be used for local configuration storage.
  * @param {Boolean} debug An optional flag that determines whether or not exceptions
  * will be logged to the error console.
- * @returns {Object} A singleton object implementing the private API.
+ * @returns {Object} An object that implements the API for a digital notary.
  */
-exports.api = function(accountId, directory, debug) {
-    const api = require('./src/DigitalNotary').api(accountId, directory, debug);
+exports.api = function(securityModule, accountId, directory, debug) {
+    const api = require('./src/DigitalNotary').api(securityModule, accountId, directory, debug);
     return api;
 };
