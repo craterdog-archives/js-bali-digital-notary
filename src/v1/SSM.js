@@ -71,8 +71,10 @@ exports.api = function(secret, keyFile) {
                 // read in the keys (if possible)
                 if (await doesExist(keyFile)) {
                     const data = JSON.parse(await pfs.readFile(keyFile, 'utf8'));
-                    keys.privateKey = Buffer.from(data.privateKey);
-                    keys.publicKey = Buffer.from(data.publicKey);
+                    keys = {
+                        privateKey: Buffer.from(data.privateKey),
+                        publicKey: Buffer.from(data.publicKey)
+                    };
                 }
                 this.initializeAPI = undefined;  // can only be called successfully once
             } catch (cause) {
@@ -91,8 +93,8 @@ exports.api = function(secret, keyFile) {
                 oldKeys = keys;
                 keys = generateKeyPair();
                 const data = {
-                    privateKey: keys.privateKey.data,
-                    publicKey: keys.publicKey.data
+                    privateKey: keys.privateKey.toJSON().data,
+                    publicKey: keys.publicKey.toJSON().data
                 };
                 await pfs.writeFile(keyFile, JSON.stringify(data, null, 4), 'utf8');
                 return keys.publicKey;

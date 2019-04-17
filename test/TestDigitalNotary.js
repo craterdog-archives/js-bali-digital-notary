@@ -18,9 +18,10 @@ const accountId = bali.tag();
 const directory = 'test/config/';
 const secret = crypto.randomBytes(32);
 const ssm = require('../').ssm(secret);
-const hsm = require('../').ssm(secret, directory + accountId.getValue() + '.bali');
+const hsm = require('../').ssm(secret, directory + accountId.getValue() + '.keys');
 const publicAPI = require('../').api(ssm, undefined, undefined, debug);
 const notaryAPI = require('../').api(hsm, accountId, directory, debug);
+
 
 describe('Bali Digital Notary™', function() {
 
@@ -45,6 +46,11 @@ describe('Bali Digital Notary™', function() {
         it('should generate the keys', async function() {
             notaryCertificate = await notaryAPI.generateKey();
             expect(notaryCertificate).to.exist;  // jshint ignore:line
+        });
+
+        it('should read in the keys', async function() {
+            const ignore = require('../').ssm(secret, directory + accountId.getValue() + '.keys');
+            await ignore.initializeAPI();
         });
 
         it('should retrieve the certificate citation', async function() {
