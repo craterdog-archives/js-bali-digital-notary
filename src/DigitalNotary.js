@@ -306,8 +306,8 @@ exports.api = function(securityModule, accountId, directory, debug) {
             try {
                 validateParameter('$citationMatches', 'citation', citation);
                 validateParameter('$citationMatches', 'document', document);
-                const securityModule = getSecurityModule('$citationMatches', citation);
-                var digest = bali.binary(await securityModule.digestMessage(document.toString()));
+                const requiredModule = selectSecurityModule('$citationMatches', securityModule, citation);
+                var digest = bali.binary(await requiredModule.digestMessage(document.toString()));
                 return digest.isEqualTo(citation.getValue('$digest'));
             } catch (cause) {
                 const exception = bali.exception({
@@ -391,8 +391,8 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 ]));  // everything but the signature
                 const publicKey = certificate.getValue('$publicKey');
                 const signature = document.getValue('$signature');
-                const securityModule = getSecurityModule('$documentIsValid', certificate);
-                return await securityModule.signatureIsValid(catalog.toString(), publicKey.getValue(), signature.getValue());
+                const requiredModule = selectSecurityModule('$documentIsValid', securityModule, certificate);
+                return await requiredModule.signatureIsValid(catalog.toString(), publicKey.getValue(), signature.getValue());
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '/bali/notary/DigitalNotary',
@@ -429,8 +429,8 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 validateParameter('$encryptComponent', 'certificate', certificate.getValue('$component'));
                 certificate = certificate.getValue('$component');
                 const publicKey = certificate.getValue('$publicKey');
-                const securityModule = getSecurityModule('$encryptComponent', certificate);
-                const object = await securityModule.encryptMessage(component.toString(), publicKey.getValue());
+                const requiredModule = selectSecurityModule('$encryptComponent', securityModule, certificate);
+                const object = await requiredModule.encryptMessage(component.toString(), publicKey.getValue());
                 const aem = bali.catalog({
                     $protocol: PROTOCOL,
                     $timestamp: bali.moment(),  // now
@@ -513,12 +513,14 @@ exports.api = function(securityModule, accountId, directory, debug) {
  * If no matching version is found, then an exception is thrown.
  * 
  * @param {String} functionName The name of the function making the request.
+ * @param {Object} preferredModule The preferred security module for the digital notary. 
  * @param {Catalog} document The notarized document being analyzed.
  * @returns {Object} A security module that supports the required version of the API.
  */
-const getSecurityModule = function(functionName, document) {
-    const protocol = document.getValue('$protocol');
-    const securityModule = protocols[protocol.toString()].SSM.api();
+const selectSecurityModule = function(functionName, preferredModule, document) {
+    const protocol = document.getValue('$protocol').toString();
+    if (protocol === preferredModule.getProtocol()) return preferredModule;
+    const securityModule = protocols[protocol].SSM.api();
     if (!securityModule) {
         const exception = bali.exception({
             $module: '/bali/notary/DigitalNotary',

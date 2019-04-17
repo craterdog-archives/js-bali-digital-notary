@@ -64,6 +64,17 @@ exports.api = function(secret, keyFile) {
         },
 
         /**
+         * This function returns the version of the security protocol supported by this
+         * security module.
+         * 
+         * @returns {String} The version of the security protocol supported by this security
+         * module.
+         */
+        getProtocol: function() {
+            return PROTOCOL;
+        },
+
+        /**
          * This function initializes the API when a keyFile has been specified.
          */
         initializeAPI: keyFile ? async function() {

@@ -48,6 +48,17 @@ exports.api = function(secret) {
         },
 
         /**
+         * This function returns the version of the security protocol supported by this
+         * security module.
+         * 
+         * @returns {String} The version of the security protocol supported by this security
+         * module.
+         */
+        getProtocol: function() {
+            return 'v1';
+        },
+
+        /**
          * This function initializes the API.
          */
         initializeAPI: async function() {
