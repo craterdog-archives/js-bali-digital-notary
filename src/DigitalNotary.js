@@ -373,16 +373,14 @@ exports.api = function(securityModule, accountId, directory, debug) {
          * document is valid.
          *
          * @param {Catalog} document The notarized document to be tested.
-         * @param {Catalog} certificate A notarized document containing the public certificate
-         * for the private notary key that allegedly notarized the specified notarized document.
+         * @param {Catalog} certificate A document containing the public certificate for the
+         * private notary key that allegedly notarized the specified notarized document.
          * @returns {Boolean} Whether or not the notary seal on the notarized document is valid.
          */
         documentIsValid: async function(document, certificate) {
             try {
                 validateParameter('$documentIsValid', 'document', document);
-                validateParameter('$documentIsValid', 'certificate', certificate, 'document');
-                validateParameter('$documentIsValid', 'certificate', certificate.getValue('$component'));
-                certificate = certificate.getValue('$component');
+                validateParameter('$documentIsValid', 'certificate', certificate);
                 const catalog = bali.catalog.extraction(document, bali.list([
                     '$component',
                     '$protocol',
