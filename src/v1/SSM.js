@@ -232,7 +232,7 @@ exports.api = function(secret, keyFile) {
 
 // The algorithms for this version of the protocol
 const PROTOCOL = 'v1';
-const CURVE = 'prime256v1';  // AKA 'secp256r1'
+const CURVE = 'secp521r1';
 const DIGEST = 'sha512';
 const SIGNATURE = 'sha512';
 const CIPHER = 'aes-256-gcm';
