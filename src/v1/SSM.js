@@ -22,8 +22,8 @@
  * be to use a module that acts as a proxy to a tamper-proof hardware security module (HSM).
  */
 const pfs = require('fs').promises;
-const crypto = require('crypto');
-const ec_pem = require('ec-pem');
+const hasher = require('crypto');
+const signer = require('tweetnacl').sign;
 
 
 // PUBLIC API
@@ -32,15 +32,12 @@ const ec_pem = require('ec-pem');
  * This function returns a singleton object that implements the API for the software
  * security module (SSM).
  *
- * @param {Buffer} secret A byte buffer containing 32 random bytes to be used to protect
- * the private key when not in use. Note, since the private key in this module is only
- * used for testing, the secret parameter is ignored.
  * @param {String} keyFile An optional file in the local directory that contains the
  * key information. If not specified, this API can only be used to perform public
  * key based functions.
  * @returns {Object} An object that implements the security module API.
  */
-exports.api = function(secret, keyFile) {
+exports.api = function(keyFile) {
     var keys, oldKeys;
 
     return {
@@ -55,10 +52,8 @@ exports.api = function(secret, keyFile) {
                 '[\n' +
                 '    $module: /bali/notary/' + PROTOCOL + '/SSM\n' +
                 '    $protocol: ' + PROTOCOL + '\n' +
-                '    $curve: "' + CURVE + '"\n' +
                 '    $digest: "' + DIGEST + '"\n' +
                 '    $signature: "' + SIGNATURE + '"\n' +
-                '    $cipher: "' + CIPHER + '"\n' +
                 ']';
             return string;
         },
@@ -180,43 +175,6 @@ exports.api = function(secret, keyFile) {
         },
 
         /**
-         * This function uses the specified public key to generate a symmetric key that
-         * is then used to encrypt the specified message. The resulting authenticated
-         * encrypted message (AEM) can be decrypted using the corresponding private key.
-         * 
-         * @param {String} message The message to be encrypted. 
-         * @param {Buffer} publicKey A byte buffer containing the public key to be used
-         * to generate the symmetric key.
-         * @returns {Object} The resulting authenticated encrypted message (AEM).
-         */
-        encryptMessage: async function(message, publicKey) {
-            try {
-                const aem = encryptMessage(message, publicKey);
-                return aem;
-            } catch (cause) {
-                throw Error('The message could not be encrypted: ' + cause);
-            }
-        },
-
-        /**
-         * This function uses the private key and the attributes from the specified
-         * authenticated encrypted message (AEM) object to generate a symmetric key that
-         * is then used to decrypt the encrypted message.
-         * 
-         * @param {Object} aem The authenticated encrypted message to be decrypted. 
-         * @returns {String} The decrypted message.
-         */
-        decryptMessage: async function(aem) {
-            if (this.initializeAPI) await this.initializeAPI();
-            try {
-                const message = decryptMessage(aem, keys.privateKey);
-                return message;
-            } catch (cause) {
-                throw Error('The message could not be decrypted: ' + cause);
-            }
-        },
-
-        /**
          * This function deletes any existing public-private key pairs.
          */
         deleteKeyPair: async function() {
@@ -232,10 +190,8 @@ exports.api = function(secret, keyFile) {
 
 // The algorithms for this version of the protocol
 const PROTOCOL = 'v1';
-const CURVE = 'secp521r1';
 const DIGEST = 'sha512';
-const SIGNATURE = 'sha512';
-const CIPHER = 'aes-256-gcm';
+const SIGNATURE = 'ed25519';
 
 
 // PRIVATE FUNCTIONS
@@ -267,11 +223,10 @@ const doesExist = async function(file) {
  * @returns {Object} An object containing the new public and private keys.
  */
 const generateKeyPair = function() {
-    const curve = crypto.createECDH(CURVE);
-    curve.generateKeys();
+    const keys = signer.keyPair();
     return {
-        publicKey: curve.getPublicKey(),
-        privateKey: curve.getPrivateKey()
+        publicKey: Buffer.from(keys.publicKey),
+        privateKey: Buffer.from(keys.secretKey)
     };
 };
 
@@ -285,9 +240,9 @@ const generateKeyPair = function() {
  * @returns {Buffer} A byte buffer containing a digital digest of the message.
  */
 const digestMessage = function(message) {
-    const hasher = crypto.createHash(DIGEST);
-    hasher.update(message);
-    const digest = hasher.digest();
+    const hash = hasher.createHash(DIGEST);
+    hash.update(message);
+    const digest = hash.digest();
     return digest;
 };
 
@@ -302,12 +257,7 @@ const digestMessage = function(message) {
  * @returns {Buffer} A byte buffer containing the resulting digital signature.
  */
 const signMessage = function(message, privateKey) {
-    const curve = crypto.createECDH(CURVE);
-    curve.setPrivateKey(privateKey);
-    const pem = ec_pem(curve, CURVE);
-    const signer = crypto.createSign(SIGNATURE);
-    signer.update(message);
-    const signature = signer.sign(pem.encodePrivateKey());
+    const signature = Buffer.from(signer.detached(Buffer.from(message, 'utf8'), privateKey));
     return signature;
 };
 
@@ -324,72 +274,6 @@ const signMessage = function(message, privateKey) {
  * @returns {Boolean} Whether or not the digital signature is valid.
  */
 const signatureIsValid = function(message, publicKey, signature) {
-    const curve = crypto.createECDH(CURVE);
-    curve.setPublicKey(publicKey);
-    const pem = ec_pem(curve, CURVE);
-    const verifier = crypto.createVerify(SIGNATURE);
-    verifier.update(message);
-    return verifier.verify(pem.encodePublicKey(), signature);
-};
-
-
-/**
- * This function uses the specified public key to generate a symmetric key that
- * is then used to encrypt the specified message. The resulting authenticated
- * encrypted message (AEM) can be decrypted using the corresponding private key.
- * 
- * @param {String} message The message to be encrypted. 
- * @param {Buffer} publicKey A byte buffer containing the public key to be used
- * to generate the symmetric key.
- * @returns {Object} The resulting authenticated encrypted message (AEM).
- */
-const encryptMessage = function(message, publicKey) {
-    // generate and encrypt a 32-byte symmetric key
-    const curve = crypto.createECDH(CURVE);
-    curve.generateKeys();
-    const seed = curve.getPublicKey();  // use the new public key as the decryption seed
-    const symmetricKey = curve.computeSecret(publicKey).slice(0, 32);  // use only first 32 bytes
-
-    // encrypt the message using the symmetric key
-    const iv = crypto.randomBytes(12);
-    const cipher = crypto.createCipheriv(CIPHER, symmetricKey, iv);
-    var ciphertext = cipher.update(message, 'utf8');
-    ciphertext = Buffer.concat([ciphertext, cipher.final()]);
-    const auth = cipher.getAuthTag();
-
-    // construct the authenticated encrypted message (AEM)
-    const aem = {
-        seed: seed,
-        iv: iv,
-        auth: auth,
-        ciphertext: ciphertext
-    };
-
-    return aem;
-};
-
-
-/**
- * This function uses the specified private key and the attributes from the specified
- * authenticated encrypted message (AEM) object to generate a symmetric key that
- * is then used to decrypt the encrypted message.
- * 
- * @param {Object} aem The authenticated encrypted message to be decrypted. 
- * @param {Buffer} privateKey A byte buffer containing the private key
- * used to regenerate the symmetric key that was used to encrypt the message.
- * @returns {String} The decrypted message.
- */
-const decryptMessage = function(aem, privateKey) {
-    // decrypt the 32-byte symmetric key
-    const curve = crypto.createECDH(CURVE);
-    curve.setPrivateKey(privateKey);
-    const symmetricKey = curve.computeSecret(aem.seed).slice(0, 32);  // use only first 32 bytes
-
-    // decrypt the ciphertext using the symmetric key
-    const decipher = crypto.createDecipheriv(CIPHER, symmetricKey, aem.iv);
-    decipher.setAuthTag(aem.auth);
-    var message = decipher.update(aem.ciphertext, undefined, 'utf8');
-    message += decipher.final('utf8');
-
-    return message;
+    const isValid = signer.detached.verify(Buffer.from(message, 'utf8'), signature, publicKey);
+    return isValid;
 };

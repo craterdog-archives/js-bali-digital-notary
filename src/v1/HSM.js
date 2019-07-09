@@ -40,10 +40,8 @@ exports.api = function(secret) {
                 '[\n' +
                 '    $module: /bali/notary/HSM\n' +
                 '    $protocol: v1\n' +
-                '    $curve: "prime256v1"\n' +
                 '    $digest: "sha512"\n' +
                 '    $signature: "sha512"\n' +
-                '    $cipher: "aes-256-gcm"\n' +
                 ']';
         },
 
@@ -137,42 +135,6 @@ exports.api = function(secret) {
                 throw Error('This function has not yet been implemented.');
             } catch (cause) {
                 throw Error('The digital signature of the message could not be validated: ' + cause);
-            }
-        },
-
-        /**
-         * This function uses the specified public key to generate a symmetric key that
-         * is then used to encrypt the specified message. The resulting authenticated
-         * encrypted message (AEM) can be decrypted using the corresponding private key.
-         * 
-         * @param {String} message The message to be encrypted. 
-         * @param {Buffer} publicKey A byte buffer containing the public key to be used
-         * to generate the symmetric key.
-         * @returns {Object} The resulting authenticated encrypted message (AEM).
-         */
-        encryptMessage: async function(message, publicKey) {
-            if (this.initializeAPI) await this.initializeAPI();
-            try {
-                throw Error('This function has not yet been implemented.');
-            } catch (cause) {
-                throw Error('The message could not be encrypted: ' + cause);
-            }
-        },
-
-        /**
-         * This function uses the private key and the attributes from the specified
-         * authenticated encrypted message (AEM) object to generate a symmetric key that
-         * is then used to decrypt the encrypted message.
-         * 
-         * @param {Object} aem The authenticated encrypted message to be decrypted. 
-         * @returns {String} The decrypted message.
-         */
-        decryptMessage: async function(aem) {
-            if (this.initializeAPI) await this.initializeAPI();
-            try {
-                throw Error('This function has not yet been implemented.');
-            } catch (cause) {
-                throw Error('The message could not be decrypted: ' + cause);
             }
         },
 

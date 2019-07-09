@@ -403,98 +403,6 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 if (debug) console.error(exception.toString());
                 throw exception;
             }
-        },
-   
-
-        /**
-         * This function uses the specified public notary certificate to encrypt the specified
-         * component in such a way that only the intended recipient of the encrypted component can
-         * decrypt it using their private notary key. The result is an authenticated encrypted
-         * message (AEM) containing the ciphertext and other required attributes needed to
-         * decrypt the message.
-         *
-         * @param {Component} component The component to be encrypted using the specified
-         * public notary certificate.
-         * @param {Catalog} certificate A notarized document containing the public certificate
-         * for the intended recipient of the encrypted component.
-         * @returns {Catalog} An authenticated encrypted message (AEM) containing the ciphertext
-         * and other required attributes for the encrypted component.
-         */
-        encryptComponent: async function(component, certificate) {
-            try {
-                validateParameter('$encryptComponent', 'component', component);
-                validateParameter('$encryptComponent', 'certificate', certificate, 'document');
-                validateParameter('$encryptComponent', 'certificate', certificate.getValue('$component'));
-                certificate = certificate.getValue('$component');
-                const publicKey = certificate.getValue('$publicKey');
-                const requiredModule = selectSecurityModule('$encryptComponent', securityModule, certificate);
-                const object = await requiredModule.encryptMessage(component.toString(), publicKey.getValue());
-                const aem = bali.catalog({
-                    $protocol: PROTOCOL,
-                    $timestamp: bali.moment(),  // now
-                    $seed: bali.binary(object.seed),
-                    $iv: bali.binary(object.iv),
-                    $auth: bali.binary(object.auth),
-                    $ciphertext: bali.binary(object.ciphertext)
-                }, bali.parameters({
-                    $type: bali.parse('/bali/notary/AEM/v1')
-                }));
-                return aem;
-            } catch (cause) {
-                const exception = bali.exception({
-                    $module: '/bali/notary/DigitalNotary',
-                    $procedure: '$encryptComponent',
-                    $exception: '$unexpected',
-                    $component: component,
-                    $certificate: certificate,
-                    $text: bali.text('An unexpected error occurred while attempting to encrypt a component.')
-                }, cause);
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
-        },
-   
-        /**
-         * This function uses the notary key to decrypt the specified authenticated
-         * encrypted message (AEM). The result is the decrypted component.
-         *
-         * @param {Catalog} aem The authenticated encrypted message to be decrypted.
-         * @returns {Component} The decrypted component.
-         */
-        decryptComponent: async function(aem) {
-            if (this.initializeAPI) await this.initializeAPI();
-            try {
-                validateParameter('$decryptComponent', 'aem', aem);
-                const protocol = aem.getValue('$protocol');
-                if (!protocol || protocol.toString() !== PROTOCOL) {
-                    const exception = bali.exception({
-                        $module: '/bali/notary/PrivateSSM',
-                        $procedure: '$decryptComponent',
-                        $exception: '$unsupportedProtocol',
-                        $expected:  PROTOCOL,
-                        $actual: protocol,
-                        $text: bali.text('The component was encrypted using an unsupported version of the notary protocol.')
-                    });
-                    throw exception;
-                }
-                const object = {
-                    seed: aem.getValue('$seed').getValue(),
-                    iv: aem.getValue('$iv').getValue(),
-                    auth: aem.getValue('$auth').getValue(),
-                    ciphertext: aem.getValue('$ciphertext').getValue()
-                };
-                return bali.parse(await securityModule.decryptMessage(object));
-            } catch (cause) {
-                const exception = bali.exception({
-                    $module: '/bali/notary/DigitalNotary',
-                    $procedure: '$decryptComponent',
-                    $exception: '$unexpected',
-                    $aem: aem,
-                    $text: bali.text('An unexpected error occurred while attempting to decrypt a component.')
-                }, cause);
-                if (debug) console.error(exception.toString());
-                throw exception;
-            }
         }
 
     };
@@ -602,24 +510,6 @@ const validateParameter = function(functionName, parameterName, parameterValue, 
                         validateParameter(functionName, parameterName + '.parameters.previous', parameters.getParameter('$previous'), 'citation');
                         if (parameters.getParameter('$type').toString().startsWith('/bali/notary/Certificate/v') &&
                             parameters.getParameter('$permissions').toString().startsWith('/bali/permissions/public/v')) return;
-                    }
-                }
-                break;
-            case 'aem':
-                // An authenticated encrypted message (AEM) must have the following:
-                //  * a parameterized type of /bali/notary/AEM/v...
-                //  * exactly six specific attributes
-                if (parameterValue.getTypeId && parameterValue.getTypeId() === bali.types.CATALOG && parameterValue.getSize() === 6) {
-                    validateParameter(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
-                    validateParameter(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
-                    validateParameter(functionName, parameterName + '.seed', parameterValue.getValue('$seed'), 'binary');
-                    validateParameter(functionName, parameterName + '.iv', parameterValue.getValue('$iv'), 'binary');
-                    validateParameter(functionName, parameterName + '.auth', parameterValue.getValue('$auth'), 'binary');
-                    validateParameter(functionName, parameterName + '.ciphertext', parameterValue.getValue('$ciphertext'), 'binary');
-                    const parameters = parameterValue.getParameters();
-                    if (parameters && parameters.getSize() === 1) {
-                        validateParameter(functionName, parameterName + '.parameters.type', parameters.getParameter('$type'), 'name');
-                        if (parameters.getParameter('$type').toString().startsWith('/bali/notary/AEM/v')) return;
                     }
                 }
                 break;
