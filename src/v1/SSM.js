@@ -89,27 +89,6 @@ exports.api = function(keyFile) {
         } : undefined,
 
         /**
-         * This function generates a new public-private key pair.
-         * 
-         * @returns {Buffer} A byte buffer containing the new public key.
-         */
-        generateKeyPair: async function() {
-            if (this.initializeAPI) await this.initializeAPI();
-            try {
-                oldKeys = keys;
-                keys = generateKeyPair();
-                const data = {
-                    privateKey: keys.privateKey.toJSON().data,
-                    publicKey: keys.publicKey.toJSON().data
-                };
-                await pfs.writeFile(keyFile, JSON.stringify(data, null, 4), 'utf8');
-                return keys.publicKey;
-            } catch (cause) {
-                throw Error('A new key pair could not be generated: ' + cause);
-            }
-        },
-
-        /**
          * This function returns a cryptographically secure digital digest of the
          * specified message. The generated digital digest will always be the same
          * for the same message.
@@ -123,6 +102,27 @@ exports.api = function(keyFile) {
                 return digest;
             } catch (cause) {
                 throw Error('A digest of the message could not be generated: ' + cause);
+            }
+        },
+
+        /**
+         * This function generates a new public-private key pair.
+         * 
+         * @returns {Buffer} A byte buffer containing the new public key.
+         */
+        generateKeys: async function() {
+            if (this.initializeAPI) await this.initializeAPI();
+            try {
+                oldKeys = keys;
+                keys = generateKeys();
+                const data = {
+                    privateKey: keys.privateKey.toJSON().data,
+                    publicKey: keys.publicKey.toJSON().data
+                };
+                await pfs.writeFile(keyFile, JSON.stringify(data, null, 4), 'utf8');
+                return keys.publicKey;
+            } catch (cause) {
+                throw Error('A new key pair could not be generated: ' + cause);
             }
         },
 
@@ -160,14 +160,17 @@ exports.api = function(keyFile) {
          * private key on the specified message.
          *
          * @param {String} message The digitally signed message.
-         * @param {Buffer} publicKey A byte buffer containing the public key.
          * @param {Buffer} signature A byte buffer containing the digital signature
          * allegedly generated using the corresponding private key.
+         * @param {Buffer} aPublicKey An optional byte buffer containing the public
+         * key to be used to validate the signature. If none is specified, the
+         * current public key for this security module is used.
          * @returns {Boolean} Whether or not the digital signature is valid.
          */
-        signatureIsValid: async function(message, publicKey, signature) {
+        validSignature: async function(message, signature, aPublicKey) {
             try {
-                const result = signatureIsValid(message, publicKey, signature);
+                aPublicKey = aPublicKey || keys.publicKey;
+                const result = validSignature(message, signature, aPublicKey);
                 return result;
             } catch (cause) {
                 throw Error('The digital signature of the message could not be validated: ' + cause);
@@ -177,7 +180,7 @@ exports.api = function(keyFile) {
         /**
          * This function deletes any existing public-private key pairs.
          */
-        deleteKeyPair: async function() {
+        eraseKeys: async function() {
             keys = undefined;
             oldKeys = undefined;
         }
@@ -218,20 +221,6 @@ const doesExist = async function(file) {
 
 
 /**
- * This function generates a new public-private key pair.
- * 
- * @returns {Object} An object containing the new public and private keys.
- */
-const generateKeyPair = function() {
-    const keys = signer.keyPair();
-    return {
-        publicKey: Buffer.from(keys.publicKey),
-        privateKey: Buffer.from(keys.secretKey)
-    };
-};
-
-
-/**
  * This function returns a cryptographically secure digital digest of the
  * specified message. The generated digital digest will always be the same
  * for the same message.
@@ -244,6 +233,20 @@ const digestMessage = function(message) {
     hash.update(message);
     const digest = hash.digest();
     return digest;
+};
+
+
+/**
+ * This function generates a new public-private key pair.
+ * 
+ * @returns {Object} An object containing the new public and private keys.
+ */
+const generateKeys = function() {
+    const keys = signer.keyPair();
+    return {
+        publicKey: Buffer.from(keys.publicKey),
+        privateKey: Buffer.from(keys.secretKey)
+    };
 };
 
 
@@ -268,12 +271,14 @@ const signMessage = function(message, privateKey) {
  * private key on the specified message.
  *
  * @param {String} message The digitally signed message.
- * @param {Buffer} publicKey A byte buffer containing the public key.
  * @param {Buffer} signature A byte buffer containing the digital signature
  * allegedly generated using the corresponding private key.
+ * @param {Buffer} aPublicKey An optional byte buffer containing the public
+ * key to be used to validate the signature. If none is specified, the
+ * current public key for this security module is used.
  * @returns {Boolean} Whether or not the digital signature is valid.
  */
-const signatureIsValid = function(message, publicKey, signature) {
-    const isValid = signer.detached.verify(Buffer.from(message, 'utf8'), signature, publicKey);
+const validSignature = function(message, signature, aPublicKey) {
+    const isValid = signer.detached.verify(Buffer.from(message, 'utf8'), signature, aPublicKey);
     return isValid;
 };

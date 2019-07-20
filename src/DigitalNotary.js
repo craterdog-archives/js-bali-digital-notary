@@ -159,7 +159,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
             if (this.initializeAPI) await this.initializeAPI();
             try {
                 // generate a new public-private key pair
-                publicKey = bali.binary(await securityModule.generateKeyPair());
+                publicKey = bali.binary(await securityModule.generateKeys());
                 timestamp = bali.moment(),  // now
                 tag = tag || bali.tag();  // generate a new tag if necessary
                 version = version ? bali.version.nextVersion(version) : bali.version();
@@ -230,7 +230,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 timestamp = undefined;
                 publicKey = undefined;
                 citation = undefined;
-                await securityModule.deleteKeyPair();
+                await securityModule.eraseKeys();
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '/bali/notary/DigitalNotary',
@@ -390,7 +390,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 const publicKey = certificate.getValue('$publicKey');
                 const signature = document.getValue('$signature');
                 const requiredModule = selectSecurityModule('$documentIsValid', securityModule, certificate);
-                return await requiredModule.signatureIsValid(catalog.toString(), publicKey.getValue(), signature.getValue());
+                return await requiredModule.validSignature(catalog.toString(), signature.getValue(), publicKey.getValue());
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '/bali/notary/DigitalNotary',
