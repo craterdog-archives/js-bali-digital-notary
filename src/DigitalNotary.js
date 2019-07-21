@@ -51,7 +51,7 @@ const EOL = '\n';
 exports.api = function(securityModule, accountId, directory, debug) {
 
     // validate the parameters
-    if (tag) validateParameter('$privateAPI', 'accountId', accountId, 'tag');
+    if (accountId) validateParameter('$privateAPI', 'accountId', accountId, 'tag');
     if (directory) validateParameter('$privateAPI', 'directory', directory);
     debug = debug || false;
 
@@ -325,7 +325,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
    
         /**
          * This function digitally signs the specified component using the private notary
-         * key maintained by the software security module. The component must be parameterized
+         * key maintained by the security module. The component must be parameterized
          * with the following parameters:
          * <pre>
          *  * $tag - a unique identifier for the component
@@ -338,7 +338,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
          * The newly notarized component is returned.
          *
          * @param {Component} component The component to be notarized.
-         * @returns {Catalog} The newly notarized component.
+         * @returns {Catalog} A newly notarized document containing the component.
          */
         signComponent: async function(component) {
             if (this.initializeAPI) await this.initializeAPI();
@@ -415,7 +415,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
  * This function returns a reference to the security module that implements the version
  * of the protocol required by the specified notarized document.  If the required version
  * matches the version of the current security module, then the current security module
- * is used. Otherwise, a software security module matching the required version is used.
+ * is used. Otherwise, a security module matching the required version is used.
  * If no matching version is found, then an exception is thrown.
  * 
  * @param {String} functionName The name of the function making the request.
