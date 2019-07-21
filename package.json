@@ -32,6 +32,7 @@
     "webpack": "^4.35.3"
   },
   "dependencies": {
+    "@abandonware/noble": "^1.9.2-2",
     "bali-component-framework": "^1.11.2",
     "tweetnacl": "^1.0.1"
   }
