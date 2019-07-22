@@ -12,8 +12,9 @@
 /*
  * This module uses the singleton pattern to provide an object that acts as a PROXY to
  * a hardware security module (HSM) for all cryptographic operations.  All cryptographic
- * operations are done on the actual HSM.
+ * operations are initiated via bluetooth and performed on the actual HSM.
  */
+const bluetooth = new (require('bluetooth-serial-port')).BluetoothSerialPort();
 
 
 // PUBLIC API

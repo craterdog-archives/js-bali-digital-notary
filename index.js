@@ -12,13 +12,11 @@
 /**
  * This function returns an object that implements the API for a software security module.
  * 
- * @param {Buffer} secret A byte buffer containing 32 random bytes that are used to help
- * protect the private key when not in use.
  * @param {String} keyfile An optional filename for a file containing the key information.
  * @returns {Object} An object that implements the API for a software security module.
  */
-exports.ssm = function(secret, keyfile) {
-    const securityModule = require('./src/v1/SSM').api(secret, keyfile);
+exports.ssm = function(keyfile) {
+    const securityModule = require('./src/v1/SSM').api(keyfile);
     return securityModule;
 };
 
