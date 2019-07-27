@@ -249,24 +249,16 @@ const formatRequest = function(type, ...args) {
 
 const findPeripheral = function() {
     return new Promise(function(resolve, reject) {
-        var notFound = true;
         bluetooth.on('discover', function(peripheral) {
             const advertisement = peripheral.advertisement;
             console.log('Found a peripheral: ' + advertisement.localName);
             if (advertisement.localName === 'ButtonUp') {
-                notFound = false;
                 bluetooth.stopScanning();
                 resolve(peripheral);
             }
         });
         console.log('Searching for an HSM...');
         bluetooth.startScanning([UART_SERVICE_ID]);  // start searching for an HSM (asynchronously)
-        setTimeout(function() {
-            if (notFound) {
-                bluetooth.stopScanning();
-                reject('An HSM was not found.');
-            }
-        }, 2000);
     });
 };
 
@@ -274,70 +266,70 @@ const findPeripheral = function() {
 const processRequest = function(peripheral, request) {
     return new Promise(function(resolve, reject) {
         if (peripheral === undefined) reject('No HSM near by.');
-        var noResponse = true;
-        setTimeout(function() {
-            if (noResponse) {
-                peripheral.disconnect();
-                reject('The request timed out.');
-            }
-        }, 2000);
         console.log('Attempting to connect...');
         peripheral.connect(function(cause) {
-            if (cause) {
-                peripheral.disconnect();
-                reject(cause);
-            }
-            console.log('Successfully connected.');
-            peripheral.discoverServices([UART_SERVICE_ID], function(cause, services) {
-                if (cause || services.length !== 1) {
-                    cause = cause || 'No UART service found.';
-                    peripheral.disconnect();
-                    reject(cause);
-                }
-                services[0].discoverCharacteristics([], function(cause, characteristics) {
-                    if (cause) {
-                        peripheral.disconnect();
-                        reject(cause);
-                    }
-                    var input, output;
-                    characteristics.forEach (characteristic => {
-                        // TODO: make it more robust by checking properties instead of Ids
-                        if (characteristic.uuid === UART_NOTIFICATION_ID) input = characteristic;
-                        if (characteristic.uuid === UART_WRITE_ID) output = characteristic;
-                    });
-                    if (input === undefined || output === undefined) {
-                        peripheral.disconnect();
-                        reject('The UART service is missing required characteristics.');
-                    }
-                    input.on('data', function(response) {
-                        console.log('Received response.');
-                        if (response.length === 0) {
-                            peripheral.disconnect();
-                            reject('Zero length response was received.');
-                        } else {
-                            console.log('response: ' + response.toString('hex'));
-                            noResponse = false;
-                            peripheral.disconnect();
-                            resolve(response);
-                        }
-                    });
-                    input.subscribe(function(cause) {
-                        if (cause) {
-                            peripheral.disconnect();
+            if (!cause) {
+                console.log('Successfully connected.');
+                peripheral.discoverServices([UART_SERVICE_ID], function(cause, services) {
+                    if (!cause && services.length === 1) {
+                        services[0].discoverCharacteristics([], function(cause, characteristics) {
+                            if (!cause) {
+                                var input, output;
+                                characteristics.forEach (characteristic => {
+                                    // TODO: make it more robust by checking properties instead of Ids
+                                    if (characteristic.uuid === UART_NOTIFICATION_ID) input = characteristic;
+                                    if (characteristic.uuid === UART_WRITE_ID) output = characteristic;
+                                });
+                                if (input && output) {
+                                    input.on('read', function(response, isNotification) {
+                                        console.log('Received notification: ' + isNotification);
+                                        if (response.length === 1) {
+                                            const value = response.readUInt8(0);
+                                            switch (value) {
+                                                case 0:
+                                                    response = false;
+                                                    break;
+                                                case 1:
+                                                    response = true;
+                                                    break;
+                                                default:
+                                                    response = Error('The request failed.');
+                                            }
+                                            console.log('response: ' + response);
+                                        } else {
+                                            console.log('response: ' + response.toString('hex'));
+                                        }
+                                        peripheral.disconnect(function() {
+                                            console.log('Peripheral disconnected.');
+                                            resolve(response);
+                                        });
+                                    });
+                                    input.subscribe(function() {
+                                        console.log('Notification subscription succeeded.');
+                                        output.write(request, false, function() {
+                                            console.log('Write completed.');
+                                            // can't resolve it until the response is read
+                                        });
+                                    });
+                                }
+                            } else {
+                                peripheral.disconnect(function() {
+                                    reject(cause);
+                                });
+                            }
+                        });
+                    } else {
+                        cause = cause || Error('Wrong number of UART services found.');
+                        peripheral.disconnect(function() {
                             reject(cause);
-                        }
-                    });
-                    console.log('Notification subscription succeeded.');
-                    output.write(request, false, function(cause) {
-                        console.log('Write completed.');
-                        if (cause) {
-                            peripheral.disconnect();
-                            reject(cause);
-                        }
-                        // can't resolve it until the response is read
-                    });
+                        });
+                    }
                 });
-            });
+            } else {
+                peripheral.disconnect(function() {
+                    reject(cause);
+                });
+            }
         });
     });
 };

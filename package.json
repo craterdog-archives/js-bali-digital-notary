@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@abandonware/noble": "^1.9.2-3",
-    "bali-component-framework": "^1.11.2",
+    "bali-component-framework": "^1.11.3",
     "tweetnacl": "^1.0.1"
   }
 }

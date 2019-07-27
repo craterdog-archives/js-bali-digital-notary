@@ -41,9 +41,14 @@ describe('Bali Digital Notary™', function() {
             expect(protocols.isEqualTo(expected)).to.equal(true);
         });
 
+        it('should digest a message', async function() {
+            const digest = await hsm.digestMessage('This is a test...');
+            expect(digest).to.exist;
+        });
+
         it('should generate the keys', async function() {
             notaryCertificate = await notaryAPI.generateKey();
-            expect(notaryCertificate).to.exist;  // jshint ignore:line
+            expect(notaryCertificate).to.exist;
         });
 
         it('should read in the new keys', async function() {
@@ -53,7 +58,7 @@ describe('Bali Digital Notary™', function() {
 
         it('should retrieve the certificate citation', async function() {
             certificateCitation = await notaryAPI.getCitation();
-            expect(certificateCitation).to.exist;  // jshint ignore:line
+            expect(certificateCitation).to.exist;
         });
 
     });
@@ -117,7 +122,7 @@ describe('Bali Digital Notary™', function() {
 
         it('should regenerate a notary key properly', async function() {
             var newNotaryCertificate = await notaryAPI.generateKey();
-            expect(newNotaryCertificate).to.exist;  // jshint ignore:line
+            expect(newNotaryCertificate).to.exist;
 
             const certificate = notaryCertificate.getValue('$component');
             const newCertificate = newNotaryCertificate.getValue('$component');
