@@ -32,8 +32,8 @@
     "webpack": "^4.35.3"
   },
   "dependencies": {
+    "@abandonware/noble": "^1.9.2-3",
     "bali-component-framework": "^1.11.2",
-    "bluetooth-serial-port": "^2.2.4",
     "tweetnacl": "^1.0.1"
   }
 }

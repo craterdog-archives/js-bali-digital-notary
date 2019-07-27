@@ -187,6 +187,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 }, bali.parameters({
                     $type: bali.parse('/bali/notary/Document/v1')
                 }));
+                console.log('certificate: ' + certificate);
                 const signature = bali.binary(await securityModule.signMessage(certificate.toString()));
                 certificate.setValue('$signature', signature);
 

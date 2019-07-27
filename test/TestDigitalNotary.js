@@ -16,10 +16,9 @@ const expect = require('chai').expect;
 const bali = require('bali-component-framework');
 const accountId = bali.tag();
 const directory = 'test/config/';
-const secret = crypto.randomBytes(32);
 const ssm = require('../').ssm();
-//const hsm = require('../').hsm(accountId, secret);  uncomment when testing real HSM
-const hsm = require('../').ssm(directory + accountId.getValue() + '.keys');
+const hsm = require('../').hsm();  // uncomment when testing real HSM
+//const hsm = require('../').ssm(directory + accountId.getValue() + '.keys');
 const publicAPI = require('../').api(ssm, undefined, undefined, debug);
 const notaryAPI = require('../').api(hsm, accountId, directory, debug);
 

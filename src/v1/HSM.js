@@ -14,7 +14,21 @@
  * a hardware security module (HSM) for all cryptographic operations.  All cryptographic
  * operations are initiated via bluetooth and performed on the actual HSM.
  */
-const bluetooth = new (require('bluetooth-serial-port')).BluetoothSerialPort();
+const crypto = require('crypto');
+const bluetooth = require('@abandonware/noble');
+
+
+// PRIVATE CONSTANTS
+
+// The algorithms for this version of the protocol
+const PROTOCOL = 'v1';
+const DIGEST = 'sha512';
+const SIGNATURE = 'ed25519';
+
+// These are viewed from the client (mobile device) perspective
+const UART_SERVICE_ID = '6e400001b5a3f393e0a9e50e24dcca9e';
+const UART_WRITE_ID = '6e400002b5a3f393e0a9e50e24dcca9e';
+const UART_NOTIFICATION_ID = '6e400003b5a3f393e0a9e50e24dcca9e';
 
 
 // PUBLIC API
@@ -23,11 +37,11 @@ const bluetooth = new (require('bluetooth-serial-port')).BluetoothSerialPort();
  * This function returns a singleton object that implements the API for the hardware
  * security module (HSM).
  *
- * @param {Buffer} secret A byte buffer containing 32 random bytes to be used to protect
- * the private key within the HSM when not in use.
  * @returns {Object} An object that implements the security module API.
  */
-exports.api = function(secret) {
+exports.api = function() {
+    var peripheral;
+    var secret, previousSecret;
 
     return {
 
@@ -39,11 +53,12 @@ exports.api = function(secret) {
         toString: function() {
             const string =
                 '[\n' +
-                '    $module: /bali/notary/HSM\n' +
-                '    $protocol: v1\n' +
-                '    $digest: "sha512"\n' +
-                '    $signature: "sha512"\n' +
+                '    $module: /bali/notary/' + PROTOCOL + '/HSM\n' +
+                '    $protocol: ' + PROTOCOL + '\n' +
+                '    $digest: "' + DIGEST + '"\n' +
+                '    $signature: "' + SIGNATURE + '"\n' +
                 ']';
+            return string;
         },
 
         /**
@@ -54,19 +69,15 @@ exports.api = function(secret) {
          * module.
          */
         getProtocol: function() {
-            return 'v1';
+            return PROTOCOL;
         },
 
         /**
          * This function initializes the API.
          */
         initializeAPI: async function() {
-            try {
-                throw Error('This function has not yet been implemented.');
-                this.initializeAPI = undefined;  // can only be called once
-            } catch (cause) {
-                throw Error('The HSM could not be contacted: ' + cause);
-            }
+            peripheral = await findPeripheral();
+            this.initializeAPI = undefined;  // can only be called successfully once
         },
 
         /**
@@ -78,9 +89,11 @@ exports.api = function(secret) {
          * @returns {Buffer} A byte buffer containing a digital digest of the message.
          */
         digestMessage: async function(message) {
-            if (this.initializeAPI) await this.initializeAPI();
             try {
-                throw Error('This function has not yet been implemented.');
+                if (this.initializeAPI) await this.initializeAPI();
+                const request = formatRequest('digestMessage', Buffer.from(message, 'utf8'));
+                const digest = await processRequest(peripheral, request);
+                return digest;
             } catch (cause) {
                 throw Error('A digest of the message could not be generated: ' + cause);
             }
@@ -92,9 +105,14 @@ exports.api = function(secret) {
          * @returns {Buffer} A byte buffer containing the new public key.
          */
         generateKeys: async function() {
-            if (this.initializeAPI) await this.initializeAPI();
             try {
-                throw Error('This function has not yet been implemented.');
+                if (this.initializeAPI) await this.initializeAPI();
+                // TODO: erase previousSecret
+                previousSecret = secret;
+                secret = crypto.randomBytes(32);
+                const request = formatRequest('generateKeys', secret);
+                const publicKey = await processRequest(peripheral, request);
+                return publicKey;
             } catch (cause) {
                 throw Error('A new key pair could not be generated: ' + cause);
             }
@@ -111,9 +129,18 @@ exports.api = function(secret) {
          * @returns {Buffer} A byte buffer containing the resulting digital signature.
          */
         signMessage: async function(message) {
-            if (this.initializeAPI) await this.initializeAPI();
             try {
-                throw Error('This function has not yet been implemented.');
+                if (this.initializeAPI) await this.initializeAPI();
+                var request;
+                if (previousSecret) {
+                    request = formatRequest('signMessage', previousSecret, Buffer.from(message, 'utf8'));
+                    // TODO: erase previousSecret
+                    previousSecret = undefined;
+                } else {
+                    request = formatRequest('signMessage', secret, Buffer.from(message, 'utf8'));
+                }
+                const signature = await processRequest(peripheral, request);
+                return signature;
             } catch (cause) {
                 throw Error('A digital signature of the message could not be generated: ' + cause);
             }
@@ -133,9 +160,11 @@ exports.api = function(secret) {
          * @returns {Boolean} Whether or not the digital signature is valid.
          */
         validSignature: async function(message, signature, aPublicKey) {
-            if (this.initializeAPI) await this.initializeAPI();
             try {
-                throw Error('This function has not yet been implemented.');
+                if (this.initializeAPI) await this.initializeAPI();
+                const request = formatRequest('validSignature', Buffer.from(message, 'utf8'), signature, aPublicKey);
+                const isValid = (await processRequest(peripheral, request))[0] ? true : false;
+                return isValid;
             } catch (cause) {
                 throw Error('The digital signature of the message could not be validated: ' + cause);
             }
@@ -143,10 +172,172 @@ exports.api = function(secret) {
 
         /**
          * This function deletes any existing public-private key pairs.
+         * 
+         * @returns {Boolean} Whether or not the keys were successfully erased.
          */
         eraseKeys: async function() {
-            throw Error('This function has not yet been implemented.');
+            try {
+                if (this.initializeAPI) await this.initializeAPI();
+                const request = formatRequest('eraseKeys');
+                const succeeded = (await processRequest(peripheral, request))[0] ? true : false;
+                return succeeded;
+            } catch (cause) {
+                throw Error('The keys could not be erased: ' + cause);
+            }
         }
 
     };
+};
+
+
+// PRIVATE FUNCTIONS
+
+/**
+ * This function formats a request into a binary format prior to sending it via bluetooth.
+ * Each request has the following byte format:
+ *   Request (1 byte) [0..255]
+ *   Number of Arguments (1 byte) [0..255]
+ *   Length of Argument 1 (2 bytes) [0..65535]
+ *   Argument 1 ([0..65535] bytes)
+ *   Length of Argument 2 (2 bytes) [0..65535]
+ *   Argument 2 ([0..65535] bytes)
+ *      ...
+ *   Length of Argument N (2 bytes) [0..65535]
+ *   Argument N ([0..65535] bytes)
+ *
+ * If the entire request is only a single byte long then the number of arguments
+ * is assumed to be zero.
+
+ * @param {String} type The type of the request.
+ * @param {Buffer} args Zero or more buffers containing the bytes for each argument.
+ * @returns {Buffer} A buffer containing the bytes for the entire request.
+ */
+const formatRequest = function(type, ...args) {
+    switch (type) {
+        case 'digestMessage':
+            type = 1;
+            break;
+        case 'generateKeys':
+            type = 2;
+            break;
+        case 'signMessage':
+            type = 3;
+            break;
+        case 'validSignature':
+            type = 4;
+            break;
+        case 'eraseKeys':
+            type = 5;
+            break;
+        case 'testHSM':
+            type = 42;
+            break;
+    }
+    var request = Buffer.from([type & 0xFF, args.length & 0xFF]);
+    args.forEach(arg => {
+        var length = arg.length;
+        request = Buffer.concat([
+            request,                                               // the request thus far
+            Buffer.from([(length & 0xFF00) >> 8, length & 0xFF]),  // the length of this argument
+            arg],                                                   // the argument bytes
+            request.length + length + 2                            // the length of the new buffer
+        );
+    });
+    return request;
+};
+
+
+const findPeripheral = function() {
+    return new Promise(function(resolve, reject) {
+        var notFound = true;
+        bluetooth.on('discover', function(peripheral) {
+            const advertisement = peripheral.advertisement;
+            console.log('Found a peripheral: ' + advertisement.localName);
+            if (advertisement.localName === 'ButtonUp') {
+                notFound = false;
+                bluetooth.stopScanning();
+                resolve(peripheral);
+            }
+        });
+        console.log('Searching for an HSM...');
+        bluetooth.startScanning([UART_SERVICE_ID]);  // start searching for an HSM (asynchronously)
+        setTimeout(function() {
+            if (notFound) {
+                bluetooth.stopScanning();
+                reject('An HSM was not found.');
+            }
+        }, 2000);
+    });
+};
+
+
+const processRequest = function(peripheral, request) {
+    return new Promise(function(resolve, reject) {
+        if (peripheral === undefined) reject('No HSM near by.');
+        var noResponse = true;
+        setTimeout(function() {
+            if (noResponse) {
+                peripheral.disconnect();
+                reject('The request timed out.');
+            }
+        }, 2000);
+        console.log('Attempting to connect...');
+        peripheral.connect(function(cause) {
+            if (cause) {
+                peripheral.disconnect();
+                reject(cause);
+            }
+            console.log('Successfully connected.');
+            peripheral.discoverServices([UART_SERVICE_ID], function(cause, services) {
+                if (cause || services.length !== 1) {
+                    cause = cause || 'No UART service found.';
+                    peripheral.disconnect();
+                    reject(cause);
+                }
+                services[0].discoverCharacteristics([], function(cause, characteristics) {
+                    if (cause) {
+                        peripheral.disconnect();
+                        reject(cause);
+                    }
+                    var input, output;
+                    characteristics.forEach (characteristic => {
+                        // TODO: make it more robust by checking properties instead of Ids
+                        if (characteristic.uuid === UART_NOTIFICATION_ID) input = characteristic;
+                        if (characteristic.uuid === UART_WRITE_ID) output = characteristic;
+                    });
+                    if (input === undefined || output === undefined) {
+                        peripheral.disconnect();
+                        reject('The UART service is missing required characteristics.');
+                    }
+                    input.on('data', function(response) {
+                        console.log('Received response.');
+                        if (response.length === 0) {
+                            peripheral.disconnect();
+                            reject('Zero length response was received.');
+                        } else {
+                            console.log('response: ' + response.toString('hex'));
+                            noResponse = false;
+                            peripheral.disconnect();
+                            resolve(response);
+                        }
+                    });
+                    input.subscribe(function(cause) {
+                        if (cause) {
+                            peripheral.disconnect();
+                            reject(cause);
+                        }
+                    });
+                    console.log('Notification subscription succeeded.');
+                    output.write(request, false, function(cause) {
+                        console.log('Write completed.');
+                        if (cause) {
+                            peripheral.disconnect();
+                            reject(cause);
+                        }
+                        // can't resolve it until the response is read
+                    });
+                });
+            });
+        });
+    });
 };

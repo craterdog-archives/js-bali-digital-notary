@@ -26,6 +26,14 @@ const hasher = require('crypto');
 const signer = require('tweetnacl').sign;
 
 
+// PRIVATE CONSTANTS
+
+// The algorithms for this version of the protocol
+const PROTOCOL = 'v1';
+const DIGEST = 'sha512';
+const SIGNATURE = 'ed25519';
+
+
 // PUBLIC API
 
 /**
@@ -38,7 +46,7 @@ const signer = require('tweetnacl').sign;
  * @returns {Object} An object that implements the security module API.
  */
 exports.api = function(keyFile) {
-    var keys, oldKeys;
+    var keys, previousKeys;
 
     return {
 
@@ -78,13 +86,13 @@ exports.api = function(keyFile) {
                 if (await doesExist(keyFile)) {
                     const data = JSON.parse(await pfs.readFile(keyFile, 'utf8'));
                     keys = {
-                        privateKey: Buffer.from(data.privateKey),
-                        publicKey: Buffer.from(data.publicKey)
+                        publicKey: Buffer.from(data.publicKey),
+                        privateKey: Buffer.from(data.privateKey)
                     };
                 }
                 this.initializeAPI = undefined;  // can only be called successfully once
             } catch (cause) {
-                throw Error('The keys could not be loaded: ' + cause);
+                throw Error('The keys could not be loaded: ' + cause.message);
             }
         } : undefined,
 
@@ -98,7 +106,10 @@ exports.api = function(keyFile) {
          */
         digestMessage: async function(message) {
             try {
-                const digest = digestMessage(message);
+                if (this.initializeAPI) await this.initializeAPI();
+                const hash = hasher.createHash(DIGEST);
+                hash.update(message);
+                const digest = hash.digest();
                 return digest;
             } catch (cause) {
                 throw Error('A digest of the message could not be generated: ' + cause);
@@ -111,13 +122,17 @@ exports.api = function(keyFile) {
          * @returns {Buffer} A byte buffer containing the new public key.
          */
         generateKeys: async function() {
-            if (this.initializeAPI) await this.initializeAPI();
             try {
-                oldKeys = keys;
-                keys = generateKeys();
+                if (this.initializeAPI) await this.initializeAPI();
+                const raw = signer.keyPair();
+                previousKeys = keys;
+                keys = {
+                    publicKey: Buffer.from(raw.publicKey),
+                    privateKey: Buffer.from(raw.secretKey)
+                };
                 const data = {
-                    privateKey: keys.privateKey.toJSON().data,
-                    publicKey: keys.publicKey.toJSON().data
+                    publicKey: keys.publicKey.toJSON().data,
+                    privateKey: keys.privateKey.toJSON().data
                 };
                 await pfs.writeFile(keyFile, JSON.stringify(data, null, 4), 'utf8');
                 return keys.publicKey;
@@ -137,16 +152,16 @@ exports.api = function(keyFile) {
          * @returns {Buffer} A byte buffer containing the resulting digital signature.
          */
         signMessage: async function(message) {
-            if (this.initializeAPI) await this.initializeAPI();
             try {
+                if (this.initializeAPI) await this.initializeAPI();
                 var signature;
-                if (oldKeys) {
+                if (previousKeys) {
                     // the message is a certificate containing the new public key, so sign
                     // it using the old private key to enforce a valid certificate chain
-                    signature = signMessage(message, oldKeys.privateKey);
-                    oldKeys = undefined;
+                    signature = Buffer.from(signer.detached(Buffer.from(message, 'utf8'), previousKeys.privateKey));
+                    previousKeys = undefined;
                 } else {
-                    signature = signMessage(message, keys.privateKey);
+                    signature = Buffer.from(signer.detached(Buffer.from(message, 'utf8'), keys.privateKey));
                 }
                 return signature;
             } catch (cause) {
@@ -169,9 +184,10 @@ exports.api = function(keyFile) {
          */
         validSignature: async function(message, signature, aPublicKey) {
             try {
+                if (this.initializeAPI) await this.initializeAPI();
                 aPublicKey = aPublicKey || keys.publicKey;
-                const result = validSignature(message, signature, aPublicKey);
-                return result;
+                const isValid = signer.detached.verify(Buffer.from(message, 'utf8'), signature, aPublicKey);
+                return isValid;
             } catch (cause) {
                 throw Error('The digital signature of the message could not be validated: ' + cause);
             }
@@ -179,22 +195,22 @@ exports.api = function(keyFile) {
 
         /**
          * This function deletes any existing public-private key pairs.
+         * 
+         * @returns {Boolean} Whether or not the keys were successfully erased.
          */
         eraseKeys: async function() {
-            keys = undefined;
-            oldKeys = undefined;
+            try {
+                if (this.initializeAPI) await this.initializeAPI();
+                keys = undefined;
+                previousKeys = undefined;
+                return true;
+            } catch (cause) {
+                throw Error('The keys could not be erased: ' + cause);
+            }
         }
 
     };
 };
-
-
-// PRIVATE CONSTANTS
-
-// The algorithms for this version of the protocol
-const PROTOCOL = 'v1';
-const DIGEST = 'sha512';
-const SIGNATURE = 'ed25519';
 
 
 // PRIVATE FUNCTIONS
@@ -217,68 +233,4 @@ const doesExist = async function(file) {
             throw exception;
         }
     }
-};
-
-
-/**
- * This function returns a cryptographically secure digital digest of the
- * specified message. The generated digital digest will always be the same
- * for the same message.
- *
- * @param {String} message The message to be digested.
- * @returns {Buffer} A byte buffer containing a digital digest of the message.
- */
-const digestMessage = function(message) {
-    const hash = hasher.createHash(DIGEST);
-    hash.update(message);
-    const digest = hash.digest();
-    return digest;
-};
-
-
-/**
- * This function generates a new public-private key pair.
- * 
- * @returns {Object} An object containing the new public and private keys.
- */
-const generateKeys = function() {
-    const keys = signer.keyPair();
-    return {
-        publicKey: Buffer.from(keys.publicKey),
-        privateKey: Buffer.from(keys.secretKey)
-    };
-};
-
-
-/**
- * This function generates a digital signature of the specified message using
- * the specified private key. The resulting digital signature can then be
- * verified using the corresponding public key.
- * 
- * @param {String} message The message to be digitally signed.
- * @param {Buffer} privateKey A byte buffer containing the private key.
- * @returns {Buffer} A byte buffer containing the resulting digital signature.
- */
-const signMessage = function(message, privateKey) {
-    const signature = Buffer.from(signer.detached(Buffer.from(message, 'utf8'), privateKey));
-    return signature;
-};
-
-
-/**
- * This function uses the specified public key to determine whether or not
- * the specified digital signature was generated using the corresponding
- * private key on the specified message.
- *
- * @param {String} message The digitally signed message.
- * @param {Buffer} signature A byte buffer containing the digital signature
- * allegedly generated using the corresponding private key.
- * @param {Buffer} aPublicKey An optional byte buffer containing the public
- * key to be used to validate the signature. If none is specified, the
- * current public key for this security module is used.
- * @returns {Boolean} Whether or not the digital signature is valid.
- */
-const validSignature = function(message, signature, aPublicKey) {
-    const isValid = signer.detached.verify(Buffer.from(message, 'utf8'), signature, aPublicKey);
-    return isValid;
 };
