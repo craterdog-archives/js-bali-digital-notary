@@ -24,7 +24,7 @@ const bluetooth = require('@abandonware/noble');
 const PROTOCOL = 'v1';
 const DIGEST = 'sha512';
 const SIGNATURE = 'ed25519';
-const BLOCK_SIZE = 511;  // one less than the maximum MTU size
+const BLOCK_SIZE = 510;  // the maximum MTU size minus the header bytes
 
 // These are viewed from the client (mobile device) perspective
 const UART_SERVICE_ID = '6e400001b5a3f393e0a9e50e24dcca9e';
@@ -225,9 +225,6 @@ exports.api = function() {
  */
 const formatRequest = function(type, ...args) {
     switch (type) {
-        case 'testHSM':
-            type = 0;
-            break;
         case 'digestMessage':
             type = 1;
             break;
@@ -292,13 +289,14 @@ const processRequest = function(peripheral, request) {
                                         if (characteristic.uuid === UART_WRITE_ID) output = characteristic;
                                     });
                                     if (input && output) {
+                                        console.log('Sending the request to the HSM...');
                                         // process any extra blocks in reverse order
                                         var buffer, offset, blockSize;
-                                        var extraBlocks = Math.ceil((request.length - 1) / BLOCK_SIZE) - 1;
+                                        var extraBlocks = Math.ceil((request.length - 2) / BLOCK_SIZE) - 1;
                                         var block = extraBlocks;
                                         while (block > 0) {
-                                            // the offset includes the initial request type byte
-                                            offset = block-- * BLOCK_SIZE + 1;
+                                            // the offset includes the header bytes
+                                            offset = block * BLOCK_SIZE + 2;
                                     
                                             // calculate the current block size
                                             blockSize = Math.min(request.length - offset, BLOCK_SIZE);
@@ -306,27 +304,33 @@ const processRequest = function(peripheral, request) {
                                             // copy the request block into the buffer
                                             buffer = request.slice(offset, offset + blockSize);
                                     
-                                            // prepend the extended request type byte to the buffer
-                                            buffer = Buffer.concat([Buffer.from([0xFE]), buffer], blockSize + 1);
+                                            // prepend the header to the buffer
+                                            buffer = Buffer.concat([Buffer.from([0x00, block & 0xFF]), buffer], blockSize + 2);
                                     
                                             // process the extended request buffer
                                             await processBlock(input, output, buffer);
+
+                                            block--;
                                         }
                                     
                                         // process the actual request
-                                        blockSize = Math.min(request.length, BLOCK_SIZE + 1);
+                                        blockSize = Math.min(request.length, BLOCK_SIZE + 2);
                                         buffer = request.slice(0, blockSize);
                                         const response = await processBlock(input, output, buffer);
+                                        console.log('A response was received from the HSM.');
                                         peripheral.disconnect(function() {
+                                            console.log('Disconnected from the HSM.');
                                             resolve(response);
                                         });
                                     } else {
                                         peripheral.disconnect(function() {
+                                            console.log('Disconnected from the HSM.');
                                             reject("The UART service doesn't support the right characteristics.");
                                         });
                                     }
                                 } else {
                                     peripheral.disconnect(function() {
+                                        console.log('Disconnected from the HSM.');
                                         reject(cause);
                                     });
                                 }
@@ -334,12 +338,14 @@ const processRequest = function(peripheral, request) {
                         } else {
                             cause = cause || Error('Wrong number of UART services found.');
                             peripheral.disconnect(function() {
+                                console.log('Disconnected from the HSM.');
                                 reject(cause);
                             });
                         }
                     });
                 } else {
                     peripheral.disconnect(function() {
+                        console.log('Disconnected from the HSM.');
                         reject(cause);
                     });
                 }
@@ -353,7 +359,7 @@ const processRequest = function(peripheral, request) {
 
 const processBlock = function(input, output, block) {
     return new Promise(function(resolve, reject) {
-        input.on('read', function(response, isNotification) {
+        input.once('read', function(response, isNotification) {
             console.log('Read completed, ' + response.length + ' bytes read.');
             if (response.length === 1) {
                 const value = response.readUInt8(0);
