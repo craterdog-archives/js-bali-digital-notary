@@ -274,37 +274,7 @@ const findPeripheral = function() {
 };
 
 
-const processRequest = async function(peripheral, request) {
-    // process any extra blocks in reverse order
-    var buffer, offset, blockSize;
-    var extraBlocks = Math.ceil((request.length - 1) / BLOCK_SIZE) - 1;
-    var block = extraBlocks;
-    while (block > 0) {
-        // the offset includes the initial request type byte
-        offset = block-- * BLOCK_SIZE + 1;
-
-        // calculate the current block size
-        blockSize = Math.min(request.length - offset, BLOCK_SIZE);
-
-        // copy the request block into the buffer
-        buffer = request.slice(offset, offset + blockSize);
-
-        // prepend the extended request type byte to the buffer
-        buffer = Buffer.concat([Buffer.from([0xFE]), buffer], blockSize + 1);
-
-        // process the extended request buffer
-        await processBlock(peripheral, buffer);
-    }
-
-    // process the actual request
-    blockSize = Math.min(request.length, BLOCK_SIZE + 1);
-    buffer = request.slice(0, blockSize);
-    const response = await processBlock(peripheral, buffer);
-    return response;
-};
-
-
-const processBlock = function(peripheral, block) {
+const processRequest = function(peripheral, request) {
     return new Promise(function(resolve, reject) {
         if (peripheral) {
             console.log('Attempting to connect to the HSM...');
@@ -313,7 +283,7 @@ const processBlock = function(peripheral, block) {
                     console.log('Successfully connected.');
                     peripheral.discoverServices([UART_SERVICE_ID], function(cause, services) {
                         if (!cause && services.length === 1) {
-                            services[0].discoverCharacteristics([], function(cause, characteristics) {
+                            services[0].discoverCharacteristics([], async function(cause, characteristics) {
                                 if (!cause) {
                                     var input, output;
                                     characteristics.forEach (characteristic => {
@@ -322,31 +292,37 @@ const processBlock = function(peripheral, block) {
                                         if (characteristic.uuid === UART_WRITE_ID) output = characteristic;
                                     });
                                     if (input && output) {
-                                        input.on('read', function(response, isNotification) {
-                                            if (response.length === 1) {
-                                                const value = response.readUInt8(0);
-                                                switch (value) {
-                                                    case 0:
-                                                        response = false;
-                                                        break;
-                                                    case 1:
-                                                        response = true;
-                                                        break;
-                                                    default:
-                                                        response = Error('Writing of the block failed.');
-                                                }
-                                            } else {
-                                            }
-                                            peripheral.disconnect(function() {
-                                                console.log('Disconnected from the HSM.');
-                                                resolve(response);
-                                            });
+                                        // process any extra blocks in reverse order
+                                        var buffer, offset, blockSize;
+                                        var extraBlocks = Math.ceil((request.length - 1) / BLOCK_SIZE) - 1;
+                                        var block = extraBlocks;
+                                        while (block > 0) {
+                                            // the offset includes the initial request type byte
+                                            offset = block-- * BLOCK_SIZE + 1;
+                                    
+                                            // calculate the current block size
+                                            blockSize = Math.min(request.length - offset, BLOCK_SIZE);
+                                    
+                                            // copy the request block into the buffer
+                                            buffer = request.slice(offset, offset + blockSize);
+                                    
+                                            // prepend the extended request type byte to the buffer
+                                            buffer = Buffer.concat([Buffer.from([0xFE]), buffer], blockSize + 1);
+                                    
+                                            // process the extended request buffer
+                                            await processBlock(input, output, buffer);
+                                        }
+                                    
+                                        // process the actual request
+                                        blockSize = Math.min(request.length, BLOCK_SIZE + 1);
+                                        buffer = request.slice(0, blockSize);
+                                        const response = await processBlock(input, output, buffer);
+                                        peripheral.disconnect(function() {
+                                            resolve(response);
                                         });
-                                        input.subscribe(function() {
-                                            output.write(block, false, function() {
-                                                console.log('Write completed, ' + block.length + ' bytes written.');
-                                                // can't resolve it until the response is read
-                                            });
+                                    } else {
+                                        peripheral.disconnect(function() {
+                                            reject("The UART service doesn't support the right characteristics.");
                                         });
                                     }
                                 } else {
@@ -371,5 +347,34 @@ const processBlock = function(peripheral, block) {
         } else {
             reject('No HSM is near by.');
         }
+    });
+};
+
+
+const processBlock = function(input, output, block) {
+    return new Promise(function(resolve, reject) {
+        input.on('read', function(response, isNotification) {
+            console.log('Read completed, ' + response.length + ' bytes read.');
+            if (response.length === 1) {
+                const value = response.readUInt8(0);
+                switch (value) {
+                    case 0:
+                        response = false;
+                        break;
+                    case 1:
+                        response = true;
+                        break;
+                    default:
+                        response = Error('Writing of the block failed.');
+                }
+            }
+            resolve(response);
+        });
+        input.subscribe(function() {
+            output.write(block, false, function() {
+                console.log('Write completed, ' + block.length + ' bytes written.');
+                // can't resolve it until the response is read
+            });
+        });
     });
 };
