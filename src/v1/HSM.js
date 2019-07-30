@@ -24,6 +24,7 @@ const bluetooth = require('@abandonware/noble');
 const PROTOCOL = 'v1';
 const DIGEST = 'sha512';
 const SIGNATURE = 'ed25519';
+const BLOCK_SIZE = 511;  // one less than the maximum MTU size
 
 // These are viewed from the client (mobile device) perspective
 const UART_SERVICE_ID = '6e400001b5a3f393e0a9e50e24dcca9e';
@@ -90,9 +91,11 @@ exports.api = function() {
          */
         digestMessage: async function(message) {
             try {
+                console.log("\nDigesting a message...");
                 if (this.initializeAPI) await this.initializeAPI();
                 const request = formatRequest('digestMessage', Buffer.from(message, 'utf8'));
                 const digest = await processRequest(peripheral, request);
+                console.log("digest: " + digest.toString('hex'));
                 return digest;
             } catch (cause) {
                 throw Error('A digest of the message could not be generated: ' + cause);
@@ -106,12 +109,14 @@ exports.api = function() {
          */
         generateKeys: async function() {
             try {
+                console.log("\n(Re)generating the keys...");
                 if (this.initializeAPI) await this.initializeAPI();
                 // TODO: erase previousSecret
                 previousSecret = secret;
                 secret = crypto.randomBytes(32);
                 const request = formatRequest('generateKeys', secret);
                 const publicKey = await processRequest(peripheral, request);
+                console.log("public key: " + publicKey.toString('hex'));
                 return publicKey;
             } catch (cause) {
                 throw Error('A new key pair could not be generated: ' + cause);
@@ -130,6 +135,7 @@ exports.api = function() {
          */
         signMessage: async function(message) {
             try {
+                console.log("\nSigning a message...");
                 if (this.initializeAPI) await this.initializeAPI();
                 var request;
                 if (previousSecret) {
@@ -140,6 +146,7 @@ exports.api = function() {
                     request = formatRequest('signMessage', secret, Buffer.from(message, 'utf8'));
                 }
                 const signature = await processRequest(peripheral, request);
+                console.log("signature: " + signature.toString('hex'));
                 return signature;
             } catch (cause) {
                 throw Error('A digital signature of the message could not be generated: ' + cause);
@@ -161,9 +168,11 @@ exports.api = function() {
          */
         validSignature: async function(message, signature, aPublicKey) {
             try {
+                console.log("\nValidating a signature...");
                 if (this.initializeAPI) await this.initializeAPI();
                 const request = formatRequest('validSignature', Buffer.from(message, 'utf8'), signature, aPublicKey);
                 const isValid = (await processRequest(peripheral, request))[0] ? true : false;
+                console.log("is valid: " + isValid);
                 return isValid;
             } catch (cause) {
                 throw Error('The digital signature of the message could not be validated: ' + cause);
@@ -177,9 +186,11 @@ exports.api = function() {
          */
         eraseKeys: async function() {
             try {
+                console.log("\nErasing the keys...");
                 if (this.initializeAPI) await this.initializeAPI();
                 const request = formatRequest('eraseKeys');
                 const succeeded = (await processRequest(peripheral, request))[0] ? true : false;
+                console.log("succeeded: " + succeeded);
                 return succeeded;
             } catch (cause) {
                 throw Error('The keys could not be erased: ' + cause);
@@ -214,6 +225,9 @@ exports.api = function() {
  */
 const formatRequest = function(type, ...args) {
     switch (type) {
+        case 'testHSM':
+            type = 0;
+            break;
         case 'digestMessage':
             type = 1;
             break;
@@ -229,9 +243,6 @@ const formatRequest = function(type, ...args) {
         case 'eraseKeys':
             type = 5;
             break;
-        case 'testHSM':
-            type = 42;
-            break;
     }
     var request = Buffer.from([type & 0xFF, args.length & 0xFF]);
     args.forEach(arg => {
@@ -239,7 +250,7 @@ const formatRequest = function(type, ...args) {
         request = Buffer.concat([
             request,                                               // the request thus far
             Buffer.from([(length & 0xFF00) >> 8, length & 0xFF]),  // the length of this argument
-            arg],                                                   // the argument bytes
+            arg],                                                  // the argument bytes
             request.length + length + 2                            // the length of the new buffer
         );
     });
@@ -251,7 +262,7 @@ const findPeripheral = function() {
     return new Promise(function(resolve, reject) {
         bluetooth.on('discover', function(peripheral) {
             const advertisement = peripheral.advertisement;
-            console.log('Found a peripheral: ' + advertisement.localName);
+            console.log('Found ' + advertisement.localName + '.');
             if (advertisement.localName === 'ButtonUp') {
                 bluetooth.stopScanning();
                 resolve(peripheral);
@@ -263,73 +274,102 @@ const findPeripheral = function() {
 };
 
 
-const processRequest = function(peripheral, request) {
+const processRequest = async function(peripheral, request) {
+    // process any extra blocks in reverse order
+    var buffer, offset, blockSize;
+    var extraBlocks = Math.ceil((request.length - 1) / BLOCK_SIZE) - 1;
+    var block = extraBlocks;
+    while (block > 0) {
+        // the offset includes the initial request type byte
+        offset = block-- * BLOCK_SIZE + 1;
+
+        // calculate the current block size
+        blockSize = Math.min(request.length - offset, BLOCK_SIZE);
+
+        // copy the request block into the buffer
+        buffer = request.slice(offset, offset + blockSize);
+
+        // prepend the extended request type byte to the buffer
+        buffer = Buffer.concat([Buffer.from([0xFE]), buffer], blockSize + 1);
+
+        // process the extended request buffer
+        await processBlock(peripheral, buffer);
+    }
+
+    // process the actual request
+    blockSize = Math.min(request.length, BLOCK_SIZE + 1);
+    buffer = request.slice(0, blockSize);
+    const response = await processBlock(peripheral, buffer);
+    return response;
+};
+
+
+const processBlock = function(peripheral, block) {
     return new Promise(function(resolve, reject) {
-        if (peripheral === undefined) reject('No HSM near by.');
-        console.log('Attempting to connect...');
-        peripheral.connect(function(cause) {
-            if (!cause) {
-                console.log('Successfully connected.');
-                peripheral.discoverServices([UART_SERVICE_ID], function(cause, services) {
-                    if (!cause && services.length === 1) {
-                        services[0].discoverCharacteristics([], function(cause, characteristics) {
-                            if (!cause) {
-                                var input, output;
-                                characteristics.forEach (characteristic => {
-                                    // TODO: make it more robust by checking properties instead of Ids
-                                    if (characteristic.uuid === UART_NOTIFICATION_ID) input = characteristic;
-                                    if (characteristic.uuid === UART_WRITE_ID) output = characteristic;
-                                });
-                                if (input && output) {
-                                    input.on('read', function(response, isNotification) {
-                                        console.log('Received notification: ' + isNotification);
-                                        if (response.length === 1) {
-                                            const value = response.readUInt8(0);
-                                            switch (value) {
-                                                case 0:
-                                                    response = false;
-                                                    break;
-                                                case 1:
-                                                    response = true;
-                                                    break;
-                                                default:
-                                                    response = Error('The request failed.');
-                                            }
-                                            console.log('response: ' + response);
-                                        } else {
-                                            console.log('response: ' + response.toString('hex'));
-                                        }
-                                        peripheral.disconnect(function() {
-                                            console.log('Peripheral disconnected.');
-                                            resolve(response);
-                                        });
+        if (peripheral) {
+            console.log('Attempting to connect to the HSM...');
+            peripheral.connect(function(cause) {
+                if (!cause) {
+                    console.log('Successfully connected.');
+                    peripheral.discoverServices([UART_SERVICE_ID], function(cause, services) {
+                        if (!cause && services.length === 1) {
+                            services[0].discoverCharacteristics([], function(cause, characteristics) {
+                                if (!cause) {
+                                    var input, output;
+                                    characteristics.forEach (characteristic => {
+                                        // TODO: make it more robust by checking properties instead of Ids
+                                        if (characteristic.uuid === UART_NOTIFICATION_ID) input = characteristic;
+                                        if (characteristic.uuid === UART_WRITE_ID) output = characteristic;
                                     });
-                                    input.subscribe(function() {
-                                        console.log('Notification subscription succeeded.');
-                                        output.write(request, false, function() {
-                                            console.log('Write completed.');
-                                            // can't resolve it until the response is read
+                                    if (input && output) {
+                                        input.on('read', function(response, isNotification) {
+                                            if (response.length === 1) {
+                                                const value = response.readUInt8(0);
+                                                switch (value) {
+                                                    case 0:
+                                                        response = false;
+                                                        break;
+                                                    case 1:
+                                                        response = true;
+                                                        break;
+                                                    default:
+                                                        response = Error('Writing of the block failed.');
+                                                }
+                                            } else {
+                                            }
+                                            peripheral.disconnect(function() {
+                                                console.log('Disconnected from the HSM.');
+                                                resolve(response);
+                                            });
                                         });
+                                        input.subscribe(function() {
+                                            output.write(block, false, function() {
+                                                console.log('Write completed, ' + block.length + ' bytes written.');
+                                                // can't resolve it until the response is read
+                                            });
+                                        });
+                                    }
+                                } else {
+                                    peripheral.disconnect(function() {
+                                        reject(cause);
                                     });
                                 }
-                            } else {
-                                peripheral.disconnect(function() {
-                                    reject(cause);
-                                });
-                            }
-                        });
-                    } else {
-                        cause = cause || Error('Wrong number of UART services found.');
-                        peripheral.disconnect(function() {
-                            reject(cause);
-                        });
-                    }
-                });
-            } else {
-                peripheral.disconnect(function() {
-                    reject(cause);
-                });
-            }
-        });
+                            });
+                        } else {
+                            cause = cause || Error('Wrong number of UART services found.');
+                            peripheral.disconnect(function() {
+                                reject(cause);
+                            });
+                        }
+                    });
+                } else {
+                    peripheral.disconnect(function() {
+                        reject(cause);
+                    });
+                }
+            });
+        } else {
+            reject('No HSM is near by.');
+        }
     });
 };

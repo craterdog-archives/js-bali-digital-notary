@@ -41,11 +41,6 @@ describe('Bali Digital Notary™', function() {
             expect(protocols.isEqualTo(expected)).to.equal(true);
         });
 
-        it('should digest a message', async function() {
-            const digest = await hsm.digestMessage('This is a test...');
-            expect(digest).to.exist;
-        });
-
         it('should generate the keys', async function() {
             notaryCertificate = await notaryAPI.generateKey();
             expect(notaryCertificate).to.exist;
