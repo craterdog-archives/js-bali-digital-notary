@@ -188,11 +188,13 @@ exports.api = function(securityModule, accountId, directory, debug) {
                     $type: bali.parse('/bali/notary/Document/v1')
                 }));
                 console.log('certificate: ' + certificate);
-                const signature = bali.binary(await securityModule.signMessage(certificate.toString()));
+                var bytes = Buffer.from(certificate.toString(), 'utf8');
+                const signature = bali.binary(await securityModule.signBytes(bytes));
                 certificate.setValue('$signature', signature);
 
                 // cache the new certificate citation
-                const digest = bali.binary(await securityModule.digestMessage(certificate.toString()));
+                bytes = Buffer.from(certificate.toString(), 'utf8');
+                const digest = bali.binary(await securityModule.digestBytes(bytes));
                 citation = bali.catalog({
                     $protocol: PROTOCOL,
                     $timestamp: timestamp,
@@ -268,7 +270,8 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 const parameters = document.getValue('$component').getParameters();
                 const tag = parameters.getParameter('$tag');
                 const version = parameters.getParameter('$version');
-                const digest = bali.binary(await securityModule.digestMessage(document.toString()));
+                const bytes = Buffer.from(document.toString(), 'utf8');
+                const digest = bali.binary(await securityModule.digestBytes(bytes));
                 const citation = bali.catalog({
                     $protocol: PROTOCOL,
                     $timestamp: bali.moment(),  // now
@@ -308,7 +311,8 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 validateParameter('$citationMatches', 'citation', citation);
                 validateParameter('$citationMatches', 'document', document);
                 const requiredModule = selectSecurityModule('$citationMatches', securityModule, citation);
-                var digest = bali.binary(await requiredModule.digestMessage(document.toString()));
+                const bytes = Buffer.from(document.toString(), 'utf8');
+                var digest = bali.binary(await requiredModule.digestBytes(bytes));
                 return digest.isEqualTo(citation.getValue('$digest'));
             } catch (cause) {
                 const exception = bali.exception({
@@ -353,7 +357,8 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 }, bali.parameters({
                     $type: bali.parse('/bali/notary/Document/v1')
                 }));
-                const signature = bali.binary(await securityModule.signMessage(notarizedComponent.toString()));
+                const bytes = Buffer.from(notarizedComponent.toString(), 'utf8');
+                const signature = bali.binary(await securityModule.signBytes(bytes));
                 notarizedComponent.setValue('$signature', signature);
                 return notarizedComponent;
             } catch (cause) {
@@ -391,7 +396,8 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 const publicKey = certificate.getValue('$publicKey');
                 const signature = document.getValue('$signature');
                 const requiredModule = selectSecurityModule('$documentIsValid', securityModule, certificate);
-                return await requiredModule.validSignature(catalog.toString(), signature.getValue(), publicKey.getValue());
+                const bytes = Buffer.from(catalog.toString(), 'utf8');
+                return await requiredModule.validSignature(bytes, signature.getValue(), publicKey.getValue());
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '/bali/notary/DigitalNotary',

@@ -98,21 +98,21 @@ exports.api = function(keyFile) {
 
         /**
          * This function returns a cryptographically secure digital digest of the
-         * specified message. The generated digital digest will always be the same
-         * for the same message.
+         * specified bytes. The generated digital digest will always be the same
+         * for the same bytes.
          *
-         * @param {String} message The message to be digested.
-         * @returns {Buffer} A byte buffer containing a digital digest of the message.
+         * @param {String} bytes The bytes to be digested.
+         * @returns {Buffer} A byte buffer containing a digital digest of the bytes.
          */
-        digestMessage: async function(message) {
+        digestBytes: async function(bytes) {
             try {
                 if (this.initializeAPI) await this.initializeAPI();
                 const hash = hasher.createHash(DIGEST);
-                hash.update(message);
+                hash.update(bytes);
                 const digest = hash.digest();
                 return digest;
             } catch (cause) {
-                throw Error('A digest of the message could not be generated: ' + cause);
+                throw Error('A digest of the bytes could not be generated: ' + cause);
             }
         },
 
@@ -142,39 +142,39 @@ exports.api = function(keyFile) {
         },
 
         /**
-         * This function generates a digital signature of the specified message using
+         * This function generates a digital signature of the specified bytes using
          * the current private key (or the old private key, one time only, if it exists).
          * This allows a new certificate to be signed using the previous private key.
          * The resulting digital signature can then be verified using the corresponding
          * public key.
          * 
-         * @param {String} message The message to be digitally signed.
+         * @param {String} bytes The bytes to be digitally signed.
          * @returns {Buffer} A byte buffer containing the resulting digital signature.
          */
-        signMessage: async function(message) {
+        signBytes: async function(bytes) {
             try {
                 if (this.initializeAPI) await this.initializeAPI();
                 var signature;
                 if (previousKeys) {
-                    // the message is a certificate containing the new public key, so sign
+                    // the bytes is a certificate containing the new public key, so sign
                     // it using the old private key to enforce a valid certificate chain
-                    signature = Buffer.from(signer.detached(Buffer.from(message, 'utf8'), previousKeys.privateKey));
+                    signature = Buffer.from(signer.detached(bytes, previousKeys.privateKey));
                     previousKeys = undefined;
                 } else {
-                    signature = Buffer.from(signer.detached(Buffer.from(message, 'utf8'), keys.privateKey));
+                    signature = Buffer.from(signer.detached(bytes, keys.privateKey));
                 }
                 return signature;
             } catch (cause) {
-                throw Error('A digital signature of the message could not be generated: ' + cause);
+                throw Error('A digital signature of the bytes could not be generated: ' + cause);
             }
         },
 
         /**
          * This function uses the specified public key to determine whether or not
          * the specified digital signature was generated using the corresponding
-         * private key on the specified message.
+         * private key on the specified bytes.
          *
-         * @param {String} message The digitally signed message.
+         * @param {String} bytes The digitally signed bytes.
          * @param {Buffer} signature A byte buffer containing the digital signature
          * allegedly generated using the corresponding private key.
          * @param {Buffer} aPublicKey An optional byte buffer containing the public
@@ -182,14 +182,14 @@ exports.api = function(keyFile) {
          * current public key for this security module is used.
          * @returns {Boolean} Whether or not the digital signature is valid.
          */
-        validSignature: async function(message, signature, aPublicKey) {
+        validSignature: async function(bytes, signature, aPublicKey) {
             try {
                 if (this.initializeAPI) await this.initializeAPI();
                 aPublicKey = aPublicKey || keys.publicKey;
-                const isValid = signer.detached.verify(Buffer.from(message, 'utf8'), signature, aPublicKey);
+                const isValid = signer.detached.verify(bytes, signature, aPublicKey);
                 return isValid;
             } catch (cause) {
-                throw Error('The digital signature of the message could not be validated: ' + cause);
+                throw Error('The digital signature of the bytes could not be validated: ' + cause);
             }
         },
 

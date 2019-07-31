@@ -83,22 +83,22 @@ exports.api = function() {
 
         /**
          * This function returns a cryptographically secure digital digest of the
-         * specified message. The generated digital digest will always be the same
-         * for the same message.
+         * specified bytes. The generated digital digest will always be the same
+         * for the same bytes.
          *
-         * @param {String} message The message to be digested.
-         * @returns {Buffer} A byte buffer containing a digital digest of the message.
+         * @param {Buffer} bytes The bytes to be digested.
+         * @returns {Buffer} A byte buffer containing a digital digest of the bytes.
          */
-        digestMessage: async function(message) {
+        digestBytes: async function(bytes) {
             try {
-                console.log("\nDigesting a message...");
+                console.log("\nDigesting bytes...");
                 if (this.initializeAPI) await this.initializeAPI();
-                const request = formatRequest('digestMessage', Buffer.from(message, 'utf8'));
+                const request = formatRequest('digestBytes', bytes);
                 const digest = await processRequest(peripheral, request);
                 console.log("digest: " + digest.toString('hex'));
                 return digest;
             } catch (cause) {
-                throw Error('A digest of the message could not be generated: ' + cause);
+                throw Error('A digest of the bytes could not be generated: ' + cause);
             }
         },
 
@@ -111,10 +111,14 @@ exports.api = function() {
             try {
                 console.log("\n(Re)generating the keys...");
                 if (this.initializeAPI) await this.initializeAPI();
-                // TODO: erase previousSecret
                 previousSecret = secret;
                 secret = crypto.randomBytes(32);
-                const request = formatRequest('generateKeys', secret);
+                var request;
+                if (previousSecret) {
+                    request = formatRequest('generateKeys', secret, previousSecret);
+                } else {
+                    request = formatRequest('generateKeys', secret);
+                }
                 const publicKey = await processRequest(peripheral, request);
                 console.log("public key: " + publicKey.toString('hex'));
                 return publicKey;
@@ -124,41 +128,40 @@ exports.api = function() {
         },
 
         /**
-         * This function generates a digital signature of the specified message using
+         * This function generates a digital signature of the specified bytes using
          * the current private key (or the old private key, one time only, if it exists).
          * This allows a new certificate to be signed using the previous private key.
          * The resulting digital signature can then be verified using the corresponding
          * public key.
          * 
-         * @param {String} message The message to be digitally signed.
+         * @param {Buffer} bytes The bytes to be digitally signed.
          * @returns {Buffer} A byte buffer containing the resulting digital signature.
          */
-        signMessage: async function(message) {
+        signBytes: async function(bytes) {
             try {
-                console.log("\nSigning a message...");
+                console.log("\nSigning bytes...");
                 if (this.initializeAPI) await this.initializeAPI();
                 var request;
                 if (previousSecret) {
-                    request = formatRequest('signMessage', previousSecret, Buffer.from(message, 'utf8'));
-                    // TODO: erase previousSecret
+                    request = formatRequest('signBytes', previousSecret, bytes);
                     previousSecret = undefined;
                 } else {
-                    request = formatRequest('signMessage', secret, Buffer.from(message, 'utf8'));
+                    request = formatRequest('signBytes', secret, bytes);
                 }
                 const signature = await processRequest(peripheral, request);
                 console.log("signature: " + signature.toString('hex'));
                 return signature;
             } catch (cause) {
-                throw Error('A digital signature of the message could not be generated: ' + cause);
+                throw Error('A digital signature of the bytes could not be generated: ' + cause);
             }
         },
 
         /**
          * This function uses the specified public key to determine whether or not
          * the specified digital signature was generated using the corresponding
-         * private key on the specified message.
+         * private key on the specified bytes.
          *
-         * @param {String} message The digitally signed message.
+         * @param {Buffer} bytes The digitally signed bytes.
          * @param {Buffer} signature A byte buffer containing the digital signature
          * allegedly generated using the corresponding private key.
          * @param {Buffer} aPublicKey An optional byte buffer containing the public
@@ -166,16 +169,16 @@ exports.api = function() {
          * current public key for this security module is used.
          * @returns {Boolean} Whether or not the digital signature is valid.
          */
-        validSignature: async function(message, signature, aPublicKey) {
+        validSignature: async function(bytes, signature, aPublicKey) {
             try {
                 console.log("\nValidating a signature...");
                 if (this.initializeAPI) await this.initializeAPI();
-                const request = formatRequest('validSignature', Buffer.from(message, 'utf8'), signature, aPublicKey);
+                const request = formatRequest('validSignature', bytes, signature, aPublicKey);
                 const isValid = (await processRequest(peripheral, request))[0] ? true : false;
                 console.log("is valid: " + isValid);
                 return isValid;
             } catch (cause) {
-                throw Error('The digital signature of the message could not be validated: ' + cause);
+                throw Error('The digital signature of the bytes could not be validated: ' + cause);
             }
         },
 
@@ -225,13 +228,13 @@ exports.api = function() {
  */
 const formatRequest = function(type, ...args) {
     switch (type) {
-        case 'digestMessage':
+        case 'digestBytes':
             type = 1;
             break;
         case 'generateKeys':
             type = 2;
             break;
-        case 'signMessage':
+        case 'signBytes':
             type = 3;
             break;
         case 'validSignature':
@@ -255,6 +258,13 @@ const formatRequest = function(type, ...args) {
 };
 
 
+/**
+ * This function searches for a bluetooth peripheral that implements the hardware security
+ * module (HSM). Once one is found it stops searching. The function is asynchronous and
+ * returns a promise to attempt to find the peripheral.
+ * 
+ * @returns {Promise} A promise to return a matching peripheral.
+ */
 const findPeripheral = function() {
     return new Promise(function(resolve, reject) {
         bluetooth.on('discover', function(peripheral) {
@@ -271,6 +281,60 @@ const findPeripheral = function() {
 };
 
 
+/**
+ * This function writes a block of bytes to the input characteristic of a BLEUart service
+ * and reads the response from the output characteristic.  The function is asynchronous and
+ * returns a promise to attempt to process the block of bytes.
+ * 
+ * @param {Characteristic} input The input characteristic for the BLEUart service.
+ * @param {Characteristic} output The output characteristic for the BLEUart service.
+ * @param {Buffer} block The block of bytes to be written.
+ * @returns {Promise} A promise to return a buffer containing the bytes for the response from
+ * the service.
+ */
+const processBlock = function(input, output, block) {
+    return new Promise(function(resolve, reject) {
+        input.once('read', function(response, isNotification) {
+            console.log('Read completed, ' + response.length + ' bytes read.');
+            if (response.length === 1) {
+                const value = response.readUInt8(0);
+                // convert single byte responses into booleans or errors
+                switch (value) {
+                    case 0:
+                        response = false;
+                        break;
+                    case 1:
+                        response = true;
+                        break;
+                    default:
+                        response = Error('Writing of the block failed.');
+                }
+            }
+            resolve(response);
+        });
+        input.subscribe(function() {
+            output.write(block, false, function() {
+                console.log('Write completed, ' + block.length + ' bytes written.');
+                // can't resolve it until the response is read
+            });
+        });
+    });
+};
+
+
+/**
+ * This function sends a request to a BLEUart service for processing. The response is
+ * returned from the service.  The function is asynchronous and returns a promise to
+ * attempt to process the request.
+ * 
+ * Note: A BLEUart service can only handle requests up to 512 bytes in length. If the
+ * specified request is longer than this limit, it is broken up into separate 512 byte
+ * blocks and each block is sent as a separate BLE request.
+ * 
+ * @param {Peripheral} peripheral The remote peripheral to do the processing.
+ * @param {Buffer} request The request to be processed.
+ * @returns {Promise} A promise to return the response from the service.
+ */
 const processRequest = function(peripheral, request) {
     return new Promise(function(resolve, reject) {
         if (peripheral) {
@@ -353,34 +417,5 @@ const processRequest = function(peripheral, request) {
         } else {
             reject('No HSM is near by.');
         }
-    });
-};
-
-
-const processBlock = function(input, output, block) {
-    return new Promise(function(resolve, reject) {
-        input.once('read', function(response, isNotification) {
-            console.log('Read completed, ' + response.length + ' bytes read.');
-            if (response.length === 1) {
-                const value = response.readUInt8(0);
-                switch (value) {
-                    case 0:
-                        response = false;
-                        break;
-                    case 1:
-                        response = true;
-                        break;
-                    default:
-                        response = Error('Writing of the block failed.');
-                }
-            }
-            resolve(response);
-        });
-        input.subscribe(function() {
-            output.write(block, false, function() {
-                console.log('Write completed, ' + block.length + ' bytes written.');
-                // can't resolve it until the response is read
-            });
-        });
     });
 };
