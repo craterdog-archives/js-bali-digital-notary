@@ -77,8 +77,12 @@ exports.api = function() {
          * This function initializes the API.
          */
         initializeAPI: async function() {
-            peripheral = await findPeripheral();
-            this.initializeAPI = undefined;  // can only be called successfully once
+            try {
+                peripheral = await findPeripheral();
+                this.initializeAPI = undefined;  // can only be called successfully once
+            } catch (cause) {
+                throw Error('The HSM could not be initialized: ' + cause);
+            }
         },
 
         /**
@@ -173,7 +177,12 @@ exports.api = function() {
             try {
                 console.log("\nValidating a signature...");
                 if (this.initializeAPI) await this.initializeAPI();
-                const request = formatRequest('validSignature', bytes, signature, aPublicKey);
+                var request;
+                if (aPublicKey) {
+                    request = formatRequest('validSignature', bytes, signature, aPublicKey);
+                } else {
+                    request = formatRequest('validSignature', bytes, signature);
+                }
                 const isValid = (await processRequest(peripheral, request))[0] ? true : false;
                 console.log("is valid: " + isValid);
                 return isValid;
@@ -296,19 +305,9 @@ const processBlock = function(input, output, block) {
     return new Promise(function(resolve, reject) {
         input.once('read', function(response, isNotification) {
             console.log('Read completed, ' + response.length + ' bytes read.');
-            if (response.length === 1) {
-                const value = response.readUInt8(0);
-                // convert single byte responses into booleans or errors
-                switch (value) {
-                    case 0:
-                        response = false;
-                        break;
-                    case 1:
-                        response = true;
-                        break;
-                    default:
-                        response = Error('Writing of the block failed.');
-                }
+            if (response.length === 1 && response.readUInt8(0) > 1) {
+                console.log("response: " + response.readUInt8(0));
+                reject('Processing of the block failed.');
             }
             resolve(response);
         });
@@ -372,7 +371,11 @@ const processRequest = function(peripheral, request) {
                                             buffer = Buffer.concat([Buffer.from([0x00, block & 0xFF]), buffer], blockSize + 2);
                                     
                                             // process the extended request buffer
-                                            await processBlock(input, output, buffer);
+                                            try {
+                                                await processBlock(input, output, buffer);
+                                            } catch (cause) {
+                                                reject(cause);
+                                            }
 
                                             block--;
                                         }
@@ -380,12 +383,16 @@ const processRequest = function(peripheral, request) {
                                         // process the actual request
                                         blockSize = Math.min(request.length, BLOCK_SIZE + 2);
                                         buffer = request.slice(0, blockSize);
-                                        const response = await processBlock(input, output, buffer);
-                                        console.log('A response was received from the HSM.');
-                                        peripheral.disconnect(function() {
-                                            console.log('Disconnected from the HSM.');
-                                            resolve(response);
-                                        });
+                                        try {
+                                            const response = await processBlock(input, output, buffer);
+                                            console.log('A response was received from the HSM.');
+                                            peripheral.disconnect(function() {
+                                                console.log('Disconnected from the HSM.');
+                                                resolve(response);
+                                            });
+                                        } catch (cause) {
+                                            reject(cause);
+                                        }
                                     } else {
                                         peripheral.disconnect(function() {
                                             console.log('Disconnected from the HSM.');

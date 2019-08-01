@@ -128,10 +128,10 @@ describe('Bali Digital Notary™', function() {
             var document = await notaryAPI.signComponent(component);
 
             var citation = await publicAPI.citeDocument(document);
-            isValid = await publicAPI.documentIsValid(document, certificate);
+            isValid = await notaryAPI.documentIsValid(document, certificate);
             expect(isValid).to.equal(false);
 
-            isValid = await publicAPI.documentIsValid(document, newCertificate);
+            isValid = await notaryAPI.documentIsValid(document, newCertificate);
             expect(isValid).to.equal(true);
 
             var matches = await publicAPI.citationMatches(citation, document);
@@ -164,10 +164,24 @@ describe('Bali Digital Notary™', function() {
             document = await notaryAPI.signComponent(document);
 
             citation = await publicAPI.citeDocument(document);
-            isValid = await publicAPI.documentIsValid(document, certificate);
+            isValid = await notaryAPI.documentIsValid(document, certificate);
             expect(isValid).to.equal(true);
             matches = await publicAPI.citationMatches(citation, document);
             expect(matches).to.equal(true);
+        });
+
+    });
+
+    describe('Test Key Erasure', function() {
+
+        it('should erase all keys properly', async function() {
+            await notaryAPI.forgetKey();
+            try {
+                await notaryAPI.signComponent(component);
+                assert.fail('The attempt to sign a component without a key should have failed.');
+            } catch (error) {
+                // expected
+            };
         });
 
     });
