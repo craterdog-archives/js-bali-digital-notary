@@ -97,31 +97,35 @@ exports.api = function(keyFile) {
         } : undefined,
 
         /**
-         * This function returns a cryptographically secure digital digest of the
-         * specified bytes. The generated digital digest will always be the same
-         * for the same bytes.
-         *
-         * @param {String} bytes The bytes to be digested.
-         * @returns {Buffer} A byte buffer containing a digital digest of the bytes.
-         */
-        digestBytes: async function(bytes) {
-            try {
-                if (this.initializeAPI) await this.initializeAPI();
-                const hash = hasher.createHash(DIGEST);
-                hash.update(bytes);
-                const digest = hash.digest();
-                return digest;
-            } catch (cause) {
-                throw Error('A digest of the bytes could not be generated: ' + cause);
-            }
-        },
-
-        /**
          * This function generates a new public-private key pair.
          * 
          * @returns {Buffer} A byte buffer containing the new public key.
          */
         generateKeys: async function() {
+            try {
+                if (this.initializeAPI) await this.initializeAPI();
+                const raw = signer.keyPair();
+                keys = {
+                    publicKey: Buffer.from(raw.publicKey),
+                    privateKey: Buffer.from(raw.secretKey)
+                };
+                const data = {
+                    publicKey: keys.publicKey.toJSON().data,
+                    privateKey: keys.privateKey.toJSON().data
+                };
+                await pfs.writeFile(keyFile, JSON.stringify(data, null, 4), 'utf8');
+                return keys.publicKey;
+            } catch (cause) {
+                throw Error('A new key pair could not be generated: ' + cause);
+            }
+        },
+
+        /**
+         * This function replaces the existing public-private key pair with a new one.
+         * 
+         * @returns {Buffer} A byte buffer containing the new public key.
+         */
+        rotateKeys: async function() {
             try {
                 if (this.initializeAPI) await this.initializeAPI();
                 const raw = signer.keyPair();
@@ -142,13 +146,49 @@ exports.api = function(keyFile) {
         },
 
         /**
+         * This function deletes any existing public-private key pairs.
+         * 
+         * @returns {Boolean} Whether or not the keys were successfully erased.
+         */
+        eraseKeys: async function() {
+            try {
+                if (this.initializeAPI) await this.initializeAPI();
+                keys = undefined;
+                previousKeys = undefined;
+                return true;
+            } catch (cause) {
+                throw Error('The keys could not be erased: ' + cause);
+            }
+        },
+
+        /**
+         * This function returns a cryptographically secure digital digest of the
+         * specified bytes. The generated digital digest will always be the same
+         * for the same bytes.
+         *
+         * @param {Buffer} bytes The bytes to be digested.
+         * @returns {Buffer} A byte buffer containing a digital digest of the bytes.
+         */
+        digestBytes: async function(bytes) {
+            try {
+                if (this.initializeAPI) await this.initializeAPI();
+                const hash = hasher.createHash(DIGEST);
+                hash.update(bytes);
+                const digest = hash.digest();
+                return digest;
+            } catch (cause) {
+                throw Error('A digest of the bytes could not be generated: ' + cause);
+            }
+        },
+
+        /**
          * This function generates a digital signature of the specified bytes using
          * the current private key (or the old private key, one time only, if it exists).
          * This allows a new certificate to be signed using the previous private key.
          * The resulting digital signature can then be verified using the corresponding
          * public key.
          * 
-         * @param {String} bytes The bytes to be digitally signed.
+         * @param {Buffer} bytes The bytes to be digitally signed.
          * @returns {Buffer} A byte buffer containing the resulting digital signature.
          */
         signBytes: async function(bytes) {
@@ -174,15 +214,14 @@ exports.api = function(keyFile) {
          * the specified digital signature was generated using the corresponding
          * private key on the specified bytes.
          *
-         * @param {String} bytes The digitally signed bytes.
+         * @param {Buffer} aPublicKey A byte buffer containing the public key to be
+         * used to validate the signature.
          * @param {Buffer} signature A byte buffer containing the digital signature
          * allegedly generated using the corresponding private key.
-         * @param {Buffer} aPublicKey An optional byte buffer containing the public
-         * key to be used to validate the signature. If none is specified, the
-         * current public key for this security module is used.
+         * @param {Buffer} bytes The digitally signed bytes.
          * @returns {Boolean} Whether or not the digital signature is valid.
          */
-        validSignature: async function(bytes, signature, aPublicKey) {
+        validSignature: async function(aPublicKey, signature, bytes) {
             try {
                 if (this.initializeAPI) await this.initializeAPI();
                 aPublicKey = aPublicKey || keys.publicKey;
@@ -190,22 +229,6 @@ exports.api = function(keyFile) {
                 return isValid;
             } catch (cause) {
                 throw Error('The digital signature of the bytes could not be validated: ' + cause);
-            }
-        },
-
-        /**
-         * This function deletes any existing public-private key pairs.
-         * 
-         * @returns {Boolean} Whether or not the keys were successfully erased.
-         */
-        eraseKeys: async function() {
-            try {
-                if (this.initializeAPI) await this.initializeAPI();
-                keys = undefined;
-                previousKeys = undefined;
-                return true;
-            } catch (cause) {
-                throw Error('The keys could not be erased: ' + cause);
             }
         }
 

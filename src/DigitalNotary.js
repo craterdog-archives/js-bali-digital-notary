@@ -150,7 +150,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
 
         /**
          * This function generates a new public-private key pair and uses the private key as the
-         * new notary key. It returns the new public notary certificate. Note, during regeneration
+         * new notary key. It returns the new public notary certificate. Note, during key rotation
          * the old private key is used to sign the new certificate before it is destroyed.
          *
          * @returns {Catalog} The new notary certificate.
@@ -161,8 +161,8 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 // generate a new public-private key pair
                 publicKey = bali.binary(await securityModule.generateKeys());
                 timestamp = bali.moment(),  // now
-                tag = tag || bali.tag();  // generate a new tag if necessary
-                version = version ? bali.version.nextVersion(version) : bali.version();
+                tag = bali.tag();  // generate a new random tag
+                version = bali.version();
 
                 // create the new notary certificate
                 const component = bali.catalog({
@@ -175,7 +175,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
                     $tag: tag,
                     $version: version,
                     $permissions: '/bali/permissions/public/v1',
-                    $previous: citation || bali.NONE
+                    $previous: bali.NONE
                 }));
 
                 // notarize the notary certificate
@@ -183,7 +183,79 @@ exports.api = function(securityModule, accountId, directory, debug) {
                     $component: component,
                     $protocol: PROTOCOL,
                     $timestamp: timestamp,
-                    $certificate: citation || bali.NONE
+                    $certificate: bali.NONE
+                }, bali.parameters({
+                    $type: bali.parse('/bali/notary/Document/v1')
+                }));
+                console.log('certificate: ' + certificate);
+                var bytes = Buffer.from(certificate.toString(), 'utf8');
+                const signature = bali.binary(await securityModule.signBytes(bytes));
+                certificate.setValue('$signature', signature);
+
+                // cache the new certificate citation
+                bytes = Buffer.from(certificate.toString(), 'utf8');
+                const digest = bali.binary(await securityModule.digestBytes(bytes));
+                citation = bali.catalog({
+                    $protocol: PROTOCOL,
+                    $timestamp: timestamp,
+                    $tag: tag,
+                    $version: version,
+                    $digest: digest
+                }, bali.parameters({
+                    $type: bali.parse('/bali/notary/Citation/v1')
+                }));
+
+                // save the state of the certificate citation
+                await pfs.writeFile(configFile, citation + EOL, {encoding: 'utf8', mode: 0o600});
+
+                return certificate;
+            } catch (cause) {
+                const exception = bali.exception({
+                    $module: '/bali/notary/DigitalNotary',
+                    $procedure: '$generateKey',
+                    $exception: '$unexpected',
+                    $text: bali.text('An unexpected error occurred while attempting to (re)generate the notary key.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
+        },
+
+        /**
+         * This function replaces an existing public-private key pair with a new one. It returns
+         * a new public notary certificate. Note, during key rotation the old private key is used
+         * to sign the new certificate before it is destroyed.
+         *
+         * @returns {Catalog} The new notary certificate.
+         */
+        rotateKey: async function() {
+            if (this.initializeAPI) await this.initializeAPI();
+            try {
+                // generate a new public-private key pair
+                publicKey = bali.binary(await securityModule.rotateKeys());
+                timestamp = bali.moment(),  // now
+                version = bali.version.nextVersion(version);
+
+                // create the new notary certificate
+                const component = bali.catalog({
+                    $protocol: PROTOCOL,
+                    $timestamp: timestamp,
+                    $accountId: accountId,
+                    $publicKey: publicKey
+                }, bali.parameters({
+                    $type: '/bali/notary/Certificate/v1',
+                    $tag: tag,
+                    $version: version,
+                    $permissions: '/bali/permissions/public/v1',
+                    $previous: citation
+                }));
+
+                // notarize the notary certificate
+                const certificate = bali.catalog({
+                    $component: component,
+                    $protocol: PROTOCOL,
+                    $timestamp: timestamp,
+                    $certificate: citation
                 }, bali.parameters({
                     $type: bali.parse('/bali/notary/Document/v1')
                 }));
@@ -397,7 +469,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 const signature = document.getValue('$signature');
                 const requiredModule = selectSecurityModule('$documentIsValid', securityModule, certificate);
                 const bytes = Buffer.from(catalog.toString(), 'utf8');
-                return await requiredModule.validSignature(bytes, signature.getValue(), publicKey.getValue());
+                return await requiredModule.validSignature(publicKey.getValue(), signature.getValue(), bytes);
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '/bali/notary/DigitalNotary',

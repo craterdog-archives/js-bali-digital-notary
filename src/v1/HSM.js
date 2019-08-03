@@ -86,6 +86,62 @@ exports.api = function() {
         },
 
         /**
+         * This function generates a new public-private key pair.
+         * 
+         * @returns {Buffer} A byte buffer containing the new public key.
+         */
+        generateKeys: async function() {
+            try {
+                console.log("\n(Re)generating the keys...");
+                if (this.initializeAPI) await this.initializeAPI();
+                secret = crypto.randomBytes(32);
+                var request = formatRequest('generateKeys', secret);
+                const publicKey = await processRequest(peripheral, request);
+                console.log("public key: " + publicKey.toString('hex'));
+                return publicKey;
+            } catch (cause) {
+                throw Error('A new key pair could not be generated: ' + cause);
+            }
+        },
+        /**
+         * This function replaces the existing public-private key pair with a new one.
+         * 
+         * @returns {Buffer} A byte buffer containing the new public key.
+         */
+        rotateKeys: async function() {
+            try {
+                console.log("\nRotating the keys...");
+                if (this.initializeAPI) await this.initializeAPI();
+                previousSecret = secret;
+                secret = crypto.randomBytes(32);
+                var request = formatRequest('rotateKeys', previousSecret, secret);
+                const publicKey = await processRequest(peripheral, request);
+                console.log("public key: " + publicKey.toString('hex'));
+                return publicKey;
+            } catch (cause) {
+                throw Error('A new key pair could not be generated: ' + cause);
+            }
+        },
+
+        /**
+         * This function deletes any existing public-private key pairs.
+         * 
+         * @returns {Boolean} Whether or not the keys were successfully erased.
+         */
+        eraseKeys: async function() {
+            try {
+                console.log("\nErasing the keys...");
+                if (this.initializeAPI) await this.initializeAPI();
+                const request = formatRequest('eraseKeys');
+                const succeeded = (await processRequest(peripheral, request))[0] ? true : false;
+                console.log("succeeded: " + succeeded);
+                return succeeded;
+            } catch (cause) {
+                throw Error('The keys could not be erased: ' + cause);
+            }
+        },
+
+        /**
          * This function returns a cryptographically secure digital digest of the
          * specified bytes. The generated digital digest will always be the same
          * for the same bytes.
@@ -103,31 +159,6 @@ exports.api = function() {
                 return digest;
             } catch (cause) {
                 throw Error('A digest of the bytes could not be generated: ' + cause);
-            }
-        },
-
-        /**
-         * This function generates a new public-private key pair.
-         * 
-         * @returns {Buffer} A byte buffer containing the new public key.
-         */
-        generateKeys: async function() {
-            try {
-                console.log("\n(Re)generating the keys...");
-                if (this.initializeAPI) await this.initializeAPI();
-                previousSecret = secret;
-                secret = crypto.randomBytes(32);
-                var request;
-                if (previousSecret) {
-                    request = formatRequest('generateKeys', secret, previousSecret);
-                } else {
-                    request = formatRequest('generateKeys', secret);
-                }
-                const publicKey = await processRequest(peripheral, request);
-                console.log("public key: " + publicKey.toString('hex'));
-                return publicKey;
-            } catch (cause) {
-                throw Error('A new key pair could not be generated: ' + cause);
             }
         },
 
@@ -165,47 +196,23 @@ exports.api = function() {
          * the specified digital signature was generated using the corresponding
          * private key on the specified bytes.
          *
-         * @param {Buffer} bytes The digitally signed bytes.
+         * @param {Buffer} aPublicKey A byte buffer containing the public key to be
+         * used to validate the signature.
          * @param {Buffer} signature A byte buffer containing the digital signature
          * allegedly generated using the corresponding private key.
-         * @param {Buffer} aPublicKey An optional byte buffer containing the public
-         * key to be used to validate the signature. If none is specified, the
-         * current public key for this security module is used.
+         * @param {Buffer} bytes The digitally signed bytes.
          * @returns {Boolean} Whether or not the digital signature is valid.
          */
-        validSignature: async function(bytes, signature, aPublicKey) {
+        validSignature: async function(aPublicKey, signature, bytes) {
             try {
                 console.log("\nValidating a signature...");
                 if (this.initializeAPI) await this.initializeAPI();
-                var request;
-                if (aPublicKey) {
-                    request = formatRequest('validSignature', bytes, signature, aPublicKey);
-                } else {
-                    request = formatRequest('validSignature', bytes, signature);
-                }
+                var request = formatRequest('validSignature', aPublicKey, signature, bytes);
                 const isValid = (await processRequest(peripheral, request))[0] ? true : false;
                 console.log("is valid: " + isValid);
                 return isValid;
             } catch (cause) {
                 throw Error('The digital signature of the bytes could not be validated: ' + cause);
-            }
-        },
-
-        /**
-         * This function deletes any existing public-private key pairs.
-         * 
-         * @returns {Boolean} Whether or not the keys were successfully erased.
-         */
-        eraseKeys: async function() {
-            try {
-                console.log("\nErasing the keys...");
-                if (this.initializeAPI) await this.initializeAPI();
-                const request = formatRequest('eraseKeys');
-                const succeeded = (await processRequest(peripheral, request))[0] ? true : false;
-                console.log("succeeded: " + succeeded);
-                return succeeded;
-            } catch (cause) {
-                throw Error('The keys could not be erased: ' + cause);
             }
         }
 
@@ -237,20 +244,23 @@ exports.api = function() {
  */
 const formatRequest = function(type, ...args) {
     switch (type) {
-        case 'digestBytes':
+        case 'generateKeys':
             type = 1;
             break;
-        case 'generateKeys':
+        case 'rotateKeys':
             type = 2;
             break;
-        case 'signBytes':
+        case 'eraseKeys':
             type = 3;
             break;
-        case 'validSignature':
+        case 'digestBytes':
             type = 4;
             break;
-        case 'eraseKeys':
+        case 'signBytes':
             type = 5;
+            break;
+        case 'validSignature':
+            type = 6;
             break;
     }
     var request = Buffer.from([type & 0xFF, args.length & 0xFF]);

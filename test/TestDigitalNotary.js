@@ -113,10 +113,10 @@ describe('Bali Digital Notary™', function() {
 
     });
 
-    describe('Test Key Regeneration', function() {
+    describe('Test Key Rotation', function() {
 
-        it('should regenerate a notary key properly', async function() {
-            var newNotaryCertificate = await notaryAPI.generateKey();
+        it('should rotate a notary key properly', async function() {
+            var newNotaryCertificate = await notaryAPI.rotateKey();
             expect(newNotaryCertificate).to.exist;
 
             const certificate = notaryCertificate.getValue('$component');
