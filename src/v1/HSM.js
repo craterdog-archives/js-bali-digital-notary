@@ -16,6 +16,7 @@
  */
 const crypto = require('crypto');
 const bluetooth = require('@abandonware/noble');
+const bali = require('bali-component-framework');
 
 
 // PRIVATE CONSTANTS
@@ -97,7 +98,7 @@ exports.api = function() {
                 secret = crypto.randomBytes(32);
                 var request = formatRequest('generateKeys', secret);
                 const publicKey = await processRequest(peripheral, request);
-                console.log("public key: " + publicKey.toString('hex'));
+                console.log("public key: '" + bali.codex.base32Encode(publicKey, '    ') + "'");
                 return publicKey;
             } catch (cause) {
                 throw Error('A new key pair could not be generated: ' + cause);
@@ -116,7 +117,7 @@ exports.api = function() {
                 secret = crypto.randomBytes(32);
                 var request = formatRequest('rotateKeys', previousSecret, secret);
                 const publicKey = await processRequest(peripheral, request);
-                console.log("public key: " + publicKey.toString('hex'));
+                console.log("public key: '" + bali.codex.base32Encode(publicKey, '    ') + "'");
                 return publicKey;
             } catch (cause) {
                 throw Error('A new key pair could not be generated: ' + cause);
@@ -155,7 +156,7 @@ exports.api = function() {
                 if (this.initializeAPI) await this.initializeAPI();
                 const request = formatRequest('digestBytes', bytes);
                 const digest = await processRequest(peripheral, request);
-                console.log("digest: " + digest.toString('hex'));
+                console.log("digest: '" + bali.codex.base32Encode(digest, '    ') + "'");
                 return digest;
             } catch (cause) {
                 throw Error('A digest of the bytes could not be generated: ' + cause);
@@ -184,7 +185,7 @@ exports.api = function() {
                     request = formatRequest('signBytes', secret, bytes);
                 }
                 const signature = await processRequest(peripheral, request);
-                console.log("signature: " + signature.toString('hex'));
+                console.log("signature: '" + bali.codex.base32Encode(signature, '    ') + "'");
                 return signature;
             } catch (cause) {
                 throw Error('A digital signature of the bytes could not be generated: ' + cause);
