@@ -17,8 +17,8 @@ const bali = require('bali-component-framework');
 const accountId = bali.tag();
 const directory = 'test/config/';
 const ssm = require('../').ssm();
-const hsm = require('../').hsm();  // uncomment when testing real HSM
-//const hsm = require('../').ssm(directory + accountId.getValue() + '.keys');
+//const hsm = require('../').hsm();  // uncomment when testing real HSM
+const hsm = require('../').ssm(directory + accountId.getValue() + '.keys');
 const publicAPI = require('../').api(ssm, undefined, undefined, debug);
 const notaryAPI = require('../').api(hsm, accountId, directory, debug);
 
