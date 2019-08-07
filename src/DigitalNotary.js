@@ -21,16 +21,6 @@ const os = require('os');
 const pfs = require('fs').promises;
 const bali = require('bali-component-framework');
 
-// import the supported protocols
-const protocols = {
-//  ...
-//  v3: require('./v3'),
-//  v2: require('./v2'),
-    v1: require('./v1')
-};
-const PROTOCOL = Object.keys(protocols)[0];  // the latest protocol
-const preferred = protocols[PROTOCOL];  // the first protocol
-
 // This private constant sets the POSIX end of line character
 const EOL = '\n';
 
@@ -49,6 +39,15 @@ const EOL = '\n';
  * @returns {Object} An object that implements the API for a digital notary.
  */
 exports.api = function(securityModule, accountId, directory, debug) {
+
+    // import the supported public API protocols (in preferred order)
+    const protocols = {
+    //  ...
+    //  v3: require('./v3/SSM').api(undefined, debug),
+    //  v2: require('./v2/SSM').api(undefined, debug),
+        v1: require('./v1/SSM').api(undefined, debug)
+    };
+    const PROTOCOL = Object.keys(protocols)[0];  // the latest protocol
 
     // validate the parameters
     if (accountId) validateParameter('$privateAPI', 'accountId', accountId, 'tag');
@@ -189,7 +188,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 }, bali.parameters({
                     $type: bali.parse('/bali/notary/Document/v1')
                 }));
-                console.log('certificate: ' + certificate);
+                if (debug) console.log('certificate: ' + certificate);
                 var bytes = Buffer.from(certificate.toString(), 'utf8');
                 const signature = bali.binary(await securityModule.signBytes(bytes));
                 certificate.setValue('$signature', signature);
@@ -216,7 +215,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
                     $module: '/bali/notary/DigitalNotary',
                     $procedure: '$generateKey',
                     $exception: '$unexpected',
-                    $text: bali.text('An unexpected error occurred while attempting to (re)generate the notary key.')
+                    $text: bali.text('An unexpected error occurred while attempting to generate the notary key.')
                 }, cause);
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -263,7 +262,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 }, bali.parameters({
                     $type: bali.parse('/bali/notary/Document/v1')
                 }));
-                console.log('certificate: ' + certificate);
+                if (debug) console.log('certificate: ' + certificate);
                 var bytes = Buffer.from(certificate.toString(), 'utf8');
                 const signature = bali.binary(await securityModule.signBytes(bytes));
                 certificate.setValue('$signature', signature);
@@ -290,7 +289,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
                     $module: '/bali/notary/DigitalNotary',
                     $procedure: '$rotateKey',
                     $exception: '$unexpected',
-                    $text: bali.text('An unexpected error occurred while attempting to (re)generate the notary key.')
+                    $text: bali.text('An unexpected error occurred while attempting to rotate the notary key.')
                 }, cause);
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -402,7 +401,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
             try {
                 validateParameter('$citationMatches', 'citation', citation);
                 validateParameter('$citationMatches', 'document', document);
-                const requiredModule = selectSecurityModule('$citationMatches', securityModule, citation);
+                const requiredModule = selectSecurityModule('$citationMatches', protocols, citation);
                 const bytes = Buffer.from(document.toString(), 'utf8');
                 var digest = bali.binary(await requiredModule.digestBytes(bytes));
                 return digest.isEqualTo(citation.getValue('$digest'));
@@ -495,7 +494,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 ]));  // everything but the signature
                 const publicKey = certificate.getValue('$publicKey');
                 const signature = document.getValue('$signature');
-                const requiredModule = selectSecurityModule('$documentIsValid', securityModule, certificate);
+                const requiredModule = selectSecurityModule('$documentIsValid', protocols, certificate);
                 const bytes = Buffer.from(catalog.toString(), 'utf8');
                 return await requiredModule.validSignature(publicKey.getValue(), signature.getValue(), bytes);
             } catch (cause) {
@@ -526,14 +525,14 @@ exports.api = function(securityModule, accountId, directory, debug) {
  * If no matching version is found, then an exception is thrown.
  * 
  * @param {String} functionName The name of the function making the request.
- * @param {Object} preferredModule The preferred security module for the digital notary. 
+ * @param {Object} protocols The list of public API protocols supported by the digital
+ * notary.
  * @param {Catalog} document The notarized document being analyzed.
  * @returns {Object} A security module that supports the required version of the API.
  */
-const selectSecurityModule = function(functionName, preferredModule, document) {
+const selectSecurityModule = function(functionName, protocols, document) {
     const protocol = document.getValue('$protocol').toString();
-    if (protocol === preferredModule.getProtocol()) return preferredModule;
-    const securityModule = protocols[protocol].SSM.api();
+    const securityModule = protocols[protocol];
     if (!securityModule) {
         const exception = bali.exception({
             $module: '/bali/notary/DigitalNotary',

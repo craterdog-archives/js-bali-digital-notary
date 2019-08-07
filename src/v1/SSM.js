@@ -40,12 +40,15 @@ const SIGNATURE = 'ed25519';
  * This function returns a singleton object that implements the API for the software
  * security module (SSM).
  *
- * @param {String} keyFile An optional file in the local directory that contains the
- * key information. If not specified, this API can only be used to perform public
- * key based functions.
+ * @param {String} keyFile An optional filename of the file that contains the current
+ * key information.  If not specified, this API can only be used to perform public key
+ * based functions.
+ * @param {Boolean} debug An optional flag that determines whether or not exceptions
+ * will be logged to the error console.
  * @returns {Object} An object that implements the security module API.
  */
-exports.api = function(keyFile) {
+exports.api = function(keyFile, debug) {
+    debug = debug || false;
     var keys, previousKeys;
 
     return {

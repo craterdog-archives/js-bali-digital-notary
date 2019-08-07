@@ -12,11 +12,14 @@
 /**
  * This function returns an object that implements the API for a software security module.
  * 
- * @param {String} keyfile An optional filename for a file containing the key information.
+ * @param {String} keyfile An optional filename for a file containing the current key information.
+ * If not specified, this API can only be used to perform public key based functions.
+ * @param {Boolean} debug An optional flag that determines whether or not exceptions
+ * will be logged to the error console.
  * @returns {Object} An object that implements the API for a software security module.
  */
-exports.ssm = function(keyfile) {
-    const securityModule = require('./src/v1/SSM').api(keyfile);
+exports.ssm = function(keyfile, debug) {
+    const securityModule = require('./src/v1/SSM').api(keyfile, debug);
     return securityModule;
 };
 
@@ -24,12 +27,12 @@ exports.ssm = function(keyfile) {
 /**
  * This function returns an object that implements the API for a hardware security module.
  * 
- * @param {Buffer} secret A byte buffer containing 32 random bytes that are used to help
- * protect the private key when not in use.
+ * @param {Boolean} debug An optional flag that determines whether or not exceptions
+ * will be logged to the error console.
  * @returns {Object} An object that implements the API for a hardware security module.
  */
-exports.hsm = function(secret) {
-    const securityModule = require('./src/v1/HSM').api(secret);
+exports.hsm = function(debug) {
+    const securityModule = require('./src/v1/HSM').api(debug);
     return securityModule;
 };
 

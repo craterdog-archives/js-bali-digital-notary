@@ -39,9 +39,12 @@ const UART_NOTIFICATION_ID = '6e400003b5a3f393e0a9e50e24dcca9e';
  * This function returns a singleton object that implements the API for the hardware
  * security module (HSM).
  *
+ * @param {Boolean} debug An optional flag that determines whether or not exceptions
+ * will be logged to the error console.
  * @returns {Object} An object that implements the security module API.
  */
-exports.api = function() {
+exports.api = function(debug) {
+    debug = debug || false;
     var peripheral;
     var secret, previousSecret;
 
@@ -79,7 +82,7 @@ exports.api = function() {
          */
         initializeAPI: async function() {
             try {
-                peripheral = await findPeripheral();
+                peripheral = await findPeripheral(debug);
                 this.initializeAPI = undefined;  // can only be called successfully once
             } catch (cause) {
                 throw Error('The HSM could not be initialized: ' + cause);
@@ -93,12 +96,12 @@ exports.api = function() {
          */
         generateKeys: async function() {
             try {
-                console.log("\n(Re)generating the keys...");
+                if (debug) console.log("\nGenerating the keys...");
                 if (this.initializeAPI) await this.initializeAPI();
                 secret = crypto.randomBytes(32);
                 var request = formatRequest('generateKeys', secret);
-                const publicKey = await processRequest(peripheral, request);
-                console.log("public key: '" + bali.codex.base32Encode(publicKey, '    ') + "'");
+                const publicKey = await processRequest(peripheral, request, debug);
+                if (debug) console.log("public key: '" + bali.codex.base32Encode(publicKey, '    ') + "'");
                 return publicKey;
             } catch (cause) {
                 throw Error('A new key pair could not be generated: ' + cause);
@@ -111,13 +114,13 @@ exports.api = function() {
          */
         rotateKeys: async function() {
             try {
-                console.log("\nRotating the keys...");
+                if (debug) console.log("\nRotating the keys...");
                 if (this.initializeAPI) await this.initializeAPI();
                 previousSecret = secret;
                 secret = crypto.randomBytes(32);
                 var request = formatRequest('rotateKeys', previousSecret, secret);
-                const publicKey = await processRequest(peripheral, request);
-                console.log("public key: '" + bali.codex.base32Encode(publicKey, '    ') + "'");
+                const publicKey = await processRequest(peripheral, request, debug);
+                if (debug) console.log("public key: '" + bali.codex.base32Encode(publicKey, '    ') + "'");
                 return publicKey;
             } catch (cause) {
                 throw Error('A new key pair could not be generated: ' + cause);
@@ -131,11 +134,11 @@ exports.api = function() {
          */
         eraseKeys: async function() {
             try {
-                console.log("\nErasing the keys...");
+                if (debug) console.log("\nErasing the keys...");
                 if (this.initializeAPI) await this.initializeAPI();
                 const request = formatRequest('eraseKeys');
-                const succeeded = (await processRequest(peripheral, request))[0] ? true : false;
-                console.log("succeeded: " + succeeded);
+                const succeeded = (await processRequest(peripheral, request, debug))[0] ? true : false;
+                if (debug) console.log("succeeded: " + succeeded);
                 return succeeded;
             } catch (cause) {
                 throw Error('The keys could not be erased: ' + cause);
@@ -152,11 +155,11 @@ exports.api = function() {
          */
         digestBytes: async function(bytes) {
             try {
-                console.log("\nDigesting bytes...");
+                if (debug) console.log("\nDigesting bytes...");
                 if (this.initializeAPI) await this.initializeAPI();
                 const request = formatRequest('digestBytes', bytes);
-                const digest = await processRequest(peripheral, request);
-                console.log("digest: '" + bali.codex.base32Encode(digest, '    ') + "'");
+                const digest = await processRequest(peripheral, request, debug);
+                if (debug) console.log("digest: '" + bali.codex.base32Encode(digest, '    ') + "'");
                 return digest;
             } catch (cause) {
                 throw Error('A digest of the bytes could not be generated: ' + cause);
@@ -175,7 +178,7 @@ exports.api = function() {
          */
         signBytes: async function(bytes) {
             try {
-                console.log("\nSigning bytes...");
+                if (debug) console.log("\nSigning bytes...");
                 if (this.initializeAPI) await this.initializeAPI();
                 var request;
                 if (previousSecret) {
@@ -184,8 +187,8 @@ exports.api = function() {
                 } else {
                     request = formatRequest('signBytes', secret, bytes);
                 }
-                const signature = await processRequest(peripheral, request);
-                console.log("signature: '" + bali.codex.base32Encode(signature, '    ') + "'");
+                const signature = await processRequest(peripheral, request, debug);
+                if (debug) console.log("signature: '" + bali.codex.base32Encode(signature, '    ') + "'");
                 return signature;
             } catch (cause) {
                 throw Error('A digital signature of the bytes could not be generated: ' + cause);
@@ -206,11 +209,11 @@ exports.api = function() {
          */
         validSignature: async function(aPublicKey, signature, bytes) {
             try {
-                console.log("\nValidating a signature...");
+                if (debug) console.log("\nValidating a signature...");
                 if (this.initializeAPI) await this.initializeAPI();
                 var request = formatRequest('validSignature', aPublicKey, signature, bytes);
-                const isValid = (await processRequest(peripheral, request))[0] ? true : false;
-                console.log("is valid: " + isValid);
+                const isValid = (await processRequest(peripheral, request, debug))[0] ? true : false;
+                if (debug) console.log("is valid: " + isValid);
                 return isValid;
             } catch (cause) {
                 throw Error('The digital signature of the bytes could not be validated: ' + cause);
@@ -283,19 +286,21 @@ const formatRequest = function(type, ...args) {
  * module (HSM). Once one is found it stops searching. The function is asynchronous and
  * returns a promise to attempt to find the peripheral.
  * 
+ * @param {Boolean} debug An optional flag that determines whether or not exceptions
+ * will be logged to the error console.
  * @returns {Promise} A promise to return a matching peripheral.
  */
-const findPeripheral = function() {
+const findPeripheral = function(debug) {
     return new Promise(function(resolve, reject) {
         bluetooth.on('discover', function(peripheral) {
             const advertisement = peripheral.advertisement;
-            console.log('Found ' + advertisement.localName + '.');
+            if (debug) console.log('Found ' + advertisement.localName + '.');
             if (advertisement.localName === 'ButtonUp') {
                 bluetooth.stopScanning();
                 resolve(peripheral);
             }
         });
-        console.log('Searching for an HSM...');
+        if (debug) console.log('Searching for an HSM...');
         bluetooth.startScanning([UART_SERVICE_ID]);  // start searching for an HSM (asynchronously)
     });
 };
@@ -309,22 +314,24 @@ const findPeripheral = function() {
  * @param {Characteristic} input The input characteristic for the BLEUart service.
  * @param {Characteristic} output The output characteristic for the BLEUart service.
  * @param {Buffer} block The block of bytes to be written.
+ * @param {Boolean} debug An optional flag that determines whether or not exceptions
+ * will be logged to the error console.
  * @returns {Promise} A promise to return a buffer containing the bytes for the response from
  * the service.
  */
-const processBlock = function(input, output, block) {
+const processBlock = function(input, output, block, debug) {
     return new Promise(function(resolve, reject) {
         input.once('read', function(response, isNotification) {
-            console.log('Read completed, ' + response.length + ' bytes read.');
+            if (debug) console.log('Read completed, ' + response.length + ' bytes read.');
             if (response.length === 1 && response.readUInt8(0) > 1) {
-                console.log("response: " + response.readUInt8(0));
+                if (debug) console.log("response: " + response.readUInt8(0));
                 reject('Processing of the block failed.');
             }
             resolve(response);
         });
         input.subscribe(function() {
             output.write(block, false, function() {
-                console.log('Write completed, ' + block.length + ' bytes written.');
+                if (debug) console.log('Write completed, ' + block.length + ' bytes written.');
                 // can't resolve it until the response is read
             });
         });
@@ -343,15 +350,17 @@ const processBlock = function(input, output, block) {
  * 
  * @param {Peripheral} peripheral The remote peripheral to do the processing.
  * @param {Buffer} request The request to be processed.
+ * @param {Boolean} debug An optional flag that determines whether or not exceptions
+ * will be logged to the error console.
  * @returns {Promise} A promise to return the response from the service.
  */
-const processRequest = function(peripheral, request) {
+const processRequest = function(peripheral, request, debug) {
     return new Promise(function(resolve, reject) {
         if (peripheral) {
-            console.log('Attempting to connect to the HSM...');
+            if (debug) console.log('Attempting to connect to the HSM...');
             peripheral.connect(function(cause) {
                 if (!cause) {
-                    console.log('Successfully connected.');
+                    if (debug) console.log('Successfully connected.');
                     peripheral.discoverServices([UART_SERVICE_ID], function(cause, services) {
                         if (!cause && services.length === 1) {
                             services[0].discoverCharacteristics([], async function(cause, characteristics) {
@@ -363,7 +372,7 @@ const processRequest = function(peripheral, request) {
                                         if (characteristic.uuid === UART_WRITE_ID) output = characteristic;
                                     });
                                     if (input && output) {
-                                        console.log('Sending the request to the HSM...');
+                                        if (debug) console.log('Sending the request to the HSM...');
                                         // process any extra blocks in reverse order
                                         var buffer, offset, blockSize;
                                         var extraBlocks = Math.ceil((request.length - 2) / BLOCK_SIZE) - 1;
@@ -383,7 +392,7 @@ const processRequest = function(peripheral, request) {
                                     
                                             // process the extended request buffer
                                             try {
-                                                await processBlock(input, output, buffer);
+                                                await processBlock(input, output, buffer, debug);
                                             } catch (cause) {
                                                 reject(cause);
                                             }
@@ -395,10 +404,10 @@ const processRequest = function(peripheral, request) {
                                         blockSize = Math.min(request.length, BLOCK_SIZE + 2);
                                         buffer = request.slice(0, blockSize);
                                         try {
-                                            const response = await processBlock(input, output, buffer);
-                                            console.log('A response was received from the HSM.');
+                                            const response = await processBlock(input, output, buffer, debug);
+                                            if (debug) console.log('A response was received from the HSM.');
                                             peripheral.disconnect(function() {
-                                                console.log('Disconnected from the HSM.');
+                                                if (debug) console.log('Disconnected from the HSM.');
                                                 resolve(response);
                                             });
                                         } catch (cause) {
@@ -406,13 +415,13 @@ const processRequest = function(peripheral, request) {
                                         }
                                     } else {
                                         peripheral.disconnect(function() {
-                                            console.log('Disconnected from the HSM.');
+                                            if (debug) console.log('Disconnected from the HSM.');
                                             reject("The UART service doesn't support the right characteristics.");
                                         });
                                     }
                                 } else {
                                     peripheral.disconnect(function() {
-                                        console.log('Disconnected from the HSM.');
+                                        if (debug) console.log('Disconnected from the HSM.');
                                         reject(cause);
                                     });
                                 }
@@ -420,14 +429,14 @@ const processRequest = function(peripheral, request) {
                         } else {
                             cause = cause || Error('Wrong number of UART services found.');
                             peripheral.disconnect(function() {
-                                console.log('Disconnected from the HSM.');
+                                if (debug) console.log('Disconnected from the HSM.');
                                 reject(cause);
                             });
                         }
                     });
                 } else {
                     peripheral.disconnect(function() {
-                        console.log('Disconnected from the HSM.');
+                        if (debug) console.log('Disconnected from the HSM.');
                         reject(cause);
                     });
                 }
