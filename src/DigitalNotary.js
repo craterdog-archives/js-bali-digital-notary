@@ -288,7 +288,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '/bali/notary/DigitalNotary',
-                    $procedure: '$generateKey',
+                    $procedure: '$rotateKey',
                     $exception: '$unexpected',
                     $text: bali.text('An unexpected error occurred while attempting to (re)generate the notary key.')
                 }, cause);
