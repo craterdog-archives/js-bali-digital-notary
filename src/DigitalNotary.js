@@ -156,8 +156,10 @@ exports.api = function(securityModule, accountId, directory, debug) {
          * @returns {Catalog} The new notary certificate.
          */
         generateKey: async function() {
-            if (this.initializeAPI) await this.initializeAPI();
             try {
+                // initialize the digital notary if necessary
+                if (this.initializeAPI) await this.initializeAPI();
+
                 // generate a new public-private key pair
                 publicKey = bali.binary(await securityModule.generateKeys());
                 timestamp = bali.moment(),  // now
@@ -229,8 +231,10 @@ exports.api = function(securityModule, accountId, directory, debug) {
          * @returns {Catalog} The new notary certificate.
          */
         rotateKey: async function() {
-            if (this.initializeAPI) await this.initializeAPI();
             try {
+                // initialize the digital notary if necessary
+                if (this.initializeAPI) await this.initializeAPI();
+
                 // generate a new public-private key pair
                 publicKey = bali.binary(await securityModule.rotateKeys());
                 timestamp = bali.moment(),  // now
@@ -298,8 +302,11 @@ exports.api = function(securityModule, accountId, directory, debug) {
          * it knows about the current public-private key pair.
          */
         forgetKey: async function() {
-            if (this.initializeAPI) await this.initializeAPI();
             try {
+                // initialize the digital notary if necessary
+                if (this.initializeAPI) await this.initializeAPI();
+
+                // erase the state of the digital notary
                 tag = undefined;
                 version = undefined;
                 timestamp = undefined;
@@ -326,8 +333,21 @@ exports.api = function(securityModule, accountId, directory, debug) {
          * with this notary key.
          */
         getCitation: async function() {
-            if (this.initializeAPI) await this.initializeAPI();
-            return citation;
+            try {
+                // initialize the digital notary if necessary
+                if (this.initializeAPI) await this.initializeAPI();
+
+                return citation;
+            } catch (cause) {
+                const exception = bali.exception({
+                    $module: '/bali/notary/DigitalNotary',
+                    $procedure: '$getCitation',
+                    $exception: '$unexpected',
+                    $text: bali.text('An unexpected error occurred while attempting to retrieve the certificate citation.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
         },
 
         /**
@@ -418,9 +438,14 @@ exports.api = function(securityModule, accountId, directory, debug) {
          * @returns {Catalog} A newly notarized document containing the component.
          */
         signComponent: async function(component) {
-            if (this.initializeAPI) await this.initializeAPI();
             try {
+                // initialize the digital notary if necessary
+                if (this.initializeAPI) await this.initializeAPI();
+
+                // validate the component parameter
                 validateParameter('$signComponent', 'component', component);
+
+                // create the document
                 const notarizedComponent = bali.catalog({
                     $component: component,
                     $protocol: PROTOCOL,
@@ -429,9 +454,12 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 }, bali.parameters({
                     $type: bali.parse('/bali/notary/Document/v1')
                 }));
+
+                // sign the document
                 const bytes = Buffer.from(notarizedComponent.toString(), 'utf8');
                 const signature = bali.binary(await securityModule.signBytes(bytes));
                 notarizedComponent.setValue('$signature', signature);
+
                 return notarizedComponent;
             } catch (cause) {
                 const exception = bali.exception({
