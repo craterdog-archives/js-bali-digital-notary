@@ -188,10 +188,10 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 }, bali.parameters({
                     $type: bali.parse('/bali/notary/Document/v1')
                 }));
-                if (debug) console.log('certificate: ' + certificate);
                 var bytes = Buffer.from(certificate.toString(), 'utf8');
                 const signature = bali.binary(await securityModule.signBytes(bytes));
                 certificate.setValue('$signature', signature);
+                if (debug) console.log('certificate: ' + certificate + EOL);
 
                 // cache the new certificate citation
                 bytes = Buffer.from(certificate.toString(), 'utf8');
@@ -205,6 +205,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 }, bali.parameters({
                     $type: bali.parse('/bali/notary/Citation/v1')
                 }));
+                if (debug) console.log('citation: ' + citation + EOL);
 
                 // save the state of the certificate citation
                 await pfs.writeFile(configFile, citation + EOL, {encoding: 'utf8', mode: 0o600});
@@ -262,10 +263,10 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 }, bali.parameters({
                     $type: bali.parse('/bali/notary/Document/v1')
                 }));
-                if (debug) console.log('certificate: ' + certificate);
                 var bytes = Buffer.from(certificate.toString(), 'utf8');
                 const signature = bali.binary(await securityModule.signBytes(bytes));
                 certificate.setValue('$signature', signature);
+                if (debug) console.log('certificate: ' + certificate + EOL);
 
                 // cache the new certificate citation
                 bytes = Buffer.from(certificate.toString(), 'utf8');
@@ -279,6 +280,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 }, bali.parameters({
                     $type: bali.parse('/bali/notary/Citation/v1')
                 }));
+                if (debug) console.log('citation: ' + citation + EOL);
 
                 // save the state of the certificate citation
                 await pfs.writeFile(configFile, citation + EOL, {encoding: 'utf8', mode: 0o600});

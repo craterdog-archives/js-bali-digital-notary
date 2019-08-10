@@ -23,7 +23,7 @@
  */
 const pfs = require('fs').promises;
 const hasher = require('crypto');
-const signer = require('tweetnacl').sign;
+const signer = require('supercop.js');
 
 
 // PRIVATE CONSTANTS
@@ -107,7 +107,8 @@ exports.api = function(keyFile, debug) {
         generateKeys: async function() {
             try {
                 if (this.initializeAPI) await this.initializeAPI();
-                const raw = signer.keyPair();
+                const seed = signer.createSeed();
+                const raw = signer.createKeyPair(seed);
                 keys = {
                     publicKey: Buffer.from(raw.publicKey),
                     privateKey: Buffer.from(raw.secretKey)
@@ -131,7 +132,8 @@ exports.api = function(keyFile, debug) {
         rotateKeys: async function() {
             try {
                 if (this.initializeAPI) await this.initializeAPI();
-                const raw = signer.keyPair();
+                const seed = signer.createSeed();
+                const raw = signer.createKeyPair(seed);
                 previousKeys = keys;
                 keys = {
                     publicKey: Buffer.from(raw.publicKey),
@@ -201,10 +203,10 @@ exports.api = function(keyFile, debug) {
                 if (previousKeys) {
                     // the bytes is a certificate containing the new public key, so sign
                     // it using the old private key to enforce a valid certificate chain
-                    signature = Buffer.from(signer.detached(bytes, previousKeys.privateKey));
+                    signature = Buffer.from(signer.sign(bytes, previousKeys.publicKey, previousKeys.privateKey));
                     previousKeys = undefined;
                 } else {
-                    signature = Buffer.from(signer.detached(bytes, keys.privateKey));
+                    signature = Buffer.from(signer.sign(bytes, keys.publicKey, keys.privateKey));
                 }
                 return signature;
             } catch (cause) {
@@ -228,7 +230,7 @@ exports.api = function(keyFile, debug) {
             try {
                 if (this.initializeAPI) await this.initializeAPI();
                 aPublicKey = aPublicKey || keys.publicKey;
-                const isValid = signer.detached.verify(bytes, signature, aPublicKey);
+                const isValid = signer.verify(signature, bytes, aPublicKey);
                 return isValid;
             } catch (cause) {
                 throw Error('The digital signature of the bytes could not be validated: ' + cause);
