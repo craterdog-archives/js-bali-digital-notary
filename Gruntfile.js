@@ -81,7 +81,7 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-webpack');
 
   grunt.registerTask('build', 'Build the module.', ['clean:build', 'eslint', 'mochaTest']);
-  grunt.registerTask('package', 'Package the libraries.', ['clean:build', 'eslint', 'mochaTest', 'webpack']);
+  grunt.registerTask('package', 'Package the libraries.', ['clean:build', 'eslint', 'webpack']);
   grunt.registerTask('default', 'Default targets.', ['build']);
 
 };

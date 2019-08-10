@@ -16,8 +16,8 @@ const expect = require('chai').expect;
 const bali = require('bali-component-framework');
 const accountId = bali.tag();
 const directory = 'test/config/';
-const securityModule = require('../').ssm(directory + accountId.getValue() + '.keys', debug);
-//const securityModule = require('../').hsm(debug);  // uncomment when testing real HSM
+const securityModule = require('../src/v1/SSM').api(directory + accountId.getValue() + '.keys', debug);
+//const securityModule = require('../src/v1/HSM').api(debug);  // uncomment when testing real HSM
 const notaryAPI = require('../').api(securityModule, accountId, directory, debug);
 
 

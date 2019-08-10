@@ -25,19 +25,6 @@ exports.ssm = function(keyfile, debug) {
 
 
 /**
- * This function returns an object that implements the API for a hardware security module.
- * 
- * @param {Boolean} debug An optional flag that determines whether or not exceptions
- * will be logged to the error console.
- * @returns {Object} An object that implements the API for a hardware security module.
- */
-exports.hsm = function(debug) {
-    const securityModule = require('./src/v1/HSM').api(debug);
-    return securityModule;
-};
-
-
-/**
  * This function returns an object that implements the API for a digital notary including
  * the functions that require access to the private key.
  *
