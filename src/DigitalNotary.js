@@ -74,8 +74,8 @@ exports.api = function(securityModule, accountId, directory, debug) {
             const catalog = bali.catalog({
                 $module: '/bali/notary/DigitalNotary',
                 $protocol: PROTOCOL,
-                $accountId: accountId || bali.NONE,
-                $certificate: citation || bali.NONE
+                $accountId: accountId || bali.pattern.NONE,
+                $certificate: citation || bali.pattern.NONE
             });
             return catalog.toString();
         },
@@ -176,7 +176,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
                     $tag: tag,
                     $version: version,
                     $permissions: '/bali/permissions/public/v1',
-                    $previous: bali.NONE
+                    $previous: bali.pattern.NONE
                 }));
 
                 // notarize the notary certificate
@@ -184,7 +184,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
                     $component: component,
                     $protocol: PROTOCOL,
                     $timestamp: timestamp,
-                    $certificate: bali.NONE
+                    $certificate: bali.pattern.NONE
                 }, bali.parameters({
                     $type: bali.parse('/bali/notary/Document/v1')
                 }));
@@ -430,7 +430,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
          *  * $version - the version of the component
          *  * $permissions - the name of a notarized document containing the permissions defining
          *                   who can access the component
-         *  * $previous - a citation to the previous version of the component (or bali.NONE)
+         *  * $previous - a citation to the previous version of the component (or bali.pattern.NONE)
          * </pre>
          * 
          * The newly notarized component is returned.
@@ -585,7 +585,7 @@ const validateParameter = function(functionName, parameterName, parameterValue, 
                 // A citation must have the following:
                 //  * a parameterized type of /bali/notary/Citation/v...
                 //  * exactly five specific attributes
-                if (parameterValue.getTypeId && parameterValue.isEqualTo(bali.NONE)) return;
+                if (parameterValue.getTypeId && parameterValue.isEqualTo(bali.pattern.NONE)) return;
                 if (parameterValue.getTypeId && parameterValue.getTypeId() === bali.types.CATALOG && parameterValue.getSize() === 5) {
                     validateParameter(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
                     validateParameter(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
@@ -654,7 +654,7 @@ const validateParameter = function(functionName, parameterName, parameterValue, 
         $procedure: functionName,
         $exception: '$invalidParameter',
         $parameter: bali.text(parameterName),
-        $value: parameterValue ? bali.text(parameterValue.toString()) : bali.NONE,
+        $value: parameterValue ? bali.text(parameterValue.toString()) : bali.pattern.NONE,
         $text: bali.text('An invalid parameter value was passed to the function.')
     });
     throw exception;
