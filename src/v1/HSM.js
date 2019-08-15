@@ -85,7 +85,14 @@ exports.api = function(debug) {
                 peripheral = await findPeripheral(debug);
                 this.initializeAPI = undefined;  // can only be called successfully once
             } catch (cause) {
-                throw Error('The HSM could not be initialized: ' + cause);
+                const exception = bali.exception({
+                    $module: '/bali/notary/v1/HSM',
+                    $procedure: '$initializeAPI',
+                    $exception: '$unexpected',
+                    $text: bali.text('The HSM could not be initialized.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
             }
         },
 
@@ -104,7 +111,14 @@ exports.api = function(debug) {
                 if (debug) console.log("public key: '" + bali.codex.base32Encode(publicKey, '    ') + "'");
                 return publicKey;
             } catch (cause) {
-                throw Error('A new key pair could not be generated: ' + cause);
+                const exception = bali.exception({
+                    $module: '/bali/notary/v1/HSM',
+                    $procedure: '$generateKeys',
+                    $exception: '$unexpected',
+                    $text: bali.text('A new key pair could not be generated.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
             }
         },
         /**
@@ -123,7 +137,14 @@ exports.api = function(debug) {
                 if (debug) console.log("public key: '" + bali.codex.base32Encode(publicKey, '    ') + "'");
                 return publicKey;
             } catch (cause) {
-                throw Error('A new key pair could not be generated: ' + cause);
+                const exception = bali.exception({
+                    $module: '/bali/notary/v1/HSM',
+                    $procedure: '$rotateKeys',
+                    $exception: '$unexpected',
+                    $text: bali.text('A new key pair could not be generated.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
             }
         },
 
@@ -141,7 +162,14 @@ exports.api = function(debug) {
                 if (debug) console.log("succeeded: " + succeeded);
                 return succeeded;
             } catch (cause) {
-                throw Error('The keys could not be erased: ' + cause);
+                const exception = bali.exception({
+                    $module: '/bali/notary/v1/HSM',
+                    $procedure: '$eraseKeys',
+                    $exception: '$unexpected',
+                    $text: bali.text('The keys could not be erased.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
             }
         },
 
@@ -162,7 +190,14 @@ exports.api = function(debug) {
                 if (debug) console.log("digest: '" + bali.codex.base32Encode(digest, '    ') + "'");
                 return digest;
             } catch (cause) {
-                throw Error('A digest of the bytes could not be generated: ' + cause);
+                const exception = bali.exception({
+                    $module: '/bali/notary/v1/HSM',
+                    $procedure: '$digestBytes',
+                    $exception: '$unexpected',
+                    $text: bali.text('A digest of the bytes could not be generated.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
             }
         },
 
@@ -184,14 +219,23 @@ exports.api = function(debug) {
                 if (previousSecret) {
                     request = formatRequest('signBytes', previousSecret, bytes);
                     previousSecret = undefined;
-                } else {
+                } else if (secret) {
                     request = formatRequest('signBytes', secret, bytes);
+                } else {
+                    throw Error('No keys exist.');
                 }
                 const signature = await processRequest(peripheral, request, debug);
                 if (debug) console.log("signature: '" + bali.codex.base32Encode(signature, '    ') + "'");
                 return signature;
             } catch (cause) {
-                throw Error('A digital signature of the bytes could not be generated: ' + cause);
+                const exception = bali.exception({
+                    $module: '/bali/notary/v1/HSM',
+                    $procedure: '$signBytes',
+                    $exception: '$unexpected',
+                    $text: bali.text('A digital signature of the bytes could not be generated.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
             }
         },
 
@@ -216,7 +260,14 @@ exports.api = function(debug) {
                 if (debug) console.log("is valid: " + isValid);
                 return isValid;
             } catch (cause) {
-                throw Error('The digital signature of the bytes could not be validated: ' + cause);
+                const exception = bali.exception({
+                    $module: '/bali/notary/v1/HSM',
+                    $procedure: '$validSignature',
+                    $exception: '$unexpected',
+                    $text: bali.text('The digital signature of the bytes could not be validated.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
             }
         }
 

@@ -24,6 +24,7 @@
 const pfs = require('fs').promises;
 const hasher = require('crypto');
 const signer = require('supercop.js');
+const bali = require('bali-component-framework');
 
 
 // PRIVATE CONSTANTS
@@ -95,7 +96,14 @@ exports.api = function(keyFile, debug) {
                 }
                 this.initializeAPI = undefined;  // can only be called successfully once
             } catch (cause) {
-                throw Error('The keys could not be loaded: ' + cause.message);
+                const exception = bali.exception({
+                    $module: '/bali/notary/v1/SSM',
+                    $procedure: '$initializeAPI',
+                    $exception: '$unexpected',
+                    $text: bali.text('The SSM could not be initialized.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
             }
         } : undefined,
 
@@ -120,7 +128,14 @@ exports.api = function(keyFile, debug) {
                 await pfs.writeFile(keyFile, JSON.stringify(data, null, 4), 'utf8');
                 return keys.publicKey;
             } catch (cause) {
-                throw Error('A new key pair could not be generated: ' + cause);
+                const exception = bali.exception({
+                    $module: '/bali/notary/v1/SSM',
+                    $procedure: '$generateKeys',
+                    $exception: '$unexpected',
+                    $text: bali.text('A new key pair could not be generated.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
             }
         },
 
@@ -146,7 +161,14 @@ exports.api = function(keyFile, debug) {
                 await pfs.writeFile(keyFile, JSON.stringify(data, null, 4), 'utf8');
                 return keys.publicKey;
             } catch (cause) {
-                throw Error('A new key pair could not be generated: ' + cause);
+                const exception = bali.exception({
+                    $module: '/bali/notary/v1/SSM',
+                    $procedure: '$rotateKeys',
+                    $exception: '$unexpected',
+                    $text: bali.text('A new key pair could not be generated.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
             }
         },
 
@@ -162,7 +184,14 @@ exports.api = function(keyFile, debug) {
                 previousKeys = undefined;
                 return true;
             } catch (cause) {
-                throw Error('The keys could not be erased: ' + cause);
+                const exception = bali.exception({
+                    $module: '/bali/notary/v1/SSM',
+                    $procedure: '$eraseKeys',
+                    $exception: '$unexpected',
+                    $text: bali.text('The keys could not be erased.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
             }
         },
 
@@ -182,7 +211,14 @@ exports.api = function(keyFile, debug) {
                 const digest = hash.digest();
                 return digest;
             } catch (cause) {
-                throw Error('A digest of the bytes could not be generated: ' + cause);
+                const exception = bali.exception({
+                    $module: '/bali/notary/v1/SSM',
+                    $procedure: '$digestBytes',
+                    $exception: '$unexpected',
+                    $text: bali.text('A digest of the bytes could not be generated.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
             }
         },
 
@@ -201,16 +237,25 @@ exports.api = function(keyFile, debug) {
                 if (this.initializeAPI) await this.initializeAPI();
                 var signature;
                 if (previousKeys) {
-                    // the bytes is a certificate containing the new public key, so sign
+                    // the bytes define a certificate containing the new public key, so sign
                     // it using the old private key to enforce a valid certificate chain
                     signature = Buffer.from(signer.sign(bytes, previousKeys.publicKey, previousKeys.privateKey));
                     previousKeys = undefined;
-                } else {
+                } else if (keys) {
                     signature = Buffer.from(signer.sign(bytes, keys.publicKey, keys.privateKey));
+                } else {
+                    throw Error('No keys exist.');
                 }
                 return signature;
             } catch (cause) {
-                throw Error('A digital signature of the bytes could not be generated: ' + cause);
+                const exception = bali.exception({
+                    $module: '/bali/notary/v1/SSM',
+                    $procedure: '$signBytes',
+                    $exception: '$unexpected',
+                    $text: bali.text('A digital signature of the bytes could not be generated.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
             }
         },
 
@@ -233,7 +278,14 @@ exports.api = function(keyFile, debug) {
                 const isValid = signer.verify(signature, bytes, aPublicKey);
                 return isValid;
             } catch (cause) {
-                throw Error('The digital signature of the bytes could not be validated: ' + cause);
+                const exception = bali.exception({
+                    $module: '/bali/notary/v1/SSM',
+                    $procedure: '$validSignature',
+                    $exception: '$unexpected',
+                    $text: bali.text('The digital signature of the bytes could not be validated.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
             }
         }
 
