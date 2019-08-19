@@ -20,9 +20,7 @@
 const os = require('os');
 const pfs = require('fs').promises;
 const bali = require('bali-component-framework');
-
-// This private constant sets the POSIX end of line character
-const EOL = '\n';
+const EOL = '\n'; // This private constant sets the POSIX end of line character
 
 
 // PUBLIC API
@@ -403,7 +401,24 @@ exports.api = function(securityModule, accountId, directory, debug) {
             try {
                 validateParameter('$citationMatches', 'citation', citation);
                 validateParameter('$citationMatches', 'document', document);
-                const requiredModule = selectSecurityModule('$citationMatches', protocols, citation);
+                var requiredModule;
+                const requiredProtocol = citation.getValue('$protocol').toString();
+                if (requiredProtocol === PROTOCOL) {
+                    requiredModule = securityModule;  // use the current one
+                } else {
+                    const requiredModule = protocols[requiredProtocol];
+                    if (!requiredModule) {
+                        const exception = bali.exception({
+                            $module: '/bali/notary/DigitalNotary',
+                            $procedure: '$citationMatches',
+                            $exception: '$unsupportedProtocol',
+                            $expected: Object.keys(protocols),
+                            $actual: requiredProtocol,
+                            $text: bali.text('Attempted to use an unsupported version of the notary protocol.')
+                        });
+                        throw exception;
+                    }
+                }
                 const bytes = Buffer.from(document.toString(), 'utf8');
                 var digest = bali.binary(await requiredModule.digestBytes(bytes));
                 return digest.isEqualTo(citation.getValue('$digest'));
@@ -496,7 +511,24 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 ]));  // everything but the signature
                 const publicKey = certificate.getValue('$publicKey');
                 const signature = document.getValue('$signature');
-                const requiredModule = selectSecurityModule('$documentIsValid', protocols, certificate);
+                var requiredModule;
+                const requiredProtocol = certificate.getValue('$protocol').toString();
+                if (requiredProtocol === PROTOCOL) {
+                    requiredModule = securityModule;  // use the current one
+                } else {
+                    const requiredModule = protocols[requiredProtocol];
+                    if (!requiredModule) {
+                        const exception = bali.exception({
+                            $module: '/bali/notary/DigitalNotary',
+                            $procedure: '$documentIsValid',
+                            $exception: '$unsupportedProtocol',
+                            $expected: Object.keys(protocols),
+                            $actual: requiredProtocol,
+                            $text: bali.text('Attempted to use an unsupported version of the notary protocol.')
+                        });
+                        throw exception;
+                    }
+                }
                 const bytes = Buffer.from(catalog.toString(), 'utf8');
                 return await requiredModule.validSignature(publicKey.getValue(), signature.getValue(), bytes);
             } catch (cause) {
@@ -518,37 +550,6 @@ exports.api = function(securityModule, accountId, directory, debug) {
 
 
 // PRIVATE FUNCTIONS
-
-/**
- * This function returns a reference to the security module that implements the version
- * of the protocol required by the specified notarized document.  If the required version
- * matches the version of the current security module, then the current security module
- * is used. Otherwise, a security module matching the required version is used.
- * If no matching version is found, then an exception is thrown.
- * 
- * @param {String} functionName The name of the function making the request.
- * @param {Object} protocols The list of public API protocols supported by the digital
- * notary.
- * @param {Catalog} document The notarized document being analyzed.
- * @returns {Object} A security module that supports the required version of the API.
- */
-const selectSecurityModule = function(functionName, protocols, document) {
-    const protocol = document.getValue('$protocol').toString();
-    const securityModule = protocols[protocol];
-    if (!securityModule) {
-        const exception = bali.exception({
-            $module: '/bali/notary/DigitalNotary',
-            $procedure: functionName,
-            $exception: '$unsupportedProtocol',
-            $expected: Object.keys(protocols),
-            $actual: protocol,
-            $text: bali.text('Attempted to use an unsupported version of the notary protocol.')
-        });
-        throw exception;
-    }
-    return securityModule;
-};
-
 
 /**
  * This function validates the specified parameter type and value for a parameter that was
