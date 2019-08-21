@@ -29,13 +29,13 @@ exports.ssm = function(keyfile, debug) {
  * the functions that require access to the private key.
  *
  * @param {Object} securityModule An object that implements the security module interface.
- * @param {Tag} accountId An optional unique account tag for the owner of the digital notary.
+ * @param {Tag} accountTag An optional unique account tag for the owner of the digital notary.
  * @param {String} directory An optional directory to be used for local configuration storage.
  * @param {Boolean} debug An optional flag that determines whether or not exceptions
  * will be logged to the error console.
  * @returns {Object} An object that implements the API for a digital notary.
  */
-exports.api = function(securityModule, accountId, directory, debug) {
-    const api = require('./src/DigitalNotary').api(securityModule, accountId, directory, debug);
+exports.api = function(securityModule, accountTag, directory, debug) {
+    const api = require('./src/DigitalNotary').api(securityModule, accountTag, directory, debug);
     return api;
 };

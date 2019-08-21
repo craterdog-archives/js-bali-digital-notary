@@ -107,7 +107,7 @@ exports.api = function(securityModule, accountTag, directory, debug) {
          * @returns {Tag} The unique tag for the account that is associated with this digital
          * notary.
          */
-        getAccountId: function() {
+        getAccountTag: function() {
             return accountTag;
         },
 

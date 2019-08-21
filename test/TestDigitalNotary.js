@@ -14,10 +14,10 @@ const mocha = require('mocha');
 const assert = require('chai').assert;
 const expect = require('chai').expect;
 const bali = require('bali-component-framework');
-const accountId = bali.tag();
+const accountTag = bali.tag();
 const directory = 'test/config/';
-const securityModule = require('../src/v1/SSM').api(directory + accountId.getValue() + '.keys', debug);
-const notaryAPI = require('../').api(securityModule, accountId, directory, debug);
+const securityModule = require('../src/v1/SSM').api(directory + accountTag.getValue() + '.keys', debug);
+const notaryAPI = require('../').api(securityModule, accountTag, directory, debug);
 
 
 describe('Bali Digital Notary™', function() {
@@ -28,8 +28,8 @@ describe('Bali Digital Notary™', function() {
 
     describe('Test Key Generation', function() {
 
-        it('should return the correct accountId', function() {
-            expect(notaryAPI.getAccountId().isEqualTo(accountId)).to.equal(true);
+        it('should return the correct account tag', function() {
+            expect(notaryAPI.getAccountTag().isEqualTo(accountTag)).to.equal(true);
         });
 
         it('should return the protocols', async function() {
@@ -43,7 +43,7 @@ describe('Bali Digital Notary™', function() {
         });
 
         it('should read in the new keys', async function() {
-            const ignore = require('../').ssm(directory + accountId.getValue() + '.keys');
+            const ignore = require('../').ssm(directory + accountTag.getValue() + '.keys');
             await ignore.initializeAPI();
         });
 
