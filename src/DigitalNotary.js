@@ -30,13 +30,13 @@ const EOL = '\n'; // This private constant sets the POSIX end of line character
  * the functions that require access to the private key.
  *
  * @param {Object} securityModule An object that implements the security module interface.
- * @param {Tag} accountId An optional unique account tag for the owner of the digital notary.
+ * @param {Tag} accountTag An optional unique account tag for the owner of the digital notary.
  * @param {String} directory An optional directory to be used for local configuration storage.
  * @param {Boolean} debug An optional flag that determines whether or not exceptions
  * will be logged to the error console.
  * @returns {Object} An object that implements the API for a digital notary.
  */
-exports.api = function(securityModule, accountId, directory, debug) {
+exports.api = function(securityModule, accountTag, directory, debug) {
 
     // import the supported public API protocols (in preferred order)
     const protocols = {
@@ -48,7 +48,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
     const PROTOCOL = Object.keys(protocols)[0];  // the latest protocol
 
     // validate the parameters
-    if (accountId) validateParameter('$privateAPI', 'accountId', accountId, 'tag');
+    if (accountTag) validateParameter('$privateAPI', 'accountTag', accountTag, 'tag');
     if (directory) validateParameter('$privateAPI', 'directory', directory);
     debug = debug || false;
 
@@ -72,7 +72,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
             const catalog = bali.catalog({
                 $module: '/bali/notary/DigitalNotary',
                 $protocol: PROTOCOL,
-                $accountId: accountId || bali.pattern.NONE,
+                $accountTag: accountTag || bali.pattern.NONE,
                 $certificate: citation || bali.pattern.NONE
             });
             return catalog.toString();
@@ -108,7 +108,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
          * notary.
          */
         getAccountId: function() {
-            return accountId;
+            return accountTag;
         },
 
         /**
@@ -116,12 +116,12 @@ exports.api = function(securityModule, accountId, directory, debug) {
          */
         initializeAPI: async function() {
             try {
-                if (!accountId) throw Error('No account identifier specified.');
+                if (!accountTag) throw Error('No account identifier specified.');
 
                 // create the configuration directory structure if necessary
                 var configDirectory = directory || os.homedir() + '/.bali/';
                 try { await pfs.mkdir(configDirectory, 0o700); } catch (ignore) {};
-                configFile = configDirectory + accountId.getValue() + '.bali';
+                configFile = configDirectory + accountTag.getValue() + '.bali';
 
                 // read in the configuration file if one exists
                 try {
@@ -167,7 +167,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 const component = bali.catalog({
                     $protocol: PROTOCOL,
                     $timestamp: timestamp,
-                    $accountId: accountId,
+                    $accountTag: accountTag,
                     $publicKey: publicKey
                 }, bali.parameters({
                     $type: '/bali/notary/Certificate/v1',
@@ -242,7 +242,7 @@ exports.api = function(securityModule, accountId, directory, debug) {
                 const component = bali.catalog({
                     $protocol: PROTOCOL,
                     $timestamp: timestamp,
-                    $accountId: accountId,
+                    $accountTag: accountTag,
                     $publicKey: publicKey
                 }, bali.parameters({
                     $type: '/bali/notary/Certificate/v1',
@@ -608,7 +608,7 @@ const validateParameter = function(functionName, parameterName, parameterValue, 
                 if (parameterValue.getTypeId && parameterValue.getTypeId() === bali.types.CATALOG && parameterValue.getSize() === 4) {
                     validateParameter(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
                     validateParameter(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
-                    validateParameter(functionName, parameterName + '.accountId', parameterValue.getValue('$accountId'), 'tag');
+                    validateParameter(functionName, parameterName + '.accountTag', parameterValue.getValue('$accountTag'), 'tag');
                     validateParameter(functionName, parameterName + '.publicKey', parameterValue.getValue('$publicKey'), 'binary');
                     const parameters = parameterValue.getParameters();
                     if (parameters && parameters.getSize() === 5) {
