@@ -8,7 +8,7 @@
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
 
-const debug = false;  // set to true for exception logging
+const debug = true;  // set to true for exception logging
 const crypto = require('crypto');
 const mocha = require('mocha');
 const assert = require('chai').assert;
@@ -38,7 +38,9 @@ describe('Bali Digital Notary™', function() {
         });
 
         it('should generate the keys', async function() {
-            notaryCertificate = await notaryAPI.generateKey();
+            const catalog = await notaryAPI.generateKey();
+            notaryCertificate = await notaryAPI.signComponent(catalog);
+            certificateCitation = await notaryAPI.activateKey(notaryCertificate);
             expect(notaryCertificate).to.exist;
         });
 

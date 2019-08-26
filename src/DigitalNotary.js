@@ -158,13 +158,14 @@ exports.api = function(securityModule, accountTag, directory, debug) {
                 if (this.initializeAPI) await this.initializeAPI();
 
                 // generate a new public-private key pair
+                citation = undefined;
                 publicKey = bali.binary(await securityModule.generateKeys());
                 timestamp = bali.moment(),  // now
                 tag = bali.tag();  // generate a new random tag
                 version = bali.version();
 
                 // create the new notary certificate
-                const component = bali.catalog({
+                const certificate = bali.catalog({
                     $protocol: PROTOCOL,
                     $timestamp: timestamp,
                     $accountTag: accountTag,
@@ -177,22 +178,34 @@ exports.api = function(securityModule, accountTag, directory, debug) {
                     $previous: bali.pattern.NONE
                 }));
 
-                // notarize the notary certificate
-                const certificate = bali.catalog({
-                    $component: component,
-                    $protocol: PROTOCOL,
-                    $timestamp: timestamp,
-                    $certificate: bali.pattern.NONE
-                }, bali.parameters({
-                    $type: bali.parse('/bali/notary/Document/v1')
-                }));
-                var bytes = Buffer.from(certificate.toString(), 'utf8');
-                const signature = bali.binary(await securityModule.signBytes(bytes));
-                certificate.setValue('$signature', signature);
-                if (debug) console.log('certificate: ' + certificate + EOL);
+                return certificate;
+            } catch (cause) {
+                const exception = bali.exception({
+                    $module: '/bali/notary/DigitalNotary',
+                    $procedure: '$generateKey',
+                    $exception: '$unexpected',
+                    $text: bali.text('An unexpected error occurred while attempting to generate the notary key.')
+                }, cause);
+                if (debug) console.error(exception.toString());
+                throw exception;
+            }
+        },
 
-                // cache the new certificate citation
-                bytes = Buffer.from(certificate.toString(), 'utf8');
+        /**
+         * This function activates a new public-private key pair by generating and caching a
+         * document citation to the notarized public certificate for the key pair. It returns
+         * the citation.
+         *
+         * @param {Catalog} certificate The notarized certificate for the new key pair.
+         * @returns {Catalog} A citation to the notarized certificate.
+         */
+        activateKey: async function(certificate) {
+            try {
+                // initialize the digital notary if necessary
+                if (this.initializeAPI) await this.initializeAPI();
+
+                // cache the certificate citation
+                const bytes = Buffer.from(certificate.toString(), 'utf8');
                 const digest = bali.binary(await securityModule.digestBytes(bytes));
                 citation = bali.catalog({
                     $protocol: PROTOCOL,
@@ -208,13 +221,14 @@ exports.api = function(securityModule, accountTag, directory, debug) {
                 // save the state of the certificate citation
                 await pfs.writeFile(configFile, citation + EOL, {encoding: 'utf8', mode: 0o600});
 
-                return certificate;
+                return citation;
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '/bali/notary/DigitalNotary',
-                    $procedure: '$generateKey',
+                    $procedure: '$activateKey',
                     $exception: '$unexpected',
-                    $text: bali.text('An unexpected error occurred while attempting to generate the notary key.')
+                    $certificate: certificate,
+                    $text: bali.text('An unexpected error occurred while attempting to activate the notary key.')
                 }, cause);
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -466,7 +480,7 @@ exports.api = function(securityModule, accountTag, directory, debug) {
                     $component: component,
                     $protocol: PROTOCOL,
                     $timestamp: bali.moment(),  // now
-                    $certificate: citation
+                    $certificate: citation || bali.pattern.NONE  // self-signed certificate
                 }, bali.parameters({
                     $type: bali.parse('/bali/notary/Document/v1')
                 }));
