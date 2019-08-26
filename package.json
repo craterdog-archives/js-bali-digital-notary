@@ -33,6 +33,6 @@
   },
   "dependencies": {
     "supercop.js": "^2.0.1",
-    "bali-component-framework": "^1.13.0"
+    "bali-component-framework": "^1.13.1"
   }
 }
