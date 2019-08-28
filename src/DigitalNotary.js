@@ -60,7 +60,7 @@ exports.api = function(securityModule, accountTag, directory, debug) {
     var publicKey;
     var citation;
     var automaton = bali.automaton(
-        [              '$generateKey', '$activateKey', '$rotateKey', '$forgetKey', '$getCitation', '$citeDocument', '$citationMatches', '$signComponent', '$documentValid' ],
+        [              '$generateKey', '$activateKey', '$rotateKey', '$forgetKey', '$getCitation', '$citeDocument', '$citationMatches', '$notarizeDocument', '$documentValid' ],
         {
             $keyless: [ '$pending',      undefined,      undefined,   '$keyless',     undefined,     '$keyless',        '$keyless',         undefined,       '$keyless'   ],
             $pending: [  undefined,     '$enabled',      undefined,   '$keyless',     undefined,     '$pending',        '$pending',        '$pending',       '$pending'   ],
@@ -513,32 +513,32 @@ exports.api = function(securityModule, accountTag, directory, debug) {
         },
    
         /**
-         * This function digitally signs the specified component using the private notary
+         * This function digitally notarizes the specified component using the private notary
          * key maintained by the security module. The component must be parameterized
          * with the following parameters:
          * <pre>
-         *  * $tag - a unique identifier for the component
-         *  * $version - the version of the component
+         *  * $tag - a unique identifier for the document
+         *  * $version - the version of the document
          *  * $permissions - the name of a notarized document containing the permissions defining
-         *                   who can access the component
-         *  * $previous - a citation to the previous version of the component (or bali.pattern.NONE)
+         *                   who can access the document
+         *  * $previous - a citation to the previous version of the document (or bali.pattern.NONE)
          * </pre>
          * 
-         * The newly notarized component is returned.
+         * The newly notarized document is returned.
          *
          * @param {Component} component The component to be notarized.
          * @returns {Catalog} A newly notarized document containing the component.
          */
-        signComponent: async function(component) {
+        notarizeDocument: async function(component) {
             try {
                 // initialize the digital notary if necessary
                 if (this.initializeAPI) await this.initializeAPI();
 
                 // check current state
-                automaton.validateEvent('$signComponent');
+                automaton.validateEvent('$notarizeDocument');
 
                 // validate the component parameter
-                validateParameter('$signComponent', 'component', component);
+                validateParameter('$notarizeDocument', 'component', component);
 
                 // create the document
                 const notarizedComponent = bali.catalog({
@@ -550,22 +550,22 @@ exports.api = function(securityModule, accountTag, directory, debug) {
                     $type: bali.parse('/bali/notary/Document/v1')
                 }));
 
-                // sign the document
+                // notarize the document
                 const bytes = Buffer.from(notarizedComponent.toString(), 'utf8');
                 const signature = bali.binary(await securityModule.signBytes(bytes));
                 notarizedComponent.setValue('$signature', signature);
 
                 // update current state
-                automaton.transitionState('$signComponent');
+                automaton.transitionState('$notarizeDocument');
 
                 return notarizedComponent;
             } catch (cause) {
                 const exception = bali.exception({
                     $module: '/bali/notary/DigitalNotary',
-                    $procedure: '$signComponent',
+                    $procedure: '$notarizeDocument',
                     $exception: '$unexpected',
                     $component: component,
-                    $text: bali.text('An unexpected error occurred while attempting to notarize a component.')
+                    $text: bali.text('An unexpected error occurred while attempting to notarize a document.')
                 }, cause);
                 if (debug) console.error(exception.toString());
                 throw exception;
@@ -665,12 +665,19 @@ const validateParameter = function(functionName, parameterName, parameterValue, 
     if (parameterValue) {
         switch (parameterType) {
             case 'binary':
+                if (parameterValue.isComponent && parameterValue.isType('$Binary')) return;
+                break;
             case 'moment':
+                if (parameterValue.isComponent && parameterValue.isType('$Moment')) return;
+                break;
             case 'name':
+                if (parameterValue.isComponent && parameterValue.isType('$Name')) return;
+                break;
             case 'tag':
+                if (parameterValue.isComponent && parameterValue.isType('$Tag')) return;
+                break;
             case 'version':
-                // Primitive types must have a typeId and their type must match the passed in type
-                if (parameterValue.getTypeId && parameterValue.getTypeId() === bali.types[parameterType.toUpperCase()]) return;
+                if (parameterValue.isComponent && parameterValue.isType('$Version')) return;
                 break;
             case 'directory':
                 // A directory must be a string that matches a specific pattern
@@ -678,15 +685,14 @@ const validateParameter = function(functionName, parameterName, parameterValue, 
                 if (typeof parameterValue === 'string' && pattern.test(parameterValue)) return;
                 break;
             case 'component':
-                // A component must just have a typeId
-                if (parameterValue.getTypeId) return;
+                if (parameterValue.isComponent) return;
                 break;
             case 'citation':
                 // A citation must have the following:
                 //  * a parameterized type of /bali/notary/Citation/v...
                 //  * exactly five specific attributes
-                if (parameterValue.getTypeId && parameterValue.isEqualTo(bali.pattern.NONE)) return;
-                if (parameterValue.getTypeId && parameterValue.getTypeId() === bali.types.CATALOG && parameterValue.getSize() === 5) {
+                if (parameterValue.isComponent && parameterValue.isEqualTo(bali.pattern.NONE)) return;
+                if (parameterValue.isComponent && parameterValue.isType('$Catalog') && parameterValue.getSize() === 5) {
                     validateParameter(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
                     validateParameter(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
                     validateParameter(functionName, parameterName + '.tag', parameterValue.getValue('$tag'), 'tag');
@@ -704,7 +710,7 @@ const validateParameter = function(functionName, parameterName, parameterValue, 
                 //  * a parameterized type of /bali/notary/Certificate/v...
                 //  * exactly four specific attributes
                 //  * and be parameterized with exactly 5 specific parameters
-                if (parameterValue.getTypeId && parameterValue.getTypeId() === bali.types.CATALOG && parameterValue.getSize() === 4) {
+                if (parameterValue.isComponent && parameterValue.isType('$Catalog') && parameterValue.getSize() === 4) {
                     validateParameter(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
                     validateParameter(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
                     validateParameter(functionName, parameterName + '.accountTag', parameterValue.getValue('$accountTag'), 'tag');
@@ -727,7 +733,7 @@ const validateParameter = function(functionName, parameterName, parameterValue, 
                 //  * exactly five specific attributes including a $component attribute
                 //  * the $component attribute must be parameterized with at least four parameters
                 //  * the $component attribute may have a parameterized type as well
-                if (parameterValue.getTypeId && parameterValue.getTypeId() === bali.types.CATALOG && parameterValue.getSize() === 5) {
+                if (parameterValue.isComponent && parameterValue.isType('$Catalog') && parameterValue.getSize() === 5) {
                     validateParameter(functionName, parameterName + '.component', parameterValue.getValue('$component'), 'component');
                     validateParameter(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
                     validateParameter(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');

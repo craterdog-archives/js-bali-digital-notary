@@ -39,7 +39,7 @@ describe('Bali Digital Notary™', function() {
 
         it('should generate the keys', async function() {
             const catalog = await notaryAPI.generateKey();
-            notaryCertificate = await notaryAPI.signComponent(catalog);
+            notaryCertificate = await notaryAPI.notarizeDocument(catalog);
             certificateCitation = await notaryAPI.activateKey(notaryCertificate);
             expect(notaryCertificate).to.exist;
         });
@@ -98,7 +98,7 @@ describe('Bali Digital Notary™', function() {
                 $permissions: bali.parse('/bali/permissions/public/v1'),
                 $previous: previous
             }));
-            var document = await notaryAPI.signComponent(transaction);
+            var document = await notaryAPI.notarizeDocument(transaction);
 
             const certificate = notaryCertificate.getValue('$component');
 
@@ -123,7 +123,7 @@ describe('Bali Digital Notary™', function() {
             var isValid = await notaryAPI.documentValid(newNotaryCertificate, certificate);
             expect(isValid).to.equal(true);
 
-            var document = await notaryAPI.signComponent(component);
+            var document = await notaryAPI.notarizeDocument(component);
 
             var citation = await notaryAPI.citeDocument(document);
             isValid = await notaryAPI.documentValid(document, certificate);
@@ -143,7 +143,7 @@ describe('Bali Digital Notary™', function() {
     describe('Test Multiple Notarizations', function() {
 
         it('should notarized a component twice properly', async function() {
-            var document = await notaryAPI.signComponent(component);
+            var document = await notaryAPI.notarizeDocument(component);
 
             const certificate = notaryCertificate.getValue('$component');
 
@@ -159,7 +159,7 @@ describe('Bali Digital Notary™', function() {
             parameters.setParameter('$version', 'v2');
             parameters.setParameter('$permissions', bali.parse('/bali/permissions/public/v1'));
             parameters.setParameter('$previous', bali.NONE);
-            document = await notaryAPI.signComponent(document);
+            document = await notaryAPI.notarizeDocument(document);
 
             citation = await notaryAPI.citeDocument(document);
             isValid = await notaryAPI.documentValid(document, certificate);
@@ -175,7 +175,7 @@ describe('Bali Digital Notary™', function() {
         it('should erase all keys properly', async function() {
             await notaryAPI.forgetKey();
             try {
-                await notaryAPI.signComponent(component);
+                await notaryAPI.notarizeDocument(component);
                 assert.fail('The attempt to sign a component without a key should have failed.');
             } catch (error) {
                 // expected
