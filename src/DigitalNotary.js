@@ -62,9 +62,9 @@ exports.api = function(securityModule, accountTag, directory, debug) {
     var automaton = bali.automaton(
         [              '$generateKey', '$activateKey', '$rotateKey', '$forgetKey', '$getCitation', '$citeDocument', '$citationMatches', '$notarizeDocument', '$documentValid' ],
         {
-            $keyless: [ '$pending',      undefined,      undefined,   '$keyless',     undefined,     '$keyless',        '$keyless',         undefined,       '$keyless'   ],
-            $pending: [  undefined,     '$enabled',      undefined,   '$keyless',     undefined,     '$pending',        '$pending',        '$pending',       '$pending'   ],
-            $enabled: [  undefined,      undefined,     '$enabled',   '$keyless',    '$enabled',     '$enabled',        '$enabled',        '$enabled',       '$enabled'   ]
+            $keyless: [ '$pending',      undefined,      undefined,   '$keyless',     undefined,     '$keyless',        '$keyless',          undefined,         '$keyless'    ],
+            $pending: [  undefined,     '$enabled',      undefined,   '$keyless',     undefined,     '$pending',        '$pending',         '$pending',         '$pending'    ],
+            $enabled: [  undefined,      undefined,     '$enabled',   '$keyless',    '$enabled',     '$enabled',        '$enabled',         '$enabled',         '$enabled'    ]
         }
     );
 
