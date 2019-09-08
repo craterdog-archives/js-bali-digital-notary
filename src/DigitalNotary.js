@@ -418,8 +418,8 @@ exports.api = function(securityModule, accountTag, directory, debug) {
 
                 // extract the required attributes
                 const parameters = document.getValue('$component').getParameters();
-                const tag = parameters.getParameter('$tag');
-                const version = parameters.getParameter('$version');
+                const tag = parameters.getValue('$tag');
+                const version = parameters.getValue('$version');
                 const bytes = Buffer.from(document.toString(), 'utf8');
 
                 // generate a digest of the document
@@ -699,9 +699,9 @@ const validateParameter = function(functionName, parameterName, parameterValue, 
                     validateParameter(functionName, parameterName + '.version', parameterValue.getValue('$version'), 'version');
                     validateParameter(functionName, parameterName + '.digest', parameterValue.getValue('$digest'), 'binary');
                     const parameters = parameterValue.getParameters();
-                    if (parameters && parameters.getSize() === 1) {
-                        validateParameter(functionName, parameterName + '.parameters.type', parameters.getParameter('$type'), 'name');
-                        if (parameters.getParameter('$type').toString().startsWith('/bali/notary/Citation/v')) return;
+                    if (parameters && parameters.getKeys().getSize() === 1) {
+                        validateParameter(functionName, parameterName + '.parameters.type', parameters.getValue('$type'), 'name');
+                        if (parameters.getValue('$type').toString().startsWith('/bali/notary/Citation/v')) return;
                     }
                 }
                 break;
@@ -716,14 +716,14 @@ const validateParameter = function(functionName, parameterName, parameterValue, 
                     validateParameter(functionName, parameterName + '.accountTag', parameterValue.getValue('$accountTag'), 'tag');
                     validateParameter(functionName, parameterName + '.publicKey', parameterValue.getValue('$publicKey'), 'binary');
                     const parameters = parameterValue.getParameters();
-                    if (parameters && parameters.getSize() === 5) {
-                        validateParameter(functionName, parameterName + '.parameters.type', parameters.getParameter('$type'), 'name');
-                        validateParameter(functionName, parameterName + '.parameters.tag', parameters.getParameter('$tag'), 'tag');
-                        validateParameter(functionName, parameterName + '.parameters.version', parameters.getParameter('$version'), 'version');
-                        validateParameter(functionName, parameterName + '.parameters.permissions', parameters.getParameter('$permissions'), 'name');
-                        validateParameter(functionName, parameterName + '.parameters.previous', parameters.getParameter('$previous'), 'citation');
-                        if (parameters.getParameter('$type').toString().startsWith('/bali/notary/Certificate/v') &&
-                            parameters.getParameter('$permissions').toString().startsWith('/bali/permissions/public/v')) return;
+                    if (parameters && parameters.getKeys().getSize() === 5) {
+                        validateParameter(functionName, parameterName + '.parameters.type', parameters.getValue('$type'), 'name');
+                        validateParameter(functionName, parameterName + '.parameters.tag', parameters.getValue('$tag'), 'tag');
+                        validateParameter(functionName, parameterName + '.parameters.version', parameters.getValue('$version'), 'version');
+                        validateParameter(functionName, parameterName + '.parameters.permissions', parameters.getValue('$permissions'), 'name');
+                        validateParameter(functionName, parameterName + '.parameters.previous', parameters.getValue('$previous'), 'citation');
+                        if (parameters.getValue('$type').toString().startsWith('/bali/notary/Certificate/v') &&
+                            parameters.getValue('$permissions').toString().startsWith('/bali/permissions/public/v')) return;
                     }
                 }
                 break;
@@ -741,14 +741,14 @@ const validateParameter = function(functionName, parameterName, parameterValue, 
                     validateParameter(functionName, parameterName + '.signature', parameterValue.getValue('$signature'), 'binary');
                     var parameters = parameterValue.getValue('$component').getParameters();
                     if (parameters) {
-                        if (parameters.getParameter('$type')) validateParameter(functionName, parameterName + '.parameters.type', parameters.getParameter('$type'), 'name');
-                        validateParameter(functionName, parameterName + '.parameters.tag', parameters.getParameter('$tag'), 'tag');
-                        validateParameter(functionName, parameterName + '.parameters.version', parameters.getParameter('$version'), 'version');
-                        validateParameter(functionName, parameterName + '.parameters.permissions', parameters.getParameter('$permissions'), 'name');
-                        validateParameter(functionName, parameterName + '.parameters.previous', parameters.getParameter('$previous'), 'citation');
+                        if (parameters.getValue('$type')) validateParameter(functionName, parameterName + '.parameters.type', parameters.getValue('$type'), 'name');
+                        validateParameter(functionName, parameterName + '.parameters.tag', parameters.getValue('$tag'), 'tag');
+                        validateParameter(functionName, parameterName + '.parameters.version', parameters.getValue('$version'), 'version');
+                        validateParameter(functionName, parameterName + '.parameters.permissions', parameters.getValue('$permissions'), 'name');
+                        validateParameter(functionName, parameterName + '.parameters.previous', parameters.getValue('$previous'), 'citation');
                         parameters = parameterValue.getParameters();
-                        if (parameters && parameters.getSize() === 1) {
-                            if (parameters.getParameter('$type').toString().startsWith('/bali/notary/Document/v')) return;
+                        if (parameters && parameters.getKeys().getSize() === 1) {
+                            if (parameters.getValue('$type').toString().startsWith('/bali/notary/Document/v')) return;
                         }
                     }
                 }
