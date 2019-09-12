@@ -8,12 +8,12 @@
  * Source Initiative. (See http://opensource.org/licenses/MIT)          *
  ************************************************************************/
 
-const debug = true;  // set to true for exception logging
+const debug = 0;  // set to [1..3] for logging at various levels
 const crypto = require('crypto');
 const mocha = require('mocha');
 const assert = require('chai').assert;
 const expect = require('chai').expect;
-const bali = require('bali-component-framework');
+const bali = require('bali-component-framework').api(debug);
 const accountTag = bali.tag();
 const directory = 'test/config/';
 const securityModule = require('../src/v1/SSM').api(directory + accountTag.getValue() + '.keys', debug);
@@ -24,7 +24,7 @@ describe('Bali Digital Notary™', function() {
 
     var notaryCertificate;
     var certificateCitation;
-    var component = bali.parse('[$foo: "bar"]($tag: #MFPCRNKS2SG20CD7VQ6KD329X7382KJY, $version: v1, $permissions: /bali/permissions/public/v1, $previous: none)');
+    var component = bali.component('[$foo: "bar"]($tag: #MFPCRNKS2SG20CD7VQ6KD329X7382KJY, $version: v1, $permissions: /bali/permissions/public/v1, $previous: none)');
 
     describe('Test Key Generation', function() {
 
@@ -78,12 +78,12 @@ describe('Bali Digital Notary™', function() {
             const tag = bali.tag();
             const previous = bali.catalog({
                 $protocol: bali.version(),
-                $timestamp: bali.parse('<2019-02-24T22:41:18.843>'),
+                $timestamp: bali.component('<2019-02-24T22:41:18.843>'),
                 $tag: tag,
                 $version: bali.version([2, 3]),
-                $digest: bali.parse("'JB2NG73VTB957T9TZWT44KRZVQ467KWJ2MSJYT6YW2RQAYQMSR861XGM5ZCDCPNJYR612SJT9RFKHA9YZ5DJMLYC7N3127AY4QDVJ38'")
+                $digest: bali.component("'JB2NG73VTB957T9TZWT44KRZVQ467KWJ2MSJYT6YW2RQAYQMSR861XGM5ZCDCPNJYR612SJT9RFKHA9YZ5DJMLYC7N3127AY4QDVJ38'")
             }, bali.parameters({
-                $type: bali.parse('/bali/notary/Citation/v1')
+                $type: bali.component('/bali/notary/Citation/v1')
             }));
             const transaction = bali.catalog({
                 $transactionId: bali.tag(),
@@ -92,10 +92,10 @@ describe('Bali Digital Notary™', function() {
                 $merchant: bali.reference('https://www.starbucks.com/'),
                 $amount: 4.95
             }, bali.parameters({
-                $type: bali.parse('/acme/types/Transaction/v2.3'),
+                $type: bali.component('/acme/types/Transaction/v2.3'),
                 $tag: tag,
                 $version: bali.version([2, 4]),
-                $permissions: bali.parse('/bali/permissions/public/v1'),
+                $permissions: bali.component('/bali/permissions/public/v1'),
                 $previous: previous
             }));
             var document = await notaryAPI.notarizeDocument(transaction);
@@ -159,7 +159,7 @@ describe('Bali Digital Notary™', function() {
                 $permissions: '/bali/permissions/public/v1',
                 $previous: bali.pattern.NONE
             });
-            document = bali.duplicate(document, parameters);
+            document = document.duplicate(parameters);
             document = await notaryAPI.notarizeDocument(document);
 
             citation = await notaryAPI.citeDocument(document);

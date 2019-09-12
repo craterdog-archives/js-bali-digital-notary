@@ -14,8 +14,7 @@
  * 
  * @param {String} keyfile An optional filename for a file containing the current key information.
  * If not specified, this API can only be used to perform public key based functions.
- * @param {Boolean} debug An optional flag that determines whether or not exceptions
- * will be logged to the error console.
+ * @param {Number} debug A number in the range [0..3].
  * @returns {Object} An object that implements the API for a software security module.
  */
 exports.ssm = function(keyfile, debug) {
@@ -31,8 +30,7 @@ exports.ssm = function(keyfile, debug) {
  * @param {Object} securityModule An object that implements the security module interface.
  * @param {Tag} accountTag An optional unique account tag for the owner of the digital notary.
  * @param {String} directory An optional directory to be used for local configuration storage.
- * @param {Boolean} debug An optional flag that determines whether or not exceptions
- * will be logged to the error console.
+ * @param {Number} debug A number in the range [0..3].
  * @returns {Object} An object that implements the API for a digital notary.
  */
 exports.api = function(securityModule, accountTag, directory, debug) {

@@ -24,7 +24,7 @@
 const pfs = require('fs').promises;
 const hasher = require('crypto');
 const signer = require('supercop.js');
-const bali = require('bali-component-framework');
+const bali = require('bali-component-framework').api(1);
 
 
 // PRIVATE CONSTANTS
@@ -44,8 +44,7 @@ const SIGNATURE = 'ed25519';
  * @param {String} keyFile An optional filename of the file that contains the current
  * key information.  If not specified, this API can only be used to perform public key
  * based functions.
- * @param {Boolean} debug An optional flag that determines whether or not exceptions
- * will be logged to the error console.
+ * @param {Number} debug A number in the range [0..3].
  * @returns {Object} An object that implements the security module API.
  */
 exports.api = function(keyFile, debug) {
@@ -102,7 +101,7 @@ exports.api = function(keyFile, debug) {
                     $exception: '$unexpected',
                     $text: bali.text('The SSM could not be initialized.')
                 }, cause);
-                if (debug) console.error(exception.toString());
+                if (debug > 0) console.error(exception.toString());
                 throw exception;
             }
         } : undefined,
@@ -134,7 +133,7 @@ exports.api = function(keyFile, debug) {
                     $exception: '$unexpected',
                     $text: bali.text('A new key pair could not be generated.')
                 }, cause);
-                if (debug) console.error(exception.toString());
+                if (debug > 0) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -167,7 +166,7 @@ exports.api = function(keyFile, debug) {
                     $exception: '$unexpected',
                     $text: bali.text('A new key pair could not be generated.')
                 }, cause);
-                if (debug) console.error(exception.toString());
+                if (debug > 0) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -190,7 +189,7 @@ exports.api = function(keyFile, debug) {
                     $exception: '$unexpected',
                     $text: bali.text('The keys could not be erased.')
                 }, cause);
-                if (debug) console.error(exception.toString());
+                if (debug > 0) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -217,7 +216,7 @@ exports.api = function(keyFile, debug) {
                     $exception: '$unexpected',
                     $text: bali.text('A digest of the bytes could not be generated.')
                 }, cause);
-                if (debug) console.error(exception.toString());
+                if (debug > 0) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -254,7 +253,7 @@ exports.api = function(keyFile, debug) {
                     $exception: '$unexpected',
                     $text: bali.text('A digital signature of the bytes could not be generated.')
                 }, cause);
-                if (debug) console.error(exception.toString());
+                if (debug > 0) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -284,7 +283,7 @@ exports.api = function(keyFile, debug) {
                     $exception: '$unexpected',
                     $text: bali.text('The digital signature of the bytes could not be validated.')
                 }, cause);
-                if (debug) console.error(exception.toString());
+                if (debug > 0) console.error(exception.toString());
                 throw exception;
             }
         }

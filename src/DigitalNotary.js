@@ -19,7 +19,7 @@
  */
 const os = require('os');
 const pfs = require('fs').promises;
-const bali = require('bali-component-framework');
+const bali = require('bali-component-framework').api(1);
 const EOL = '\n'; // This private constant sets the POSIX end of line character
 
 
@@ -32,11 +32,11 @@ const EOL = '\n'; // This private constant sets the POSIX end of line character
  * @param {Object} securityModule An object that implements the security module interface.
  * @param {Tag} accountTag An optional unique account tag for the owner of the digital notary.
  * @param {String} directory An optional directory to be used for local configuration storage.
- * @param {Boolean} debug An optional flag that determines whether or not exceptions
- * will be logged to the error console.
+ * @param {Number} debug A number in the range [0..3].
  * @returns {Object} An object that implements the API for a digital notary.
  */
 exports.api = function(securityModule, accountTag, directory, debug) {
+    debug = debug || 0;
 
     // import the supported public API protocols (in preferred order)
     const protocols = {
@@ -50,7 +50,6 @@ exports.api = function(securityModule, accountTag, directory, debug) {
     // validate the parameters
     if (accountTag) validateParameter('$privateAPI', 'accountTag', accountTag, 'tag');
     if (directory) validateParameter('$privateAPI', 'directory', directory);
-    debug = debug || false;
 
     // define the private state
     var configFile;
@@ -102,7 +101,7 @@ exports.api = function(securityModule, accountTag, directory, debug) {
                     $exception: '$unexpected',
                     $text: bali.text('An unexpected error occurred while attempting to retrieve the supported security protocols.')
                 }, cause);
-                if (debug) console.error(exception.toString());
+                if (debug > 0) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -133,7 +132,7 @@ exports.api = function(securityModule, accountTag, directory, debug) {
 
                 // read in the configuration file if one exists
                 try {
-                    citation = bali.parse(await pfs.readFile(configFile, 'utf8'));
+                    citation = bali.component(await pfs.readFile(configFile, 'utf8'));
                 } catch (exception) {
                     if (exception.code !== 'ENOENT') {
                         throw exception;
@@ -148,7 +147,7 @@ exports.api = function(securityModule, accountTag, directory, debug) {
                     $exception: '$unexpected',
                     $text: bali.text('An unexpected error occurred while attempting to initialize the API.')
                 }, cause);
-                if (debug) console.error(exception.toString());
+                if (debug > 0) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -171,7 +170,7 @@ exports.api = function(securityModule, accountTag, directory, debug) {
                 // generate a new public-private key pair
                 citation = undefined;
                 publicKey = bali.binary(await securityModule.generateKeys());
-                timestamp = bali.moment(),  // now
+                timestamp = bali.moment();  // now
                 tag = bali.tag();  // generate a new random tag
                 version = bali.version();
 
@@ -200,7 +199,7 @@ exports.api = function(securityModule, accountTag, directory, debug) {
                     $exception: '$unexpected',
                     $text: bali.text('An unexpected error occurred while attempting to generate the notary key.')
                 }, cause);
-                if (debug) console.error(exception.toString());
+                if (debug > 0) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -233,9 +232,9 @@ exports.api = function(securityModule, accountTag, directory, debug) {
                     $version: version,
                     $digest: digest
                 }, bali.parameters({
-                    $type: bali.parse('/bali/notary/Citation/v1')
+                    $type: bali.component('/bali/notary/Citation/v1')
                 }));
-                if (debug) console.log('citation: ' + citation + EOL);
+                if (debug > 2) console.log('citation: ' + citation + EOL);
                 await pfs.writeFile(configFile, citation + EOL, {encoding: 'utf8', mode: 0o600});
 
                 // update current state
@@ -250,7 +249,7 @@ exports.api = function(securityModule, accountTag, directory, debug) {
                     $certificate: certificate,
                     $text: bali.text('An unexpected error occurred while attempting to activate the notary key.')
                 }, cause);
-                if (debug) console.error(exception.toString());
+                if (debug > 0) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -272,8 +271,8 @@ exports.api = function(securityModule, accountTag, directory, debug) {
 
                 // generate a new public-private key pair
                 publicKey = bali.binary(await securityModule.rotateKeys());
-                timestamp = bali.moment(),  // now
-                version = bali.version.nextVersion(version);
+                timestamp = bali.moment();  // now
+                version = version.nextVersion();
 
                 // create the new notary certificate
                 const component = bali.catalog({
@@ -296,12 +295,12 @@ exports.api = function(securityModule, accountTag, directory, debug) {
                     $timestamp: timestamp,
                     $certificate: citation
                 }, bali.parameters({
-                    $type: bali.parse('/bali/notary/Document/v1')
+                    $type: bali.component('/bali/notary/Document/v1')
                 }));
                 var bytes = Buffer.from(certificate.toString(), 'utf8');
                 const signature = bali.binary(await securityModule.signBytes(bytes));
                 certificate.setValue('$signature', signature);
-                if (debug) console.log('certificate: ' + certificate + EOL);
+                if (debug > 2) console.log('certificate: ' + certificate + EOL);
 
                 // generate a digest of the certificate
                 bytes = Buffer.from(certificate.toString(), 'utf8');
@@ -315,9 +314,9 @@ exports.api = function(securityModule, accountTag, directory, debug) {
                     $version: version,
                     $digest: digest
                 }, bali.parameters({
-                    $type: bali.parse('/bali/notary/Citation/v1')
+                    $type: bali.component('/bali/notary/Citation/v1')
                 }));
-                if (debug) console.log('citation: ' + citation + EOL);
+                if (debug > 2) console.log('citation: ' + citation + EOL);
                 await pfs.writeFile(configFile, citation + EOL, {encoding: 'utf8', mode: 0o600});
 
                 // update current state
@@ -331,7 +330,7 @@ exports.api = function(securityModule, accountTag, directory, debug) {
                     $exception: '$unexpected',
                     $text: bali.text('An unexpected error occurred while attempting to rotate the notary key.')
                 }, cause);
-                if (debug) console.error(exception.toString());
+                if (debug > 0) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -366,7 +365,7 @@ exports.api = function(securityModule, accountTag, directory, debug) {
                     $exception: '$unexpected',
                     $text: bali.text('An unexpected error occurred while attempting to forget the notary key.')
                 }, cause);
-                if (debug) console.error(exception.toString());
+                if (debug > 0) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -397,7 +396,7 @@ exports.api = function(securityModule, accountTag, directory, debug) {
                     $exception: '$unexpected',
                     $text: bali.text('An unexpected error occurred while attempting to retrieve the certificate citation.')
                 }, cause);
-                if (debug) console.error(exception.toString());
+                if (debug > 0) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -448,7 +447,7 @@ exports.api = function(securityModule, accountTag, directory, debug) {
                     $document: document,
                     $text: bali.text('An unexpected error occurred while attempting to cite a notarized document.')
                 }, cause);
-                if (debug) console.error(exception.toString());
+                if (debug > 0) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -507,7 +506,7 @@ exports.api = function(securityModule, accountTag, directory, debug) {
                     $document: document,
                     $text: bali.text('An unexpected error occurred while attempting to match a citation to a notarized document.')
                 }, cause);
-                if (debug) console.error(exception.toString());
+                if (debug > 0) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -547,7 +546,7 @@ exports.api = function(securityModule, accountTag, directory, debug) {
                     $timestamp: bali.moment(),  // now
                     $certificate: citation || bali.pattern.NONE  // self-signed certificate
                 }, bali.parameters({
-                    $type: bali.parse('/bali/notary/Document/v1')
+                    $type: bali.component('/bali/notary/Document/v1')
                 }));
 
                 // notarize the document
@@ -567,7 +566,7 @@ exports.api = function(securityModule, accountTag, directory, debug) {
                     $component: component,
                     $text: bali.text('An unexpected error occurred while attempting to notarize a document.')
                 }, cause);
-                if (debug) console.error(exception.toString());
+                if (debug > 0) console.error(exception.toString());
                 throw exception;
             }
         },
@@ -639,7 +638,7 @@ exports.api = function(securityModule, accountTag, directory, debug) {
                     $certificate: certificate,
                     $text: bali.text('An unexpected error occurred while attempting to validate a notarized document.')
                 }, cause);
-                if (debug) console.error(exception.toString());
+                if (debug > 0) console.error(exception.toString());
                 throw exception;
             }
         }
