@@ -14,12 +14,20 @@
  * 
  * @param {String} keyfile An optional filename for a file containing the current key information.
  * If not specified, this API can only be used to perform public key based functions.
- * @param {Number} debug A number in the range [0..3].
+ * @param {String} directory An optional directory to be used for local configuration storage.
+ * @param {Boolean|Number} debug An optional number in the range [0..3] that controls
+ * the level of debugging that occurs:
+ * <pre>
+ *   0 (or false): debugging turned off
+ *   1 (or true): log exceptions to console.error
+ *   2: perform argument validation and log exceptions to console.error
+ *   3: perform argument validation and log exceptions to console.error and debug info to console.log
+ * </pre>
  * @returns {Object} An object that implements the API for a software security module.
  */
-exports.ssm = function(keyfile, debug) {
-    const securityModule = require('./src/v1/SSM').api(keyfile, debug);
-    return securityModule;
+exports.ssm = function(keyfile, directory, debug) {
+    const ssm = new require('./src/v1/SSM').SSM(keyfile, directory, debug);
+    return ssm;
 };
 
 
@@ -28,12 +36,19 @@ exports.ssm = function(keyfile, debug) {
  * the functions that require access to the private key.
  *
  * @param {Object} securityModule An object that implements the security module interface.
- * @param {Tag} accountTag An optional unique account tag for the owner of the digital notary.
+ * @param {Tag} account A unique account tag for the owner of the digital notary.
  * @param {String} directory An optional directory to be used for local configuration storage.
- * @param {Number} debug A number in the range [0..3].
+ * @param {Boolean|Number} debug An optional number in the range [0..3] that controls
+ * the level of debugging that occurs:
+ * <pre>
+ *   0 (or false): debugging turned off
+ *   1 (or true): log exceptions to console.error
+ *   2: perform argument validation and log exceptions to console.error
+ *   3: perform argument validation and log exceptions to console.error and debug info to console.log
+ * </pre>
  * @returns {Object} An object that implements the API for a digital notary.
  */
-exports.api = function(securityModule, accountTag, directory, debug) {
-    const api = require('./src/DigitalNotary').api(securityModule, accountTag, directory, debug);
-    return api;
+exports.notary = function(securityModule, account, directory, debug) {
+    const notary = new require('./src/DigitalNotary').DigitalNotary(securityModule, account, directory, debug);
+    return notary;
 };
