@@ -10,14 +10,16 @@
 'use strict';
 
 /**
- * This class implements a digital notary that is capable of performing the following functions:
+ * This class implements a digital notary object that is capable of performing the following
+ * functions:
  * <pre>
- *   * generateKey - generate a new notary key and return the associated notary certificate
- *   * activateKey - digitally notarize the notary certificate and return a citation to it
- *   * citeDocument - create a document citation for a document
- *   * citationMatches - check whether or not the digest for a citation matches the cited document
+ *   * generateKey - generate a new notary key and return the (unsigned) notary certificate
+ *   * activateKey - activate the notary key and return a citation to the notary certificate
+ *   * getCitation - retrieve the document citation for the notary certificate
  *   * notarizeDocument - digitally notarize a document and return the notarized document
  *   * validDocument - check whether or not the notary seal on a notarized document is valid
+ *   * citeDocument - create a document citation for a document
+ *   * citationMatches - check whether or not a citation matches its cited document
  *   * refreshKey - replace the existing notary key with new one
  *   * forgetKey - forget any knowledge of the notary key
  * </pre>
@@ -34,7 +36,7 @@ const SSMv1 = require('./v1/SSM').SSM;
 // the POSIX end of line character
 const EOL = '\n';
 
-// import the supported validation protocols (in preferred order)
+// import the supported validation only protocols (in preferred order)
 const PROTOCOLS = {
 //  ...
 //  v3: new SSMv3(),
@@ -90,11 +92,11 @@ function DigitalNotary(securityModule, account, directory, debug) {
             '/javascript/String'
         ]);
     }
-    if (directory) validateType('$privateAPI', 'directory', directory);
+    if (directory) validateStructure('$DigitalNotary', 'directory', directory);
 
     // define the private configuration
     const filename = account.getValue() + '.bali';
-    const configurator = bali.configuration(filename, directory, debug);
+    const configurator = bali.configurator(filename, directory, debug);
     var configuration, machine;
 
     /**
@@ -154,8 +156,10 @@ function DigitalNotary(securityModule, account, directory, debug) {
     this.generateKey = async function() {
         try {
             // check current state
-            if (!configuration) configuration = await loadConfiguration(configurator, debug);
-            if (!machine) machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+            if (!configuration) {
+                configuration = await loadConfiguration(configurator, debug);
+                machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+            }
             machine.validateEvent('$generateKey');
 
             // generate a new public-private key pair
@@ -210,13 +214,15 @@ function DigitalNotary(securityModule, account, directory, debug) {
                 validator.validateType('/bali/notary/DigitalNotary', '$activateKey', '$certificate', certificate, [
                     '/bali/collections/Catalog'
                 ]);
+                validateStructure('$activateKey', 'document', certificate);
+                validateStructure('$activateKey', 'certificate', certificate.getValue('$component'));
             }
-            validateType('$activateKey', 'document', certificate);
-            validateType('$activateKey', 'certificate', certificate.getValue('$component'));
 
             // check current state
-            if (!configuration) configuration = await loadConfiguration(configurator, debug);
-            if (!machine) machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+            if (!configuration) {
+                configuration = await loadConfiguration(configurator, debug);
+                machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+            }
             machine.validateEvent('$activateKey');
 
             // extract the required attributes
@@ -271,8 +277,10 @@ function DigitalNotary(securityModule, account, directory, debug) {
     this.refreshKey = async function() {
         try {
             // check current state
-            if (!configuration) configuration = await loadConfiguration(configurator, debug);
-            if (!machine) machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+            if (!configuration) {
+                configuration = await loadConfiguration(configurator, debug);
+                machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+            }
             machine.validateEvent('$refreshKey');
 
             // generate a new public-private key pair
@@ -356,7 +364,6 @@ function DigitalNotary(securityModule, account, directory, debug) {
             await securityModule.eraseKeys();
             await deleteConfiguration(configurator, debug);
             configuration = undefined;
-            machine = undefined;
 
         } catch (cause) {
             const exception = bali.exception({
@@ -380,8 +387,10 @@ function DigitalNotary(securityModule, account, directory, debug) {
     this.getCitation = async function() {
         try {
             // check current state
-            if (!configuration) configuration = await loadConfiguration(configurator, debug);
-            if (!machine) machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+            if (!configuration) {
+                configuration = await loadConfiguration(configurator, debug);
+                machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+            }
             const state = machine.transitionState('$getCitation');  // NOTE: straight to transition...
             configuration.setValue('$state', state);
             await storeConfiguration(configurator, configuration, debug);
@@ -398,109 +407,6 @@ function DigitalNotary(securityModule, account, directory, debug) {
         }
     };
 
-    /**
-     * This method generates a document citation for the specified notarized document.
-     *
-     * @param {Catalog} document The document to be cited.
-     * @returns {Catalog} A document citation for the notarized document.
-     */
-    this.citeDocument = async function(document) {
-        try {
-            // validate the argument
-            if (debug > 1) {
-                const validator = bali.validator(debug);
-                validator.validateType('/bali/notary/DigitalNotary', '$citeDocument', '$document', document, [
-                    '/bali/collections/Catalog'
-                ]);
-            }
-
-            // extract the required attributes
-            const timestamp = bali.moment();  // now
-            const component = document.getValue('$component');
-            const tag = component.getParameter('$tag');
-            const version = component.getParameter('$version');
-
-            // generate a digest of the document
-            const bytes = Buffer.from(document.toString(), 'utf8');
-            const digest = await securityModule.digestBytes(bytes);
-
-            // create the citation
-            const citation = bali.catalog({
-                $protocol: PROTOCOL,
-                $timestamp: timestamp,
-                $tag: tag,
-                $version: version,
-                $digest: digest
-            }, bali.parameters({
-                $type: '/bali/notary/Citation/v1'
-            }));
-
-            return citation;
-        } catch (cause) {
-            const exception = bali.exception({
-                $module: '/bali/notary/DigitalNotary',
-                $procedure: '$citeDocument',
-                $exception: '$unexpected',
-                $document: document,
-                $text: 'An unexpected error occurred while attempting to cite a notarized document.'
-            }, cause);
-            if (debug > 0) console.error(exception.toString());
-            throw exception;
-        }
-    };
-   
-    /**
-     * This method determines whether or not the specified document citation matches
-     * the specified notarized document. The citation only matches if its digest matches
-     * the digest of the notarized document exactly.
-     *
-     * @param {Catalog} citation A document citation allegedly referring to the
-     * specified notarized document.
-     * @param {Catalog} document The notarized document to be tested.
-     * @returns {Boolean} Whether or not the citation matches the specified notarized document.
-     */
-    this.citationMatches = async function(citation, document) {
-        try {
-            validateType('$citationMatches', 'citation', citation);
-            validateType('$citationMatches', 'document', document);
-            const requiredProtocol = citation.getValue('$protocol').toString();
-            var requiredModule;
-            if (requiredProtocol === PROTOCOL) {
-                requiredModule = securityModule;  // use the current one
-            } else {
-                requiredModule = PROTOCOLS[requiredProtocol];
-                if (!requiredModule) {
-                    const exception = bali.exception({
-                        $module: '/bali/notary/DigitalNotary',
-                        $procedure: '$citationMatches',
-                        $exception: '$unsupportedProtocol',
-                        $expected: Object.keys(PROTOCOLS),
-                        $actual: requiredProtocol,
-                        $text: 'Attempted to use an unsupported version of the notary protocol.'
-                    });
-                    throw exception;
-                }
-            }
-            const bytes = Buffer.from(document.toString(), 'utf8');
-            var digest = await requiredModule.digestBytes(bytes);
-
-            const result = digest.isEqualTo(citation.getValue('$digest'));
-
-            return result;
-        } catch (cause) {
-            const exception = bali.exception({
-                $module: '/bali/notary/DigitalNotary',
-                $procedure: '$citationMatches',
-                $exception: '$unexpected',
-                $citation: citation,
-                $document: document,
-                $text: 'An unexpected error occurred while attempting to match a citation to a notarized document.'
-            }, cause);
-            if (debug > 0) console.error(exception.toString());
-            throw exception;
-        }
-    };
-   
     /**
      * This method digitally notarizes the specified component using the private notary
      * key maintained by the security module. The component must be parameterized
@@ -520,13 +426,21 @@ function DigitalNotary(securityModule, account, directory, debug) {
      */
     this.notarizeDocument = async function(component) {
         try {
-            // check current state
-            if (!configuration) configuration = await loadConfiguration(configurator, debug);
-            if (!machine) machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
-            machine.validateEvent('$notarizeDocument');
+            // validate the argument
+            if (debug > 1) {
+                const validator = bali.validator(debug);
+                validator.validateType('/bali/notary/DigitalNotary', '$notarizeDocument', '$component', component, [
+                    '/bali/collections/Catalog'
+                ]);
+                validateStructure('$notarizeDocument', 'component', component);
+            }
 
-            // validate the component parameter
-            validateType('$notarizeDocument', 'component', component);
+            // check current state
+            if (!configuration) {
+                configuration = await loadConfiguration(configurator, debug);
+                machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+            }
+            machine.validateEvent('$notarizeDocument');
 
             // create the document
             const citation = configuration.getValue('$citation');
@@ -534,7 +448,7 @@ function DigitalNotary(securityModule, account, directory, debug) {
                 $component: component,
                 $protocol: PROTOCOL,
                 $timestamp: bali.moment(),  // now
-                $certificate: citation || bali.pattern.NONE  // self-signed certificate
+                $certificate: citation || bali.pattern.NONE  // 'none' for self-signed certificate
             }, bali.parameters({
                 $type: bali.component('/bali/notary/Document/v1')
             }));
@@ -574,9 +488,18 @@ function DigitalNotary(securityModule, account, directory, debug) {
      */
     this.validDocument = async function(document, certificate) {
         try {
-            // validate the parameters
-            validateType('$validDocument', 'document', document);
-            validateType('$validDocument', 'certificate', certificate);
+            // validate the arguments
+            if (debug > 1) {
+                const validator = bali.validator(debug);
+                validator.validateType('/bali/notary/DigitalNotary', '$validDocument', '$document', document, [
+                    '/bali/collections/Catalog'
+                ]);
+                validateStructure('$validDocument', 'document', document);
+                validator.validateType('/bali/notary/DigitalNotary', '$validDocument', '$certificate', certificate, [
+                    '/bali/collections/Catalog'
+                ]);
+                validateStructure('$validDocument', 'certificate', certificate);
+            }
 
             // separate the signature from the document
             const catalog = bali.catalog.extraction(document, bali.list([
@@ -629,6 +552,120 @@ function DigitalNotary(securityModule, account, directory, debug) {
         }
     };
 
+    /**
+     * This method generates a document citation for the specified notarized document.
+     *
+     * @param {Catalog} document The document to be cited.
+     * @returns {Catalog} A document citation for the notarized document.
+     */
+    this.citeDocument = async function(document) {
+        try {
+            // validate the argument
+            if (debug > 1) {
+                const validator = bali.validator(debug);
+                validator.validateType('/bali/notary/DigitalNotary', '$citeDocument', '$document', document, [
+                    '/bali/collections/Catalog'
+                ]);
+                validateStructure('$citeDocument', 'document', document);
+            }
+
+            // extract the required attributes
+            const timestamp = bali.moment();  // now
+            const component = document.getValue('$component');
+            const tag = component.getParameter('$tag');
+            const version = component.getParameter('$version');
+
+            // generate a digest of the document
+            const bytes = Buffer.from(document.toString(), 'utf8');
+            const digest = await securityModule.digestBytes(bytes);
+
+            // create the citation
+            const citation = bali.catalog({
+                $protocol: PROTOCOL,
+                $timestamp: timestamp,
+                $tag: tag,
+                $version: version,
+                $digest: digest
+            }, bali.parameters({
+                $type: '/bali/notary/Citation/v1'
+            }));
+
+            return citation;
+        } catch (cause) {
+            const exception = bali.exception({
+                $module: '/bali/notary/DigitalNotary',
+                $procedure: '$citeDocument',
+                $exception: '$unexpected',
+                $document: document,
+                $text: 'An unexpected error occurred while attempting to cite a notarized document.'
+            }, cause);
+            if (debug > 0) console.error(exception.toString());
+            throw exception;
+        }
+    };
+   
+    /**
+     * This method determines whether or not the specified document citation matches
+     * the specified notarized document. The citation only matches if its digest matches
+     * the digest of the notarized document exactly.
+     *
+     * @param {Catalog} citation A document citation allegedly referring to the
+     * specified notarized document.
+     * @param {Catalog} document The notarized document to be tested.
+     * @returns {Boolean} Whether or not the citation matches the specified notarized document.
+     */
+    this.citationMatches = async function(citation, document) {
+        try {
+            // validate the arguments
+            if (debug > 1) {
+                const validator = bali.validator(debug);
+                validator.validateType('/bali/notary/DigitalNotary', '$citationMatches', '$citation', citation, [
+                    '/bali/collections/Catalog'
+                ]);
+                validateStructure('$citationMatches', 'citation', citation);
+                validator.validateType('/bali/notary/DigitalNotary', '$citationMatches', '$document', document, [
+                    '/bali/collections/Catalog'
+                ]);
+                validateStructure('$citationMatches', 'document', document);
+            }
+            const requiredProtocol = citation.getValue('$protocol').toString();
+            var requiredModule;
+            if (requiredProtocol === PROTOCOL) {
+                requiredModule = securityModule;  // use the current one
+            } else {
+                requiredModule = PROTOCOLS[requiredProtocol];
+                if (!requiredModule) {
+                    const exception = bali.exception({
+                        $module: '/bali/notary/DigitalNotary',
+                        $procedure: '$citationMatches',
+                        $exception: '$unsupportedProtocol',
+                        $expected: Object.keys(PROTOCOLS),
+                        $actual: requiredProtocol,
+                        $text: 'Attempted to use an unsupported version of the notary protocol.'
+                    });
+                    throw exception;
+                }
+            }
+            const bytes = Buffer.from(document.toString(), 'utf8');
+            var digest = await requiredModule.digestBytes(bytes);
+
+            const result = digest.isEqualTo(citation.getValue('$digest'));
+
+            return result;
+        } catch (cause) {
+            const exception = bali.exception({
+                $module: '/bali/notary/DigitalNotary',
+                $procedure: '$citationMatches',
+                $exception: '$unexpected',
+                $citation: citation,
+                $document: document,
+                $text: 'An unexpected error occurred while attempting to match a citation to a notarized document.'
+            }, cause);
+            if (debug > 0) console.error(exception.toString());
+            throw exception;
+        }
+    };
+   
     return this;
 };
 DigitalNotary.prototype.constructor = DigitalNotary;
@@ -647,7 +684,7 @@ exports.DigitalNotary = DigitalNotary;
  * @param {Object} parameterValue The value of the parameter that was passed. 
  * @param {String} parameterType The expected type of the parameter that was passed. 
  */
-const validateType = function(functionName, parameterName, parameterValue, parameterType) {
+const validateStructure = function(functionName, parameterName, parameterValue, parameterType) {
     parameterType = parameterType || parameterName;
     if (parameterValue) {
         switch (parameterType) {
@@ -680,14 +717,14 @@ const validateType = function(functionName, parameterName, parameterValue, param
                 //  * exactly five specific attributes
                 if (parameterValue.isComponent && parameterValue.isEqualTo(bali.pattern.NONE)) return;
                 if (parameterValue.isComponent && parameterValue.isType('$Catalog') && parameterValue.getSize() === 5) {
-                    validateType(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
-                    validateType(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
-                    validateType(functionName, parameterName + '.tag', parameterValue.getValue('$tag'), 'tag');
-                    validateType(functionName, parameterName + '.version', parameterValue.getValue('$version'), 'version');
-                    validateType(functionName, parameterName + '.digest', parameterValue.getValue('$digest'), 'binary');
+                    validateStructure(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
+                    validateStructure(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
+                    validateStructure(functionName, parameterName + '.tag', parameterValue.getValue('$tag'), 'tag');
+                    validateStructure(functionName, parameterName + '.version', parameterValue.getValue('$version'), 'version');
+                    validateStructure(functionName, parameterName + '.digest', parameterValue.getValue('$digest'), 'binary');
                     const parameters = parameterValue.getParameters();
                     if (parameters && parameters.getKeys().getSize() === 1) {
-                        validateType(functionName, parameterName + '.parameters.type', parameters.getValue('$type'), 'name');
+                        validateStructure(functionName, parameterName + '.parameters.type', parameters.getValue('$type'), 'name');
                         if (parameters.getValue('$type').toString().startsWith('/bali/notary/Citation/v')) return;
                     }
                 }
@@ -698,17 +735,17 @@ const validateType = function(functionName, parameterName, parameterValue, param
                 //  * exactly four specific attributes
                 //  * and be parameterized with exactly 5 specific parameters
                 if (parameterValue.isComponent && parameterValue.isType('$Catalog') && parameterValue.getSize() === 4) {
-                    validateType(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
-                    validateType(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
-                    validateType(functionName, parameterName + '.account', parameterValue.getValue('$account'), 'tag');
-                    validateType(functionName, parameterName + '.publicKey', parameterValue.getValue('$publicKey'), 'binary');
+                    validateStructure(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
+                    validateStructure(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
+                    validateStructure(functionName, parameterName + '.account', parameterValue.getValue('$account'), 'tag');
+                    validateStructure(functionName, parameterName + '.publicKey', parameterValue.getValue('$publicKey'), 'binary');
                     const parameters = parameterValue.getParameters();
                     if (parameters && parameters.getKeys().getSize() === 5) {
-                        validateType(functionName, parameterName + '.parameters.type', parameters.getValue('$type'), 'name');
-                        validateType(functionName, parameterName + '.parameters.tag', parameters.getValue('$tag'), 'tag');
-                        validateType(functionName, parameterName + '.parameters.version', parameters.getValue('$version'), 'version');
-                        validateType(functionName, parameterName + '.parameters.permissions', parameters.getValue('$permissions'), 'name');
-                        validateType(functionName, parameterName + '.parameters.previous', parameters.getValue('$previous'), 'citation');
+                        validateStructure(functionName, parameterName + '.parameters.type', parameters.getValue('$type'), 'name');
+                        validateStructure(functionName, parameterName + '.parameters.tag', parameters.getValue('$tag'), 'tag');
+                        validateStructure(functionName, parameterName + '.parameters.version', parameters.getValue('$version'), 'version');
+                        validateStructure(functionName, parameterName + '.parameters.permissions', parameters.getValue('$permissions'), 'name');
+                        validateStructure(functionName, parameterName + '.parameters.previous', parameters.getValue('$previous'), 'citation');
                         if (parameters.getValue('$type').toString().startsWith('/bali/notary/Certificate/v') &&
                             parameters.getValue('$permissions').toString().startsWith('/bali/permissions/public/v')) return;
                     }
@@ -721,18 +758,18 @@ const validateType = function(functionName, parameterName, parameterValue, param
                 //  * the $component attribute must be parameterized with at least four parameters
                 //  * the $component attribute may have a parameterized type as well
                 if (parameterValue.isComponent && parameterValue.isType('$Catalog') && parameterValue.getSize() === 5) {
-                    validateType(functionName, parameterName + '.component', parameterValue.getValue('$component'), 'component');
-                    validateType(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
-                    validateType(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
-                    validateType(functionName, parameterName + '.certificate', parameterValue.getValue('$certificate'), 'citation');
-                    validateType(functionName, parameterName + '.signature', parameterValue.getValue('$signature'), 'binary');
+                    validateStructure(functionName, parameterName + '.component', parameterValue.getValue('$component'), 'component');
+                    validateStructure(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
+                    validateStructure(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
+                    validateStructure(functionName, parameterName + '.certificate', parameterValue.getValue('$certificate'), 'citation');
+                    validateStructure(functionName, parameterName + '.signature', parameterValue.getValue('$signature'), 'binary');
                     var parameters = parameterValue.getValue('$component').getParameters();
                     if (parameters) {
-                        if (parameters.getValue('$type')) validateType(functionName, parameterName + '.parameters.type', parameters.getValue('$type'), 'name');
-                        validateType(functionName, parameterName + '.parameters.tag', parameters.getValue('$tag'), 'tag');
-                        validateType(functionName, parameterName + '.parameters.version', parameters.getValue('$version'), 'version');
-                        validateType(functionName, parameterName + '.parameters.permissions', parameters.getValue('$permissions'), 'name');
-                        validateType(functionName, parameterName + '.parameters.previous', parameters.getValue('$previous'), 'citation');
+                        if (parameters.getValue('$type')) validateStructure(functionName, parameterName + '.parameters.type', parameters.getValue('$type'), 'name');
+                        validateStructure(functionName, parameterName + '.parameters.tag', parameters.getValue('$tag'), 'tag');
+                        validateStructure(functionName, parameterName + '.parameters.version', parameters.getValue('$version'), 'version');
+                        validateStructure(functionName, parameterName + '.parameters.permissions', parameters.getValue('$permissions'), 'name');
+                        validateStructure(functionName, parameterName + '.parameters.previous', parameters.getValue('$previous'), 'citation');
                         parameters = parameterValue.getParameters();
                         if (parameters && parameters.getKeys().getSize() === 1) {
                             if (parameters.getValue('$type').toString().startsWith('/bali/notary/Document/v')) return;

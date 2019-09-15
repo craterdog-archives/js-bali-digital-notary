@@ -17,12 +17,13 @@
 ///////////////////////////////////////////////////////////////////////////////////////
 
 /*
- * This class implements a software security module that is capable of performing the following functions:
+ * This class implements a software security module that is capable of performing the following
+ * functions:
  * <pre>
  *   * generateKeys - generate a new public-private key pair and return the public key
  *   * digestBytes - generate a cryptographic digest of an array of bytes
  *   * signBytes - digitally sign an array of bytes using the private key
- *   * signatureValid - check whether or not the digital signature of an array of bytes is valid
+ *   * validSignature - check whether or not the digital signature of an array of bytes is valid
  *   * rotateKeys - replace the existing public-private key pair with new pair
  *   * eraseKeys - erases any trace of the public-private key pair
  * </pre>
@@ -30,12 +31,14 @@
 const hasher = require('crypto');
 const signer = require('supercop.js');
 const bali = require('bali-component-framework').api();
-const EOL = '\n'; // The POSIX end of line character
 
 
 // PRIVATE CONSTANTS
 
-// The algorithms for this version of the protocol
+// the POSIX end of line character
+const EOL = '\n';
+
+// the algorithms for this version of the protocol
 const PROTOCOL = 'v1';
 const DIGEST = 'sha512';
 const SIGNATURE = 'ed25519';
@@ -82,7 +85,7 @@ function SSM(directory, debug) {
 
     // setup the configuration
     const filename = 'SSM' + PROTOCOL + '.bali';
-    const configurator = bali.configuration(filename, directory, debug);
+    const configurator = bali.configurator(filename, directory, debug);
     var configuration, machine;
 
     /**
@@ -108,8 +111,12 @@ function SSM(directory, debug) {
      */
     this.getTag = async function() {
         try {
-            if (!configuration) configuration = await loadConfiguration(configurator, debug);
-            if (!machine) machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+            // load the current configuration if necessary
+            if (!configuration) {
+                configuration = await loadConfiguration(configurator, debug);
+                machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+            }
+
             return configuration.getValue('$tag');
         } catch (cause) {
             const exception = bali.exception({
@@ -153,16 +160,24 @@ function SSM(directory, debug) {
      */
     this.generateKeys = async function() {
         try {
-            if (!configuration) configuration = await loadConfiguration(configurator, debug);
-            if (!machine) machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+            // check the current state
+            if (!configuration) {
+                configuration = await loadConfiguration(configurator, debug);
+                machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+            }
             machine.validateEvent('$generateKeys');
+
+            // generate a new key pair
             const seed = signer.createSeed();
             const raw = signer.createKeyPair(seed);
             configuration.setValue('$publicKey', bali.binary(raw.publicKey));
             configuration.setValue('$privateKey', bali.binary(raw.secretKey));
+
+            // update the configuration
             const state = machine.transitionState('$generateKeys');
             configuration.setValue('$state', state);
             await storeConfiguration(configurator, configuration, debug);
+
             return configuration.getValue('$publicKey');
         } catch (cause) {
             const exception = bali.exception({
@@ -183,18 +198,28 @@ function SSM(directory, debug) {
      */
     this.rotateKeys = async function() {
         try {
-            if (!configuration) configuration = await loadConfiguration(configurator, debug);
-            if (!machine) machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+            // check the current state
+            if (!configuration) {
+                configuration = await loadConfiguration(configurator, debug);
+                machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+            }
             machine.validateEvent('$rotateKeys');
+
+            // save the previous key pair
             configuration.setValue('$previousPublicKey', configuration.getValue('$publicKey'));
             configuration.setValue('$previousPrivateKey', configuration.getValue('$privateKey'));
+
+            // generate a new key pair
             const seed = signer.createSeed();
             const raw = signer.createKeyPair(seed);
             configuration.setValue('$publicKey', bali.binary(raw.publicKey));
             configuration.setValue('$privateKey', bali.binary(raw.secretKey));
+
+            // update the configuration
             const state = machine.transitionState('$rotateKeys');
             configuration.setValue('$state', state);
             await storeConfiguration(configurator, configuration, debug);
+
             return configuration.getValue('$publicKey');
         } catch (cause) {
             const exception = bali.exception({
@@ -215,9 +240,10 @@ function SSM(directory, debug) {
      */
     this.eraseKeys = async function() {
         try {
+            // delete the current configuration
             await deleteConfiguration(configurator, debug);
             configuration = undefined;
-            machine = undefined;
+
             return true;
         } catch (cause) {
             const exception = bali.exception({
@@ -241,15 +267,19 @@ function SSM(directory, debug) {
      */
     this.digestBytes = async function(bytes) {
         try {
+            // validate the arguments
             if (debug > 1) {
                 const validator = bali.validator(debug);
                 validator.validateType('/bali/notary/' + PROTOCOL + '/SSM', '$digestBytes', '$bytes', bytes, [
                     '/nodejs/Buffer'
                 ]);
             }
+
+            // generate the digital digest of the bytes
             const hash = hasher.createHash(DIGEST);
             hash.update(bytes);
             const digest = hash.digest();
+
             return bali.binary(digest);
         } catch (cause) {
             const exception = bali.exception({
@@ -275,15 +305,22 @@ function SSM(directory, debug) {
      */
     this.signBytes = async function(bytes) {
         try {
+            // validate the arguments
             if (debug > 1) {
                 const validator = bali.validator(debug);
                 validator.validateType('/bali/notary/' + PROTOCOL + '/SSM', '$signBytes', '$bytes', bytes, [
                     '/nodejs/Buffer'
                 ]);
             }
-            if (!configuration) configuration = await loadConfiguration(configurator, debug);
-            if (!machine) machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+
+            // check the current state
+            if (!configuration) {
+                configuration = await loadConfiguration(configurator, debug);
+                machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+            }
             machine.validateEvent('$signBytes');
+
+            // retrieve the keys
             var privateKey;
             var publicKey = configuration.getValue('$previousPublicKey');
             if (publicKey) {
@@ -295,11 +332,16 @@ function SSM(directory, debug) {
                 publicKey = configuration.getValue('$publicKey');
                 privateKey = configuration.getValue('$privateKey');
             }
-            const signature = bali.binary(signer.sign(bytes, publicKey.getValue(), privateKey.getValue()));
+
+            // digitally sign the bytes using the private key
+            const signature = signer.sign(bytes, publicKey.getValue(), privateKey.getValue());
+
+            // update the configuration
             const state = machine.transitionState('$signBytes');
             configuration.setValue('$state', state);
             await storeConfiguration(configurator, configuration, debug);
-            return signature;
+
+            return bali.binary(signature);
         } catch (cause) {
             const exception = bali.exception({
                 $module: '/bali/notary/v1/SSM',
@@ -326,6 +368,7 @@ function SSM(directory, debug) {
      */
     this.validSignature = async function(aPublicKey, signature, bytes) {
         try {
+            // validate the arguments
             if (debug > 1) {
                 const validator = bali.validator(debug);
                 validator.validateType('/bali/notary/' + PROTOCOL + '/SSM', '$validSignature', '$aPublicKey', aPublicKey, [
@@ -338,7 +381,10 @@ function SSM(directory, debug) {
                     '/nodejs/Buffer'
                 ]);
             }
+
+            // check the signature on the bytes
             const isValid = signer.verify(signature.getValue(), bytes, aPublicKey.getValue());
+
             return isValid;
         } catch (cause) {
             const exception = bali.exception({
