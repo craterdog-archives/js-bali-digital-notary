@@ -12,8 +12,6 @@
 /**
  * This function returns an object that implements the API for a software security module.
  * 
- * @param {String} keyfile An optional filename for a file containing the current key information.
- * If not specified, this API can only be used to perform public key based functions.
  * @param {String} directory An optional directory to be used for local configuration storage.
  * @param {Boolean|Number} debug An optional number in the range [0..3] that controls
  * the level of debugging that occurs:
@@ -25,8 +23,8 @@
  * </pre>
  * @returns {Object} An object that implements the API for a software security module.
  */
-exports.ssm = function(keyfile, directory, debug) {
-    const ssm = new require('./src/v1/SSM').SSM(keyfile, directory, debug);
+exports.ssm = function(directory, debug) {
+    const ssm = new require('./src/v1/SSM').SSM(directory, debug);
     return ssm;
 };
 
