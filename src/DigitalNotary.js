@@ -177,7 +177,8 @@ function DigitalNotary(securityModule, account, directory, debug) {
             configuration.setValue('$certificate', certificate);
 
             // update current state
-            configuration.setValue('$state', machine.transitionState('$generateKey'));
+            const state = machine.transitionState('$generateKey');
+            configuration.setValue('$state', state);
             await storeConfiguration(configurator, configuration, debug);
 
             return certificate;
@@ -242,8 +243,8 @@ function DigitalNotary(securityModule, account, directory, debug) {
             configuration.setValue('$citation', citation);
 
             // update current state
-            const newState = machine.transitionState('$activateKey');
-            configuration.setValue('$state', newState);
+            const state = machine.transitionState('$activateKey');
+            configuration.setValue('$state', state);
             await storeConfiguration(configurator, configuration, debug);
 
             return citation;
@@ -328,7 +329,8 @@ function DigitalNotary(securityModule, account, directory, debug) {
             configuration.setValue('$citation', citation);
 
             // update current state
-            configuration.setValue('$state', machine.transitionState('$refreshKey'));
+            const state = machine.transitionState('$refreshKey');
+            configuration.setValue('$state', state);
             await storeConfiguration(configurator, configuration, debug);
 
             return certificate;
@@ -354,6 +356,7 @@ function DigitalNotary(securityModule, account, directory, debug) {
             await securityModule.eraseKeys();
             await deleteConfiguration(configurator, debug);
             configuration = undefined;
+            machine = undefined;
 
         } catch (cause) {
             const exception = bali.exception({
@@ -379,7 +382,9 @@ function DigitalNotary(securityModule, account, directory, debug) {
             // check current state
             if (!configuration) configuration = await loadConfiguration(configurator, debug);
             if (!machine) machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
-            machine.transitionState('$getCitation');  // NOTE: straight to transition...
+            const state = machine.transitionState('$getCitation');  // NOTE: straight to transition...
+            configuration.setValue('$state', state);
+            await storeConfiguration(configurator, configuration, debug);
             return configuration.getValue('$citation');
         } catch (cause) {
             const exception = bali.exception({
@@ -540,7 +545,8 @@ function DigitalNotary(securityModule, account, directory, debug) {
             notarizedComponent.setValue('$signature', signature);
 
             // update current state
-            configuration.setValue('$state', machine.transitionState('$notarizeDocument'));
+            const state = machine.transitionState('$notarizeDocument');
+            configuration.setValue('$state', state);
             await storeConfiguration(configurator, configuration, debug);
 
             return notarizedComponent;

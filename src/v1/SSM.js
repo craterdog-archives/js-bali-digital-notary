@@ -161,10 +161,8 @@ function SSM(directory, debug) {
             configuration.setValue('$publicKey', bali.binary(raw.publicKey));
             configuration.setValue('$privateKey', bali.binary(raw.secretKey));
             const state = machine.transitionState('$generateKeys');
-            if (state !== configuration.getValue('$state')) {
-                configuration.setValue('$state', state);
-                await storeConfiguration(configurator, configuration, debug);
-            }
+            configuration.setValue('$state', state);
+            await storeConfiguration(configurator, configuration, debug);
             return configuration.getValue('$publicKey');
         } catch (cause) {
             const exception = bali.exception({
@@ -195,10 +193,8 @@ function SSM(directory, debug) {
             configuration.setValue('$publicKey', bali.binary(raw.publicKey));
             configuration.setValue('$privateKey', bali.binary(raw.secretKey));
             const state = machine.transitionState('$rotateKeys');
-            if (state !== configuration.getValue('$state')) {
-                configuration.setValue('$state', state);
-                await storeConfiguration(configurator, configuration, debug);
-            }
+            configuration.setValue('$state', state);
+            await storeConfiguration(configurator, configuration, debug);
             return configuration.getValue('$publicKey');
         } catch (cause) {
             const exception = bali.exception({
@@ -221,6 +217,7 @@ function SSM(directory, debug) {
         try {
             await deleteConfiguration(configurator, debug);
             configuration = undefined;
+            machine = undefined;
             return true;
         } catch (cause) {
             const exception = bali.exception({
@@ -294,18 +291,14 @@ function SSM(directory, debug) {
                 // it using the old private key to enforce a valid certificate chain
                 privateKey = configuration.getValue('$previousPrivateKey');
                 configuration.removeValues(['$previousPublicKey', '$previousPrivateKey']);
-                configuration.setValue('$publicKey', publicKey);
-                configuration.setValue('$privateKey', privateKey);
             } else {
                 publicKey = configuration.getValue('$publicKey');
                 privateKey = configuration.getValue('$privateKey');
             }
             const signature = bali.binary(signer.sign(bytes, publicKey.getValue(), privateKey.getValue()));
             const state = machine.transitionState('$signBytes');
-            if (state !== configuration.getValue('$state')) {
-                configuration.setValue('$state', state);
-                await storeConfiguration(configurator, configuration, debug);
-            }
+            configuration.setValue('$state', state);
+            await storeConfiguration(configurator, configuration, debug);
             return signature;
         } catch (cause) {
             const exception = bali.exception({
