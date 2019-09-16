@@ -92,7 +92,6 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             '/javascript/String'
         ]);
     }
-    if (directory) validateStructure('$DigitalNotary', 'directory', directory);
 
     // define the private configuration
     const filename = account.getValue() + '.bali';
@@ -702,11 +701,6 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
                 break;
             case 'version':
                 if (parameterValue.isComponent && parameterValue.isType('$Version')) return;
-                break;
-            case 'directory':
-                // A directory must be a string that matches a specific pattern
-                const pattern = new RegExp('/?(\\w+/)+');
-                if (typeof parameterValue === 'string' && pattern.test(parameterValue)) return;
                 break;
             case 'component':
                 if (parameterValue.isComponent) return;
