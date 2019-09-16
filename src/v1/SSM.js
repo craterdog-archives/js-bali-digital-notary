@@ -55,7 +55,7 @@ const STATES = {
 };
 
 
-// PUBLIC API
+// PUBLIC FUNCTIONS
 
 /**
  * This function creates a new instance of a software security module (SSM).
@@ -70,9 +70,9 @@ const STATES = {
  *   2: perform argument validation and log exceptions to console.error
  *   3: perform argument validation and log exceptions to console.error and debug info to console.log
  * </pre>
- * @returns {Object} An object that implements the security module API.
+ * @returns {Object} The new software security module.
  */
-function SSM(directory, debug) {
+const SSM = function(directory, debug) {
     // validate the arguments
     if (debug === null || debug === undefined) debug = 0;  // default is off
     if (debug > 1) {

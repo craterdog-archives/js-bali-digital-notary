@@ -76,7 +76,7 @@ const STATES = {
  * </pre>
  * @returns {Object} An object that implements the API for a digital notary.
  */
-function DigitalNotary(securityModule, account, directory, debug) {
+const DigitalNotary = function(securityModule, account, directory, debug) {
     // validate the arguments
     if (debug === null || debug === undefined) debug = 0;  // default is off
     if (debug > 1) {
