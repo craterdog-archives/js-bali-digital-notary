@@ -86,7 +86,7 @@ const SSM = function(directory, debug) {
     // setup the configuration
     const filename = 'SSM' + PROTOCOL + '.bali';
     const configurator = bali.configurator(filename, directory, debug);
-    var configuration, machine;
+    var configuration, controller;
 
     /**
      * This method returns a string describing the attributes of the SSM. It must not be an
@@ -114,7 +114,7 @@ const SSM = function(directory, debug) {
             // load the current configuration if necessary
             if (!configuration) {
                 configuration = await loadConfiguration(configurator, debug);
-                machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+                controller = bali.controller(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
             }
 
             return configuration.getValue('$tag');
@@ -163,9 +163,9 @@ const SSM = function(directory, debug) {
             // check the current state
             if (!configuration) {
                 configuration = await loadConfiguration(configurator, debug);
-                machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+                controller = bali.controller(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
             }
-            machine.validateEvent('$generateKeys');
+            controller.validateEvent('$generateKeys');
 
             // generate a new key pair
             const seed = signer.createSeed();
@@ -174,7 +174,7 @@ const SSM = function(directory, debug) {
             configuration.setValue('$privateKey', bali.binary(raw.secretKey));
 
             // update the configuration
-            const state = machine.transitionState('$generateKeys');
+            const state = controller.transitionState('$generateKeys');
             configuration.setValue('$state', state);
             await storeConfiguration(configurator, configuration, debug);
 
@@ -201,9 +201,9 @@ const SSM = function(directory, debug) {
             // check the current state
             if (!configuration) {
                 configuration = await loadConfiguration(configurator, debug);
-                machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+                controller = bali.controller(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
             }
-            machine.validateEvent('$rotateKeys');
+            controller.validateEvent('$rotateKeys');
 
             // save the previous key pair
             configuration.setValue('$previousPublicKey', configuration.getValue('$publicKey'));
@@ -216,7 +216,7 @@ const SSM = function(directory, debug) {
             configuration.setValue('$privateKey', bali.binary(raw.secretKey));
 
             // update the configuration
-            const state = machine.transitionState('$rotateKeys');
+            const state = controller.transitionState('$rotateKeys');
             configuration.setValue('$state', state);
             await storeConfiguration(configurator, configuration, debug);
 
@@ -316,9 +316,9 @@ const SSM = function(directory, debug) {
             // check the current state
             if (!configuration) {
                 configuration = await loadConfiguration(configurator, debug);
-                machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+                controller = bali.controller(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
             }
-            machine.validateEvent('$signBytes');
+            controller.validateEvent('$signBytes');
 
             // retrieve the keys
             var privateKey;
@@ -337,7 +337,7 @@ const SSM = function(directory, debug) {
             const signature = signer.sign(bytes, publicKey.getValue(), privateKey.getValue());
 
             // update the configuration
-            const state = machine.transitionState('$signBytes');
+            const state = controller.transitionState('$signBytes');
             configuration.setValue('$state', state);
             await storeConfiguration(configurator, configuration, debug);
 

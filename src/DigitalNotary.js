@@ -96,7 +96,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     // define the private configuration
     const filename = account.getValue() + '.bali';
     const configurator = bali.configurator(filename, directory, debug);
-    var configuration, machine;
+    var configuration, controller;
 
     /**
      * This method returns a string describing the attributes of the digital notary. It must
@@ -157,9 +157,9 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             // check current state
             if (!configuration) {
                 configuration = await loadConfiguration(configurator, debug);
-                machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+                controller = bali.controller(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
             }
-            machine.validateEvent('$generateKey');
+            controller.validateEvent('$generateKey');
 
             // generate a new public-private key pair
             const publicKey = await securityModule.generateKeys();
@@ -180,7 +180,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             configuration.setValue('$certificate', certificate);
 
             // update current state
-            const state = machine.transitionState('$generateKey');
+            const state = controller.transitionState('$generateKey');
             configuration.setValue('$state', state);
             await storeConfiguration(configurator, configuration, debug);
 
@@ -220,9 +220,9 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             // check current state
             if (!configuration) {
                 configuration = await loadConfiguration(configurator, debug);
-                machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+                controller = bali.controller(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
             }
-            machine.validateEvent('$activateKey');
+            controller.validateEvent('$activateKey');
 
             // extract the required attributes
             const timestamp = bali.moment();  // now
@@ -248,7 +248,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             configuration.setValue('$citation', citation);
 
             // update current state
-            const state = machine.transitionState('$activateKey');
+            const state = controller.transitionState('$activateKey');
             configuration.setValue('$state', state);
             await storeConfiguration(configurator, configuration, debug);
 
@@ -278,9 +278,9 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             // check current state
             if (!configuration) {
                 configuration = await loadConfiguration(configurator, debug);
-                machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+                controller = bali.controller(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
             }
-            machine.validateEvent('$refreshKey');
+            controller.validateEvent('$refreshKey');
 
             // generate a new public-private key pair
             const publicKey = await securityModule.rotateKeys();
@@ -336,7 +336,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             configuration.setValue('$citation', citation);
 
             // update current state
-            const state = machine.transitionState('$refreshKey');
+            const state = controller.transitionState('$refreshKey');
             configuration.setValue('$state', state);
             await storeConfiguration(configurator, configuration, debug);
 
@@ -388,9 +388,9 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             // check current state
             if (!configuration) {
                 configuration = await loadConfiguration(configurator, debug);
-                machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+                controller = bali.controller(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
             }
-            const state = machine.transitionState('$getCitation');  // NOTE: straight to transition...
+            const state = controller.transitionState('$getCitation');  // NOTE: straight to transition...
             configuration.setValue('$state', state);
             await storeConfiguration(configurator, configuration, debug);
             return configuration.getValue('$citation');
@@ -437,9 +437,9 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             // check current state
             if (!configuration) {
                 configuration = await loadConfiguration(configurator, debug);
-                machine = bali.machine(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+                controller = bali.controller(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
             }
-            machine.validateEvent('$notarizeDocument');
+            controller.validateEvent('$notarizeDocument');
 
             // create the document
             const citation = configuration.getValue('$citation');
@@ -458,7 +458,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             notarizedComponent.setValue('$signature', signature);
 
             // update current state
-            const state = machine.transitionState('$notarizeDocument');
+            const state = controller.transitionState('$notarizeDocument');
             configuration.setValue('$state', state);
             await storeConfiguration(configurator, configuration, debug);
 
