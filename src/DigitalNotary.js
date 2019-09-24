@@ -101,7 +101,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     /**
      * This method returns a string describing the attributes of the digital notary. It must
      * not be an asynchronous function since it is part of the JavaScript language.
-     * 
+     *
      * @returns {String} A string describing the attributes of the digital notary.
      */
     this.toString = function() {
@@ -116,7 +116,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     /**
      * This method returns a list of the protocol versions supported by this digital notary
      * API.
-     * 
+     *
      * @returns {List} A list of the protocol versions supported by this digital notary API.
      */
     this.getProtocols = function() {
@@ -133,11 +133,11 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             throw exception;
         }
     };
-   
+
     /**
      * This method returns the unique tag for the account that is associated with this
      * digital notary.
-     * 
+     *
      * @returns {Tag} The unique tag for the account that is associated with this digital
      * notary.
      */
@@ -417,7 +417,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
      *                   who can access the document
      *  * $previous - a citation to the previous version of the document (or bali.pattern.NONE)
      * </pre>
-     * 
+     *
      * The newly notarized document is returned.
      *
      * @param {Component} component The component to be notarized.
@@ -602,7 +602,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             throw exception;
         }
     };
-   
+
     /**
      * This method determines whether or not the specified document citation matches
      * the specified notarized document. The citation only matches if its digest matches
@@ -664,7 +664,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             throw exception;
         }
     };
-   
+
     return this;
 };
 DigitalNotary.prototype.constructor = DigitalNotary;
@@ -677,30 +677,30 @@ exports.DigitalNotary = DigitalNotary;
  * This function validates the specified parameter type and value for a parameter that was
  * passed into the specified function. If either the type or value is not valid an exception
  * is thrown. This function is called recursively for any parameters that contain attributes.
- * 
- * @param {String} functionName The name of the function to which the parameter was passed. 
- * @param {String} parameterName The name of the parameter that was passed. 
- * @param {Object} parameterValue The value of the parameter that was passed. 
- * @param {String} parameterType The expected type of the parameter that was passed. 
+ *
+ * @param {String} functionName The name of the function to which the parameter was passed.
+ * @param {String} parameterName The name of the parameter that was passed.
+ * @param {Object} parameterValue The value of the parameter that was passed.
+ * @param {String} parameterType The expected type of the parameter that was passed.
  */
 const validateStructure = function(functionName, parameterName, parameterValue, parameterType) {
     parameterType = parameterType || parameterName;
     if (parameterValue) {
         switch (parameterType) {
             case 'binary':
-                if (parameterValue.isComponent && parameterValue.isType('$Binary')) return;
+                if (parameterValue.isComponent && parameterValue.isType('/bali/elements/Binary')) return;
                 break;
             case 'moment':
-                if (parameterValue.isComponent && parameterValue.isType('$Moment')) return;
+                if (parameterValue.isComponent && parameterValue.isType('/bali/elements/Moment')) return;
                 break;
             case 'name':
-                if (parameterValue.isComponent && parameterValue.isType('$Name')) return;
+                if (parameterValue.isComponent && parameterValue.isType('/bali/elements/Name')) return;
                 break;
             case 'tag':
-                if (parameterValue.isComponent && parameterValue.isType('$Tag')) return;
+                if (parameterValue.isComponent && parameterValue.isType('/bali/elements/Tag')) return;
                 break;
             case 'version':
-                if (parameterValue.isComponent && parameterValue.isType('$Version')) return;
+                if (parameterValue.isComponent && parameterValue.isType('/bali/elements/Version')) return;
                 break;
             case 'component':
                 if (parameterValue.isComponent) return;
@@ -710,7 +710,7 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
                 //  * a parameterized type of /bali/notary/Citation/v...
                 //  * exactly five specific attributes
                 if (parameterValue.isComponent && parameterValue.isEqualTo(bali.pattern.NONE)) return;
-                if (parameterValue.isComponent && parameterValue.isType('$Catalog') && parameterValue.getSize() === 5) {
+                if (parameterValue.isComponent && parameterValue.isType('/bali/collections/Catalog') && parameterValue.getSize() === 5) {
                     validateStructure(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
                     validateStructure(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
                     validateStructure(functionName, parameterName + '.tag', parameterValue.getValue('$tag'), 'tag');
@@ -728,7 +728,7 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
                 //  * a parameterized type of /bali/notary/Certificate/v...
                 //  * exactly four specific attributes
                 //  * and be parameterized with exactly 5 specific parameters
-                if (parameterValue.isComponent && parameterValue.isType('$Catalog') && parameterValue.getSize() === 4) {
+                if (parameterValue.isComponent && parameterValue.isType('/bali/collections/Catalog') && parameterValue.getSize() === 4) {
                     validateStructure(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
                     validateStructure(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
                     validateStructure(functionName, parameterName + '.account', parameterValue.getValue('$account'), 'tag');
@@ -751,7 +751,7 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
                 //  * exactly five specific attributes including a $component attribute
                 //  * the $component attribute must be parameterized with at least four parameters
                 //  * the $component attribute may have a parameterized type as well
-                if (parameterValue.isComponent && parameterValue.isType('$Catalog') && parameterValue.getSize() === 5) {
+                if (parameterValue.isComponent && parameterValue.isType('/bali/collections/Catalog') && parameterValue.getSize() === 5) {
                     validateStructure(functionName, parameterName + '.component', parameterValue.getValue('$component'), 'component');
                     validateStructure(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
                     validateStructure(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
