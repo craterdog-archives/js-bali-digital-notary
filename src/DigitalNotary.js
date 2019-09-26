@@ -170,13 +170,13 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 $timestamp: bali.moment(),  // now
                 $account: account,
                 $publicKey: publicKey
-            }, bali.parameters({
+            }, {
                 $type: '/bali/notary/Certificate/v1',
                 $tag: bali.tag(),  // generate a new random tag
                 $version: bali.version(),  // initial version
                 $permissions: '/bali/permissions/public/v1',
                 $previous: bali.pattern.NONE
-            }));
+            });
             configuration.setValue('$certificate', certificate);
 
             // update current state
@@ -241,9 +241,9 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 $tag: tag,
                 $version: version,
                 $digest: digest
-            }, bali.parameters({
+            }, {
                 $type: bali.component('/bali/notary/Citation/v1')
-            }));
+            });
             if (debug > 2) console.log('citation: ' + citation + EOL);
             configuration.setValue('$citation', citation);
 
@@ -295,13 +295,13 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 $timestamp: timestamp,
                 $account: account,
                 $publicKey: publicKey
-            }, bali.parameters({
+            }, {
                 $type: '/bali/notary/Certificate/v1',
                 $tag: tag,
                 $version: version,
                 $permissions: '/bali/permissions/public/v1',
                 $previous: citation
-            }));
+            });
 
             // create a notarized certificate
             const certificate = bali.catalog({
@@ -309,9 +309,9 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 $protocol: PROTOCOL,
                 $timestamp: timestamp,
                 $certificate: citation
-            }, bali.parameters({
+            }, {
                 $type: bali.component('/bali/notary/Document/v1')
-            }));
+            });
             var bytes = Buffer.from(certificate.toString(), 'utf8');
             const signature = await securityModule.signBytes(bytes);
             certificate.setValue('$signature', signature);
@@ -329,9 +329,9 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 $tag: tag,
                 $version: version,
                 $digest: digest
-            }, bali.parameters({
+            }, {
                 $type: bali.component('/bali/notary/Citation/v1')
-            }));
+            });
             if (debug > 2) console.log('citation: ' + citation + EOL);
             configuration.setValue('$citation', citation);
 
@@ -448,9 +448,9 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 $protocol: PROTOCOL,
                 $timestamp: bali.moment(),  // now
                 $certificate: citation || bali.pattern.NONE  // 'none' for self-signed certificate
-            }, bali.parameters({
+            }, {
                 $type: bali.component('/bali/notary/Document/v1')
-            }));
+            });
 
             // notarize the document
             const bytes = Buffer.from(notarizedComponent.toString(), 'utf8');
@@ -585,9 +585,9 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 $tag: tag,
                 $version: version,
                 $digest: digest
-            }, bali.parameters({
+            }, {
                 $type: '/bali/notary/Citation/v1'
-            }));
+            });
 
             return citation;
         } catch (cause) {
