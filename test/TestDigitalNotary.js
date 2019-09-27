@@ -150,7 +150,6 @@ describe('Bali Digital Notary™', function() {
             expect(matches).to.equal(true);
 
             document = document.duplicate();
-            const parameters = document.g
             document.setParameter('$tag', document.getValue('$component').getParameter('$tag')),
             document.setParameter('$version', bali.component('v2'));
             document.setParameter('$permissions', bali.component('/bali/permissions/public/v1'));
