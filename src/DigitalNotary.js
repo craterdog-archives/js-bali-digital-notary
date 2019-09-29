@@ -147,8 +147,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
 
     /**
      * This method generates a new public-private key pair and uses the private key as the
-     * new notary key. It returns the new public notary certificate. Note, during key rotation
-     * the old private key is used to sign the new certificate before it is destroyed.
+     * new notary key. It returns the new (unsigned) public notary certificate.
      *
      * @returns {Catalog} The new notary certificate.
      */
