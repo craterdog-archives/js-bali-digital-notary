@@ -16,9 +16,9 @@
  *   * generateKey - generate a new notary key and return the (unsigned) notary certificate
  *   * activateKey - activate the notary key and return a citation to the notary certificate
  *   * getCitation - retrieve the document citation for the notary certificate
- *   * notarizeDocument - digitally notarize a document and return the notarized document
+ *   * notarizeComponent - digitally notarize a component using the current notary key
  *   * validDocument - check whether or not the notary seal on a notarized document is valid
- *   * citeDocument - create a document citation for a document
+ *   * citeDocument - create a document citation for a notarized document
  *   * citationMatches - check whether or not a citation matches its cited document
  *   * refreshKey - replace the existing notary key with new one
  *   * forgetKey - forget any knowledge of the notary key
@@ -46,14 +46,14 @@ const PROTOCOLS = {
 const PROTOCOL = Object.keys(PROTOCOLS)[0];  // the latest protocol
 
 // define the finite state machine
-const EVENTS = [  //                          possible events
-               '$generateKey', '$activateKey', '$refreshKey', '$getCitation', '$notarizeDocument'
+const REQUESTS = [  //                        possible request types
+              '$generateKey', '$activateKey', '$getCitation', '$notarizeComponent', '$refreshKey'
 ];
 const STATES = {
-//   current                                 allowed next states
-    $limited: [ '$pending',      undefined,      undefined,     undefined,        undefined  ],
-    $pending: [  undefined,     '$enabled',      undefined,     undefined,       '$pending'  ],
-    $enabled: [  undefined,      undefined,     '$enabled',    '$enabled',       '$enabled'  ]
+//   current                                   allowed next states
+    $limited: [ '$pending',     undefined,      undefined,         undefined,         undefined ],
+    $pending: [  undefined,    '$enabled',      undefined,        '$pending',         undefined ],
+    $enabled: [  undefined,     undefined,     '$enabled',        '$enabled',        '$enabled' ]
 };
 
 
@@ -146,17 +146,46 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     };
 
     /**
-     * This method generates a new public-private key pair and uses the private key as the
-     * new notary key. It returns the new (unsigned) public notary certificate.
+     * This method returns a document citation referencing the notary certificate associated
+     * with the current notary key.
      *
-     * @returns {Catalog} The new notary certificate.
+     * @returns {Catalog} A document citation referencing the notary certificate associated
+     * with the current notary key.
+     */
+    this.getCitation = async function() {
+        try {
+            // check current state
+            if (!configuration) {
+                configuration = await loadConfiguration(configurator, debug);
+                controller = bali.controller(REQUESTS, STATES, configuration.getValue('$state').toString(), debug);
+            }
+            const state = controller.transitionState('$getCitation');  // NOTE: straight to transition...
+            configuration.setValue('$state', state);
+            await storeConfiguration(configurator, configuration, debug);
+            return configuration.getValue('$citation');
+        } catch (cause) {
+            const exception = bali.exception({
+                $module: '/bali/notary/DigitalNotary',
+                $procedure: '$getCitation',
+                $exception: '$unexpected',
+                $text: 'An unexpected error occurred while attempting to retrieve the certificate citation.'
+            }, cause);
+            if (debug > 0) console.error(exception.toString());
+            throw exception;
+        }
+    };
+
+    /**
+     * This method generates a new notary key and returns the new (unsigned) notary certificate.
+     *
+     * @returns {Catalog} The new (unsigned) notary certificate.
      */
     this.generateKey = async function() {
         try {
             // check current state
             if (!configuration) {
                 configuration = await loadConfiguration(configurator, debug);
-                controller = bali.controller(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+                controller = bali.controller(REQUESTS, STATES, configuration.getValue('$state').toString(), debug);
             }
             controller.validateEvent('$generateKey');
 
@@ -197,12 +226,15 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     };
 
     /**
-     * This method activates a new public-private key pair by generating and caching a
-     * document citation to the notarized public certificate for the key pair. It returns
-     * the citation.
+     * This method activates a new notary key by generating and returning a document citation
+     * for the specified notary certificate associated with the notary key. This function is
+     * needed since a new notary certificate may or may not be self-signed depending on
+     * whether it was generated locally by the end user or on their behalf in the Bali Nebula™.
+     * The notary certificate in either case must be signed using the notary key that is local
+     * to the user.
      *
-     * @param {Catalog} certificate The notarized certificate for the new key pair.
-     * @returns {Catalog} A citation to the notarized certificate.
+     * @param {Catalog} certificate The (signed) notary certificate for the new notary key.
+     * @returns {Catalog} A document citation for the notarized certificate.
      */
     this.activateKey = async function(certificate) {
         try {
@@ -219,13 +251,26 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             // check current state
             if (!configuration) {
                 configuration = await loadConfiguration(configurator, debug);
-                controller = bali.controller(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+                controller = bali.controller(REQUESTS, STATES, configuration.getValue('$state').toString(), debug);
             }
             controller.validateEvent('$activateKey');
 
+            // make sure its the same certificate
+            const component = certificate.getValue('$component');
+            if (!configuration.getValue('$certificate').isEqualTo(component)) {
+                const exception = bali.exception({
+                    $module: '/bali/notary/DigitalNotary',
+                    $procedure: '$activateKey',
+                    $exception: '$invalidCertificate',
+                    $certificate: certificate,
+                    $text: 'The certificate did not match the original notary certificate.'
+                });
+                if (debug > 0) console.error(exception.toString());
+                throw exception;
+            }
+
             // extract the required attributes
             const timestamp = bali.moment();  // now
-            const component = certificate.getValue('$component');
             const tag = component.getParameter('$tag');
             const version = component.getParameter('$version');
 
@@ -245,6 +290,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             });
             if (debug > 2) console.log('citation: ' + citation + EOL);
             configuration.setValue('$citation', citation);
+            configuration.setValue('$certificate', certificate);
 
             // update current state
             const state = controller.transitionState('$activateKey');
@@ -266,155 +312,14 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     };
 
     /**
-     * This method replaces an existing public-private key pair with a new one. It returns
-     * a new public notary certificate. Note, during key rotation the old private key is used
-     * to sign the new certificate before it is destroyed.
-     *
-     * @returns {Catalog} The new notary certificate.
-     */
-    this.refreshKey = async function() {
-        try {
-            // check current state
-            if (!configuration) {
-                configuration = await loadConfiguration(configurator, debug);
-                controller = bali.controller(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
-            }
-            controller.validateEvent('$refreshKey');
-
-            // generate a new public-private key pair
-            const publicKey = await securityModule.rotateKeys();
-            const timestamp = bali.moment();  // now
-            var citation = configuration.getValue('$citation');
-            const tag = citation.getValue('$tag');
-            const version = citation.getValue('$version').nextVersion();
-
-            // create the new notary certificate body
-            const component = bali.catalog({
-                $protocol: PROTOCOL,
-                $timestamp: timestamp,
-                $account: account,
-                $publicKey: publicKey
-            }, {
-                $type: '/bali/notary/Certificate/v1',
-                $tag: tag,
-                $version: version,
-                $permissions: '/bali/permissions/public/v1',
-                $previous: citation
-            });
-
-            // create a notarized certificate
-            const certificate = bali.catalog({
-                $component: component,
-                $protocol: PROTOCOL,
-                $timestamp: timestamp,
-                $certificate: citation
-            }, {
-                $type: bali.component('/bali/notary/Document/v1')
-            });
-            var bytes = Buffer.from(certificate.toString(), 'utf8');
-            const signature = await securityModule.signBytes(bytes);
-            certificate.setValue('$signature', signature);
-            if (debug > 2) console.log('certificate: ' + certificate + EOL);
-            configuration.setValue('$certificate', certificate);
-
-            // generate a digest of the certificate
-            bytes = Buffer.from(certificate.toString(), 'utf8');
-            const digest = await securityModule.digestBytes(bytes);
-
-            // save the state of the certificate citation
-            citation = bali.catalog({
-                $protocol: PROTOCOL,
-                $timestamp: timestamp,
-                $tag: tag,
-                $version: version,
-                $digest: digest
-            }, {
-                $type: bali.component('/bali/notary/Citation/v1')
-            });
-            if (debug > 2) console.log('citation: ' + citation + EOL);
-            configuration.setValue('$citation', citation);
-
-            // update current state
-            const state = controller.transitionState('$refreshKey');
-            configuration.setValue('$state', state);
-            await storeConfiguration(configurator, configuration, debug);
-
-            return certificate;
-        } catch (cause) {
-            const exception = bali.exception({
-                $module: '/bali/notary/DigitalNotary',
-                $procedure: '$refreshKey',
-                $exception: '$unexpected',
-                $text: 'An unexpected error occurred while attempting to refresh the notary key.'
-            }, cause);
-            if (debug > 0) console.error(exception.toString());
-            throw exception;
-        }
-    };
-
-    /**
-     * This method causes the digital notary to forget all information
-     * it knows about the current public-private key pair.
-     */
-    this.forgetKey = async function() {
-        try {
-            // erase the state of the digital notary
-            await securityModule.eraseKeys();
-            await deleteConfiguration(configurator, debug);
-            configuration = undefined;
-
-        } catch (cause) {
-            const exception = bali.exception({
-                $module: '/bali/notary/DigitalNotary',
-                $procedure: '$forgetKey',
-                $exception: '$unexpected',
-                $text: 'An unexpected error occurred while attempting to forget the notary key.'
-            }, cause);
-            if (debug > 0) console.error(exception.toString());
-            throw exception;
-        }
-    };
-
-    /**
-     * This method returns a citation referencing the notary certificate associated
-     * with this notary key.
-     *
-     * @returns {Catalog} A citation referencing the notary certificate associated
-     * with this notary key.
-     */
-    this.getCitation = async function() {
-        try {
-            // check current state
-            if (!configuration) {
-                configuration = await loadConfiguration(configurator, debug);
-                controller = bali.controller(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
-            }
-            const state = controller.transitionState('$getCitation');  // NOTE: straight to transition...
-            configuration.setValue('$state', state);
-            await storeConfiguration(configurator, configuration, debug);
-            return configuration.getValue('$citation');
-        } catch (cause) {
-            const exception = bali.exception({
-                $module: '/bali/notary/DigitalNotary',
-                $procedure: '$getCitation',
-                $exception: '$unexpected',
-                $text: 'An unexpected error occurred while attempting to retrieve the certificate citation.'
-            }, cause);
-            if (debug > 0) console.error(exception.toString());
-            throw exception;
-        }
-    };
-
-    /**
-     * This method digitally notarizes the specified component using the private notary
-     * key maintained by the security module. The component must be parameterized
-     * with the following parameters:
+     * This method digitally signs the specified component using the notary key maintained by
+     * the security module. The component must be parameterized with the following parameters:
      * <pre>
-     *  * $tag - a unique identifier for the document
-     *  * $version - the version of the document
+     *  * $tag - a unique identifier for the component
+     *  * $version - the version of the component
      *  * $permissions - the name of a notarized document containing the permissions defining
-     *                   who can access the document
-     *  * $previous - a citation to the previous version of the document (or bali.pattern.NONE)
+     *                   who can access the component
+     *  * $previous - a citation to the previous version of the component (or bali.pattern.NONE)
      * </pre>
      *
      * The newly notarized document is returned.
@@ -422,27 +327,27 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
      * @param {Component} component The component to be notarized.
      * @returns {Catalog} A newly notarized document containing the component.
      */
-    this.notarizeDocument = async function(component) {
+    this.notarizeComponent = async function(component) {
         try {
             // validate the argument
             if (debug > 1) {
                 const validator = bali.validator(debug);
-                validator.validateType('/bali/notary/DigitalNotary', '$notarizeDocument', '$component', component, [
+                validator.validateType('/bali/notary/DigitalNotary', '$notarizeComponent', '$component', component, [
                     '/bali/collections/Catalog'
                 ]);
-                validateStructure('$notarizeDocument', 'component', component);
+                validateStructure('$notarizeComponent', 'component', component);
             }
 
             // check current state
             if (!configuration) {
                 configuration = await loadConfiguration(configurator, debug);
-                controller = bali.controller(EVENTS, STATES, configuration.getValue('$state').toString(), debug);
+                controller = bali.controller(REQUESTS, STATES, configuration.getValue('$state').toString(), debug);
             }
-            controller.validateEvent('$notarizeDocument');
+            controller.validateEvent('$notarizeComponent');
 
             // create the document
             const citation = configuration.getValue('$citation');
-            const notarizedComponent = bali.catalog({
+            const document = bali.catalog({
                 $component: component,
                 $protocol: PROTOCOL,
                 $timestamp: bali.moment(),  // now
@@ -452,23 +357,23 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             });
 
             // notarize the document
-            const bytes = Buffer.from(notarizedComponent.toString(), 'utf8');
+            const bytes = Buffer.from(document.toString(), 'utf8');
             const signature = await securityModule.signBytes(bytes);
-            notarizedComponent.setValue('$signature', signature);
+            document.setValue('$signature', signature);
 
             // update current state
-            const state = controller.transitionState('$notarizeDocument');
+            const state = controller.transitionState('$notarizeComponent');
             configuration.setValue('$state', state);
             await storeConfiguration(configurator, configuration, debug);
 
-            return notarizedComponent;
+            return document;
         } catch (cause) {
             const exception = bali.exception({
                 $module: '/bali/notary/DigitalNotary',
-                $procedure: '$notarizeDocument',
+                $procedure: '$notarizeComponent',
                 $exception: '$unexpected',
                 $component: component,
-                $text: 'An unexpected error occurred while attempting to notarize a document.'
+                $text: 'An unexpected error occurred while attempting to notarize a component.'
             }, cause);
             if (debug > 0) console.error(exception.toString());
             throw exception;
@@ -480,9 +385,9 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
      * document is valid.
      *
      * @param {Catalog} document The notarized document to be tested.
-     * @param {Catalog} certificate A document containing the public certificate for the
-     * private notary key that allegedly notarized the specified notarized document.
-     * @returns {Boolean} Whether or not the notary seal on the notarized document is valid.
+     * @param {Catalog} certificate A document containing the notary certificate for the
+     * notary key that allegedly notarized the specified document.
+     * @returns {Boolean} Whether or not the notary seal on the document is valid.
      */
     this.validDocument = async function(document, certificate) {
         try {
@@ -664,6 +569,116 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
         }
     };
 
+    /**
+     * This method replaces an existing public-private key pair with a new one. It returns
+     * a new public notary certificate.  Note, while refreshing the key the old private key
+     * is used to sign the new certificate before it is destroyed.
+     *
+     * @returns {Catalog} The new notary certificate.
+     */
+    this.refreshKey = async function() {
+        try {
+            // check current state
+            if (!configuration) {
+                configuration = await loadConfiguration(configurator, debug);
+                controller = bali.controller(REQUESTS, STATES, configuration.getValue('$state').toString(), debug);
+            }
+            controller.validateEvent('$refreshKey');
+
+            // generate a new public-private key pair
+            const publicKey = await securityModule.rotateKeys();
+            const timestamp = bali.moment();  // now
+            var citation = configuration.getValue('$citation');
+            const tag = citation.getValue('$tag');
+            const version = citation.getValue('$version').nextVersion();
+
+            // create the new notary certificate body
+            const component = bali.catalog({
+                $protocol: PROTOCOL,
+                $timestamp: timestamp,
+                $account: account,
+                $publicKey: publicKey
+            }, {
+                $type: '/bali/notary/Certificate/v1',
+                $tag: tag,
+                $version: version,
+                $permissions: '/bali/permissions/public/v1',
+                $previous: citation
+            });
+
+            // create a notarized certificate
+            const certificate = bali.catalog({
+                $component: component,
+                $protocol: PROTOCOL,
+                $timestamp: timestamp,
+                $certificate: citation
+            }, {
+                $type: bali.component('/bali/notary/Document/v1')
+            });
+            var bytes = Buffer.from(certificate.toString(), 'utf8');
+            const signature = await securityModule.signBytes(bytes);
+            certificate.setValue('$signature', signature);
+            if (debug > 2) console.log('certificate: ' + certificate + EOL);
+            configuration.setValue('$certificate', certificate);
+
+            // generate a digest of the certificate
+            bytes = Buffer.from(certificate.toString(), 'utf8');
+            const digest = await securityModule.digestBytes(bytes);
+
+            // save the state of the certificate citation
+            citation = bali.catalog({
+                $protocol: PROTOCOL,
+                $timestamp: timestamp,
+                $tag: tag,
+                $version: version,
+                $digest: digest
+            }, {
+                $type: bali.component('/bali/notary/Citation/v1')
+            });
+            if (debug > 2) console.log('citation: ' + citation + EOL);
+            configuration.setValue('$citation', citation);
+
+            // update current state
+            const state = controller.transitionState('$refreshKey');
+            configuration.setValue('$state', state);
+            await storeConfiguration(configurator, configuration, debug);
+
+            return certificate;
+        } catch (cause) {
+            const exception = bali.exception({
+                $module: '/bali/notary/DigitalNotary',
+                $procedure: '$refreshKey',
+                $exception: '$unexpected',
+                $text: 'An unexpected error occurred while attempting to refresh the notary key.'
+            }, cause);
+            if (debug > 0) console.error(exception.toString());
+            throw exception;
+        }
+    };
+
+    /**
+     * This method causes the digital notary to forget all information
+     * it knows about the current public-private key pair.
+     */
+    this.forgetKey = async function() {
+        try {
+            // erase the state of the digital notary
+            await securityModule.eraseKeys();
+            await deleteConfiguration(configurator, debug);
+            configuration = undefined;
+
+        } catch (cause) {
+            const exception = bali.exception({
+                $module: '/bali/notary/DigitalNotary',
+                $procedure: '$forgetKey',
+                $exception: '$unexpected',
+                $text: 'An unexpected error occurred while attempting to forget the notary key.'
+            }, cause);
+            if (debug > 0) console.error(exception.toString());
+            throw exception;
+        }
+    };
+
     return this;
 };
 DigitalNotary.prototype.constructor = DigitalNotary;
@@ -780,18 +795,28 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
         $value: parameterValue ? bali.text(parameterValue.toString()) : bali.pattern.NONE,
         $text: 'An invalid parameter value was passed to the function.'
     });
+    console.error(exception.toString());  // debug > 0 if this function was called so log it
     throw exception;
 };
 
 
 // PRIVATE FUNCTIONS
 
+/**
+ * This function uses a configurator to store out the specified configuration catalog to
+ * the local filesystem.
+ * 
+ * @param {Configurator} configurator A filesystem backed configurator.
+ * @param {Catalog} configuration A catalog containing the current configuration to be stored.
+ * @param {Boolean|Number} debug An optional number in the range [0..3] that controls
+ * the level of debugging that occurs:
+ */
 const storeConfiguration = async function(configurator, configuration, debug) {
     try {
         await configurator.store(configuration.toString() + EOL);
     } catch (cause) {
         const exception = bali.exception({
-            $module: '/bali/notary/' + PROTOCOL + '/SSM',
+            $module: '/bali/notary/DigitalNotary',
             $procedure: '$storeConfiguration',
             $exception: '$storageException',
             $text: 'The attempt to store the current configuration failed.'
@@ -802,6 +827,15 @@ const storeConfiguration = async function(configurator, configuration, debug) {
 };
 
 
+/**
+ * This function uses a configurator to load the current configuration catalog from
+ * the local filesystem.
+ * 
+ * @param {Configurator} configurator A filesystem backed configurator.
+ * @param {Boolean|Number} debug An optional number in the range [0..3] that controls
+ * the level of debugging that occurs:
+ * @returns {Catalog} A catalog containing the current configuration.
+ */
 const loadConfiguration = async function(configurator, debug) {
     try {
         var configuration;
@@ -817,7 +851,7 @@ const loadConfiguration = async function(configurator, debug) {
         return configuration;
     } catch (cause) {
         const exception = bali.exception({
-            $module: '/bali/notary/' + PROTOCOL + '/SSM',
+            $module: '/bali/notary/DigitalNotary',
             $procedure: '$loadConfiguration',
             $exception: '$storageException',
             $text: 'The attempt to load the current configuration failed.'
@@ -828,12 +862,20 @@ const loadConfiguration = async function(configurator, debug) {
 };
 
 
+/**
+ * This function uses a configurator to delete the current configuration catalog from
+ * the local filesystem.
+ * 
+ * @param {Configurator} configurator A filesystem backed configurator.
+ * @param {Boolean|Number} debug An optional number in the range [0..3] that controls
+ * the level of debugging that occurs:
+ */
 const deleteConfiguration = async function(configurator, debug) {
     try {
         await configurator.delete();
     } catch (cause) {
         const exception = bali.exception({
-            $module: '/bali/notary/' + PROTOCOL + '/SSM',
+            $module: '/bali/notary/DigitalNotary',
             $procedure: '$deleteConfiguration',
             $exception: '$storageException',
             $text: 'The attempt to delete the current configuration failed.'
