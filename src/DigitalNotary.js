@@ -26,9 +26,9 @@
  * All cryptographic operations are delegated to a security module.
  */
 const bali = require('bali-component-framework').api();
-const SSMv1 = require('./v1/SSM').SSM;
-//const SSMv2 = require('./v2/SSM').SSM;
+const SSMv2 = require('./v2/SSM').SSM;
 //const SSMv3 = require('./v3/SSM').SSM;
+//const SSMv4 = require('./v4/SSM').SSM;
 
 
 // PRIVATE CONSTANTS
@@ -39,9 +39,9 @@ const EOL = '\n';
 // import the supported validation only protocols (in preferred order)
 const PROTOCOLS = {
 //  ...
+//  v4: new SSMv4(),
 //  v3: new SSMv3(),
-//  v2: new SSMv2(),
-    v1: new SSMv1()
+    v2: new SSMv2(),
 };
 const PROTOCOL = Object.keys(PROTOCOLS)[0];  // the latest protocol
 

@@ -24,7 +24,7 @@
  * @returns {Object} An object that implements the API for a software security module.
  */
 exports.ssm = function(directory, debug) {
-    const ssm = new require('./src/v1/SSM').SSM(directory, debug);
+    const ssm = new require('./src/v2/SSM').SSM(directory, debug);
     return ssm;
 };
 

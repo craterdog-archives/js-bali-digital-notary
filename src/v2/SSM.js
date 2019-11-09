@@ -39,7 +39,7 @@ const bali = require('bali-component-framework').api();
 const EOL = '\n';
 
 // the algorithms for this version of the protocol
-const PROTOCOL = 'v1';
+const PROTOCOL = 'v2';
 const DIGEST = 'sha512';
 const SIGNATURE = 'ed25519';
 
@@ -120,7 +120,7 @@ const SSM = function(directory, debug) {
             return configuration.getValue('$tag');
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/v1/SSM',
+                $module: '/bali/notary/' + PROTOCOL + '/SSM',
                 $procedure: '$getTag',
                 $exception: '$unexpected',
                 $text: 'The tag for the security module could not be retrieved.'
@@ -143,7 +143,7 @@ const SSM = function(directory, debug) {
             return bali.component(PROTOCOL);
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/v1/SSM',
+                $module: '/bali/notary/' + PROTOCOL + '/SSM',
                 $procedure: '$getProtocol',
                 $exception: '$unexpected',
                 $text: 'The protocol supported by the security module could not be retrieved.'
@@ -181,7 +181,7 @@ const SSM = function(directory, debug) {
             return configuration.getValue('$publicKey');
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/v1/SSM',
+                $module: '/bali/notary/' + PROTOCOL + '/SSM',
                 $procedure: '$generateKeys',
                 $exception: '$unexpected',
                 $text: 'A new key pair could not be generated.'
@@ -223,7 +223,7 @@ const SSM = function(directory, debug) {
             return configuration.getValue('$publicKey');
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/v1/SSM',
+                $module: '/bali/notary/' + PROTOCOL + '/SSM',
                 $procedure: '$rotateKeys',
                 $exception: '$unexpected',
                 $text: 'The key pair could not be rotated.'
@@ -247,7 +247,7 @@ const SSM = function(directory, debug) {
             return true;
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/v1/SSM',
+                $module: '/bali/notary/' + PROTOCOL + '/SSM',
                 $procedure: '$eraseKeys',
                 $exception: '$unexpected',
                 $text: 'The keys could not be erased.'
@@ -283,7 +283,7 @@ const SSM = function(directory, debug) {
             return bali.binary(digest);
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/v1/SSM',
+                $module: '/bali/notary/' + PROTOCOL + '/SSM',
                 $procedure: '$digestBytes',
                 $exception: '$unexpected',
                 $text: 'A digest of the bytes could not be generated.'
@@ -344,7 +344,7 @@ const SSM = function(directory, debug) {
             return bali.binary(signature);
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/v1/SSM',
+                $module: '/bali/notary/' + PROTOCOL + '/SSM',
                 $procedure: '$signBytes',
                 $exception: '$unexpected',
                 $text: 'A digital signature of the bytes could not be generated.'
@@ -388,7 +388,7 @@ const SSM = function(directory, debug) {
             return isValid;
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/v1/SSM',
+                $module: '/bali/notary/' + PROTOCOL + '/SSM',
                 $procedure: '$validSignature',
                 $exception: '$unexpected',
                 $text: 'The digital signature of the bytes could not be validated.'
