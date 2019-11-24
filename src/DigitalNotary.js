@@ -247,6 +247,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 validateStructure('$activateKey', 'document', certificate);
                 validateStructure('$activateKey', 'certificate', certificate.getValue('$component'));
             }
+            if (debug > 2) console.log('certificate: ' + certificate + EOL);
 
             // check current state
             if (!configuration) {
