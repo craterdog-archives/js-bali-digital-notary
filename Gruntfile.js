@@ -1,7 +1,6 @@
 'use strict';
 
 const path = require('path');
-const childProcess = require('child_process');
 
 // wrapper function for grunt configuration
 module.exports = function(grunt) {
