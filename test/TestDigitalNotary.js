@@ -56,7 +56,7 @@ describe('Bali Digital Notary™', function() {
 
         it('should validate the certificate', async function() {
             expect(notaryCertificate.getValue('$protocol').toString()).to.equal('v2');
-            const certificate = notaryCertificate.getValue('$document');
+            const certificate = notaryCertificate.getValue('$content');
             var isValid = await notary.validDocument(notaryCertificate, certificate);
             expect(isValid).to.equal(true);
         });
@@ -96,7 +96,7 @@ describe('Bali Digital Notary™', function() {
             });
             var document = await notary.notarizeDocument(transaction);
 
-            const certificate = notaryCertificate.getValue('$document');
+            const certificate = notaryCertificate.getValue('$content');
 
             var citation = await notary.citeDocument(document);
             var isValid = await notary.validDocument(document, certificate);
@@ -113,8 +113,8 @@ describe('Bali Digital Notary™', function() {
             var newNotaryCertificate = await notary.refreshKey();
             expect(newNotaryCertificate).to.exist;
 
-            const certificate = notaryCertificate.getValue('$document');
-            const newCertificate = newNotaryCertificate.getValue('$document');
+            const certificate = notaryCertificate.getValue('$content');
+            const newCertificate = newNotaryCertificate.getValue('$content');
 
             var isValid = await notary.validDocument(newNotaryCertificate, certificate);
             expect(isValid).to.equal(true);
@@ -141,7 +141,7 @@ describe('Bali Digital Notary™', function() {
         it('should notarized a document twice properly', async function() {
             var document = await notary.notarizeDocument(content);
 
-            const certificate = notaryCertificate.getValue('$document');
+            const certificate = notaryCertificate.getValue('$content');
 
             var citation = await notary.citeDocument(document);
             var isValid = await notary.validDocument(document, certificate);

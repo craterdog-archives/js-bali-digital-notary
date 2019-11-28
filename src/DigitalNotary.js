@@ -245,7 +245,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$activateKey', 'document', certificate);
-                validateStructure('$activateKey', 'certificate', certificate.getValue('$document'));
+                validateStructure('$activateKey', 'certificate', certificate.getValue('$content'));
             }
             if (debug > 2) console.log('certificate: ' + certificate + EOL);
 
@@ -257,7 +257,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             controller.validateEvent('$activateKey');
 
             // make sure its the same certificate
-            const document = certificate.getValue('$document');
+            const document = certificate.getValue('$content');
             if (!configuration.getValue('$certificate').isEqualTo(document)) {
                 const exception = bali.exception({
                     $module: '/bali/notary/DigitalNotary',
@@ -349,7 +349,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             // create the document
             const citation = configuration.getValue('$citation');
             document = bali.catalog({
-                $document: document,
+                $content: document,
                 $protocol: PROTOCOL,
                 $timestamp: bali.moment(),  // now
                 $certificate: citation || bali.pattern.NONE  // 'none' for self-signed certificate
@@ -407,7 +407,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
 
             // separate the signature from the document
             const catalog = bali.catalog.extraction(document, bali.list([
-                '$document',
+                '$content',
                 '$protocol',
                 '$timestamp',
                 '$certificate'
@@ -475,7 +475,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
 
             // extract the required attributes
             const timestamp = bali.moment();  // now
-            const content = document.getValue('$document');
+            const content = document.getValue('$content');
             const tag = content.getParameter('$tag');
             const version = content.getParameter('$version');
 
@@ -609,7 +609,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
 
             // create a notarized certificate
             const certificate = bali.catalog({
-                $document: document,
+                $content: document,
                 $protocol: PROTOCOL,
                 $timestamp: timestamp,
                 $certificate: citation
@@ -763,16 +763,16 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
             case 'document':
                 // A document must have the following:
                 //  * a parameterized type of /bali/notary/Document/v...
-                //  * exactly five specific attributes including a $document attribute
-                //  * the $document attribute must be parameterized with at least four parameters
-                //  * the $document attribute may have a parameterized type as well
+                //  * exactly five specific attributes including a $content attribute
+                //  * the $content attribute must be parameterized with at least four parameters
+                //  * the $content attribute may have a parameterized type as well
                 if (parameterValue.isComponent && parameterValue.isType('/bali/collections/Catalog') && parameterValue.getSize() === 5) {
-                    validateStructure(functionName, parameterName + '.document', parameterValue.getValue('$document'), 'component');
+                    validateStructure(functionName, parameterName + '.document', parameterValue.getValue('$content'), 'component');
                     validateStructure(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
                     validateStructure(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
                     validateStructure(functionName, parameterName + '.certificate', parameterValue.getValue('$certificate'), 'citation');
                     validateStructure(functionName, parameterName + '.signature', parameterValue.getValue('$signature'), 'binary');
-                    var parameters = parameterValue.getValue('$document').getParameters();
+                    var parameters = parameterValue.getValue('$content').getParameters();
                     if (parameters) {
                         if (parameters['$type']) validateStructure(functionName, parameterName + '.parameters.type', parameters['$type'], 'name');
                         validateStructure(functionName, parameterName + '.parameters.tag', parameters['$tag'], 'tag');
