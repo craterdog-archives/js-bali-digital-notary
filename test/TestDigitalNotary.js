@@ -11,8 +11,9 @@
 const debug = 0;  // set to [1..3] for logging at various levels
 const crypto = require('crypto');
 const mocha = require('mocha');
-const assert = require('chai').assert;
-const expect = require('chai').expect;
+const chai = require('chai');
+const expect = chai.expect;
+const assert = require('assert');
 const bali = require('bali-component-framework').api(debug);
 const account = bali.tag();
 const directory = 'test/config/';
@@ -169,12 +170,9 @@ describe('Bali Digital Notary™', function() {
 
         it('should erase all keys properly', async function() {
             await notary.forgetKey();
-            try {
+            assert.rejects(async function() {
                 await notary.notarizeDocument(content);
-                assert.fail('The attempt to sign a document without a key should have failed.');
-            } catch (error) {
-                // expected
-            };
+            });
         });
 
     });
