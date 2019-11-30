@@ -170,7 +170,7 @@ describe('Bali Digital Notary™', function() {
 
         it('should erase all keys properly', async function() {
             await notary.forgetKey();
-            assert.rejects(async function() {
+            await assert.rejects(async function() {
                 await notary.notarizeDocument(content);
             });
         });
