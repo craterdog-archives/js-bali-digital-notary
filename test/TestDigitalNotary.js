@@ -18,8 +18,8 @@ const bali = require('bali-component-framework').api(debug);
 const account = bali.tag();
 const directory = 'test/config/';
 const api = require('../');
-const securityModule = api.ssm(directory, debug);
-const notary = api.notary(securityModule, account, directory, debug);
+const notary = api.test(account, directory, debug);
+const service = api.service(debug);
 
 
 describe('Bali Digital Notary™', function() {
@@ -32,11 +32,13 @@ describe('Bali Digital Notary™', function() {
 
         it('should return the correct account tag', function() {
             expect(notary.getAccount().isEqualTo(account)).to.equal(true);
+            expect(service.getAccount()).to.equal(undefined);
         });
 
         it('should return the protocols', function() {
             const protocols = notary.getProtocols();
             expect(protocols).to.exist;
+            expect(protocols.isEqualTo(service.getProtocols())).to.equal(true);
         });
 
         it('should generate the keys', async function() {
@@ -44,11 +46,17 @@ describe('Bali Digital Notary™', function() {
             notaryCertificate = await notary.notarizeDocument(catalog);
             certificateCitation = await notary.activateKey(notaryCertificate);
             expect(notaryCertificate).to.exist;
+            await assert.rejects(async function() {
+                await service.generateKey();
+            });
         });
 
         it('should retrieve the certificate citation', async function() {
             certificateCitation = await notary.getCitation();
             expect(certificateCitation).to.exist;
+            await assert.rejects(async function() {
+                await service.getCitation();
+            });
         });
 
     });
@@ -96,13 +104,16 @@ describe('Bali Digital Notary™', function() {
                 $previous: previous
             });
             var document = await notary.notarizeDocument(transaction);
+            await assert.rejects(async function() {
+                await service.notarizeDocument(transaction);
+            });
 
             const certificate = notaryCertificate.getValue('$content');
 
-            var citation = await notary.citeDocument(document);
-            var isValid = await notary.validDocument(document, certificate);
+            var citation = await service.citeDocument(document);
+            var isValid = await service.validDocument(document, certificate);
             expect(isValid).to.equal(true);
-            var matches = await notary.citationMatches(citation, document);
+            var matches = await service.citationMatches(citation, document);
             expect(matches).to.equal(true);
         });
 
@@ -113,6 +124,10 @@ describe('Bali Digital Notary™', function() {
         it('should refresh a notary key properly', async function() {
             var newNotaryCertificate = await notary.refreshKey();
             expect(newNotaryCertificate).to.exist;
+
+            await assert.rejects(async function() {
+                await service.refreshKey();
+            });
 
             const certificate = notaryCertificate.getValue('$content');
             const newCertificate = newNotaryCertificate.getValue('$content');

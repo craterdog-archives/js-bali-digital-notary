@@ -85,6 +85,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             '/javascript/Object'
         ]);
         validator.validateType('/bali/notary/DigitalNotary', '$DigitalNotary', '$account', account, [
+            '/javascript/Undefined',
             '/bali/elements/Tag'
         ]);
         validator.validateType('/bali/notary/DigitalNotary', '$DigitalNotary', '$directory', directory, [
@@ -93,10 +94,12 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
         ]);
     }
 
-    // define the private configuration
-    const filename = account.getValue() + '.bali';
-    const configurator = bali.configurator(filename, directory, debug);
-    var configuration, controller;
+    var configurator, configuration, controller;
+    if (account) {
+        // create a configurator to manage the key and state configuration
+        const filename = account.getValue() + '.bali';
+        configurator = bali.configurator(filename, directory, debug);
+    }
 
     /**
      * This method returns a string describing the attributes of the digital notary. It must
@@ -814,6 +817,7 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
  */
 const storeConfiguration = async function(configurator, configuration, debug) {
     try {
+        if (!configurator) throw Error('The digital notary is configured for public certificate operations only.');
         await configurator.store(configuration.toString() + EOL);
     } catch (cause) {
         const exception = bali.exception({
@@ -840,6 +844,7 @@ const storeConfiguration = async function(configurator, configuration, debug) {
 const loadConfiguration = async function(configurator, debug) {
     try {
         var configuration;
+        if (!configurator) throw Error('The digital notary is configured for public certificate operations only.');
         const source = await configurator.load();
         if (source) {
             configuration = bali.component(source);
@@ -873,6 +878,7 @@ const loadConfiguration = async function(configurator, debug) {
  */
 const deleteConfiguration = async function(configurator, debug) {
     try {
+        if (!configurator) throw Error('The digital notary is configured for public certificate operations only.');
         await configurator.delete();
     } catch (cause) {
         const exception = bali.exception({

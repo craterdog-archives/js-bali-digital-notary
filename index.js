@@ -9,6 +9,10 @@
  ************************************************************************/
 'use strict';
 
+const SSM = require('./src/v2/SSM').SSM;
+const DigitalNotary = require('./src/DigitalNotary').DigitalNotary;
+
+
 /**
  * This function returns an object that implements the API for a software security module.
  * 
@@ -23,10 +27,11 @@
  * </pre>
  * @returns {Object} An object that implements the API for a software security module.
  */
-exports.ssm = function(directory, debug) {
-    const ssm = new require('./src/v2/SSM').SSM(directory, debug);
+const ssm = function(directory, debug) {
+    const ssm = new SSM(directory, debug);
     return ssm;
 };
+exports.ssm = ssm;
 
 
 /**
@@ -46,7 +51,52 @@ exports.ssm = function(directory, debug) {
  * </pre>
  * @returns {Object} An object that implements the API for a digital notary.
  */
-exports.notary = function(securityModule, account, directory, debug) {
-    const notary = new require('./src/DigitalNotary').DigitalNotary(securityModule, account, directory, debug);
+const notary = function(securityModule, account, directory, debug) {
+    const notary = new DigitalNotary(securityModule, account, directory, debug);
     return notary;
 };
+exports.notary = notary;
+
+
+/**
+ * This function initializes a digital notary test implementation configured with a local software
+ * security module (SSM). It should ONLY be used for testing purposes.
+ *
+ * @param {Tag} account A unique tag for the account of the owner of the digital notary.
+ * @param {String} directory The top level directory to be used for local configuration.
+ * @param {Boolean|Number} debug An optional number in the range [0..3] that controls the level of
+ * debugging that occurs:
+ * <pre>
+ *   0 (or false): no logging
+ *   1 (or true): log exceptions to console.error
+ *   2: perform argument validation and log exceptions to console.error
+ *   3: perform argument validation and log exceptions to console.error and debug info to console.log
+ * </pre>
+ * @returns {Object} The new digital notary test instance.
+ */
+const test = function(account, directory, debug) {
+    return notary(ssm(directory, debug), account, directory, debug);
+};
+exports.test = test;
+
+
+/**
+ * This function initializes a digital notary instance configured to be used within a service
+ * for public notary certificate based operations only.  No private notary key should be
+ * generated for this instance.
+ *
+ * @param {Boolean|Number} debug An optional number in the range [0..3] that controls the level of
+ * debugging that occurs:
+ * <pre>
+ *   0 (or false): no logging
+ *   1 (or true): log exceptions to console.error
+ *   2: perform argument validation and log exceptions to console.error
+ *   3: perform argument validation and log exceptions to console.error and debug info to console.log
+ * </pre>
+ * @returns {Object} The new digital notary service instance.
+ */
+const service = function(debug) {
+    return notary(ssm(undefined, debug), undefined, undefined, debug);
+};
+exports.service = service;
+
