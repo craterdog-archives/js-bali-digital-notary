@@ -352,9 +352,10 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             // create the document
             const citation = configuration.getValue('$citation');
             document = bali.catalog({
-                $content: document,
                 $protocol: PROTOCOL,
                 $timestamp: bali.moment(),  // now
+                $account: account,
+                $content: document,
                 $certificate: citation || bali.pattern.NONE  // 'none' for self-signed certificate
             }, {
                 $type: bali.component('/bali/notary/Document/v1')
@@ -410,9 +411,10 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
 
             // separate the signature from the document
             const catalog = bali.catalog.extraction(document, bali.list([
-                '$content',
                 '$protocol',
                 '$timestamp',
+                '$account',
+                '$content',
                 '$certificate'
             ]));
             const signature = document.getValue('$signature');
@@ -612,9 +614,10 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
 
             // create a notarized certificate
             const certificate = bali.catalog({
-                $content: document,
                 $protocol: PROTOCOL,
                 $timestamp: timestamp,
+                $account: account,
+                $content: document,
                 $certificate: citation
             }, {
                 $type: bali.component('/bali/notary/Document/v1')
@@ -769,10 +772,11 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
                 //  * exactly five specific attributes including a $content attribute
                 //  * the $content attribute must be parameterized with at least four parameters
                 //  * the $content attribute may have a parameterized type as well
-                if (parameterValue.isComponent && parameterValue.isType('/bali/collections/Catalog') && parameterValue.getSize() === 5) {
-                    validateStructure(functionName, parameterName + '.document', parameterValue.getValue('$content'), 'component');
+                if (parameterValue.isComponent && parameterValue.isType('/bali/collections/Catalog') && parameterValue.getSize() === 6) {
                     validateStructure(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
                     validateStructure(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
+                    validateStructure(functionName, parameterName + '.account', parameterValue.getValue('$account'), 'tag');
+                    validateStructure(functionName, parameterName + '.content', parameterValue.getValue('$content'), 'component');
                     validateStructure(functionName, parameterName + '.certificate', parameterValue.getValue('$certificate'), 'citation');
                     validateStructure(functionName, parameterName + '.signature', parameterValue.getValue('$signature'), 'binary');
                     var parameters = parameterValue.getValue('$content').getParameters();
