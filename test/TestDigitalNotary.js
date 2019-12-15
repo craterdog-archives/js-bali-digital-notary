@@ -77,7 +77,25 @@ describe('Bali Digital Notary™', function() {
 
     });
 
-    describe('Test Signing and Verification', function() {
+    describe('Test Credential Generation and Verification', function() {
+        var credentials;
+
+        it('should generate new credentials properly', async function() {
+            const salt = bali.tag();
+            credentials = await notary.generateCredentials(salt);
+            expect(credentials).to.exist;
+        });
+
+        it('should validate the credentials properly', async function() {
+            const certificate = notaryCertificate.getValue('$content');
+            const isValid = await notary.validDocument(credentials, certificate);
+            expect(isValid).to.equal(true);
+        });
+
+    });
+
+    describe('Test Signing and Citations', function() {
+        var document, citation;
 
         it('should digitally sign a document properly', async function() {
             const tag = bali.tag();
@@ -103,16 +121,24 @@ describe('Bali Digital Notary™', function() {
                 $permissions: bali.component('/bali/permissions/public/v1'),
                 $previous: previous
             });
-            var document = await notary.notarizeDocument(transaction);
+            document = await notary.notarizeDocument(transaction);
             await assert.rejects(async function() {
                 await service.notarizeDocument(transaction);
             });
+        });
 
+        it('should validate the notarized document properly', async function() {
             const certificate = notaryCertificate.getValue('$content');
-
-            var citation = await service.citeDocument(document);
             var isValid = await service.validDocument(document, certificate);
             expect(isValid).to.equal(true);
+        });
+
+        it('should cite the notarized document properly', async function() {
+            citation = await service.citeDocument(document);
+            expect(citation).to.exist;
+        });
+
+        it('should validate the citation properly', async function() {
             var matches = await service.citationMatches(citation, document);
             expect(matches).to.equal(true);
         });
