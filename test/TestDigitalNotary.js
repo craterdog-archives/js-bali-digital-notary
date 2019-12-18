@@ -14,6 +14,7 @@ const mocha = require('mocha');
 const chai = require('chai');
 const expect = chai.expect;
 const assert = require('assert');
+const fs = require('fs');
 const bali = require('bali-component-framework').api(debug);
 const account = bali.tag();
 const directory = 'test/config/';
@@ -27,8 +28,10 @@ describe('Bali Digital Notary™', function() {
     var notaryCertificate;
     var certificateCitation;
     var content = bali.component('[$foo: "bar"]($type: /bali/examples/Content/v1, $tag: #MFPCRNKS2SG20CD7VQ6KD329X7382KJY, $version: v1, $permissions: /bali/permissions/public/v1, $previous: none)');
+    const style = 'https://bali-nebula.net/repository/statics/styles/BDN.css';
 
     describe('Test Key Generation', function() {
+        fs.mkdirSync('test/html', {recursive: true, mode: 0o700});
 
         it('should return the correct account tag', function() {
             expect(notary.getAccount().isEqualTo(account)).to.equal(true);
@@ -46,6 +49,8 @@ describe('Bali Digital Notary™', function() {
             notaryCertificate = await notary.notarizeDocument(catalog);
             certificateCitation = await notary.activateKey(notaryCertificate);
             expect(notaryCertificate).to.exist;
+            const html = notaryCertificate.toHTML(style) + '\n';  // add POSIX <EOL>
+            fs.writeFileSync('test/html/certificate.html', html, 'utf8');
             await assert.rejects(async function() {
                 await service.generateKey();
             });
@@ -54,6 +59,8 @@ describe('Bali Digital Notary™', function() {
         it('should retrieve the certificate citation', async function() {
             certificateCitation = await notary.getCitation();
             expect(certificateCitation).to.exist;
+            const html = certificateCitation.toHTML(style) + '\n';  // add POSIX <EOL>
+            fs.writeFileSync('test/html/citation.html', html, 'utf8');
             await assert.rejects(async function() {
                 await service.getCitation();
             });
@@ -83,6 +90,8 @@ describe('Bali Digital Notary™', function() {
             const salt = bali.tag();
             credentials = await notary.generateCredentials(salt);
             expect(credentials).to.exist;
+            const html = credentials.toHTML(style) + '\n';  // add POSIX <EOL>
+            fs.writeFileSync('test/html/credentials.html', html, 'utf8');
         });
 
         it('should validate the credentials properly', async function() {
@@ -120,6 +129,8 @@ describe('Bali Digital Notary™', function() {
                 $previous: previous
             });
             document = await notary.notarizeDocument(transaction);
+            const html = document.toHTML(style) + '\n';  // add POSIX <EOL>
+            fs.writeFileSync('test/html/document.html', html, 'utf8');
             await assert.rejects(async function() {
                 await service.notarizeDocument(transaction);
             });
@@ -147,6 +158,8 @@ describe('Bali Digital Notary™', function() {
         it('should refresh a notary key properly', async function() {
             var newNotaryCertificate = await notary.refreshKey();
             expect(newNotaryCertificate).to.exist;
+            const html = newNotaryCertificate.toHTML(style) + '\n';  // add POSIX <EOL>
+            fs.writeFileSync('test/html/certificateV2.html', html, 'utf8');
 
             await assert.rejects(async function() {
                 await service.refreshKey();

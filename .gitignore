@@ -13,6 +13,7 @@ logs
 hs_err_pid*
 target/
 dist/
+test/html/
 test/config/
 
 # Development Repositories
