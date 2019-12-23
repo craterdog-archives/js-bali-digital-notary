@@ -28,7 +28,7 @@ describe('Bali Digital Notary™', function() {
     var notaryCertificate;
     var certificateCitation;
     var content = bali.component('[$foo: "bar"]($type: /bali/examples/Content/v1, $tag: #MFPCRNKS2SG20CD7VQ6KD329X7382KJY, $version: v1, $permissions: /bali/permissions/public/v1, $previous: none)');
-    const style = 'https://bali-nebula.net/repository/statics/styles/BDN.css';
+    const style = 'https://bali-nebula.net/static/styles/BDN.css';
 
     describe('Test Key Generation', function() {
         fs.mkdirSync('test/html', {recursive: true, mode: 0o700});
