@@ -288,7 +288,6 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             const citation = bali.catalog({
                 $protocol: PROTOCOL,
                 $timestamp: timestamp,
-                $type: '$document',
                 $tag: tag,
                 $version: version,
                 $digest: digest
@@ -571,25 +570,18 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
      * This method generates a document citation for the specified notarized document.
      *
      * @param {Catalog} document The notarized document to be cited.
-     * @param {Symbol} type An optional type of document to be cited (e.g. $draft, $document, or
-     * $type), the default is $document.
      * @returns {Catalog} A document citation for the notarized document.
      */
-    this.citeDocument = async function(document, type) {
+    this.citeDocument = async function(document) {
         try {
-            // validate the arguments
+            // validate the argument
             if (debug > 1) {
                 const validator = bali.validator(debug);
                 validator.validateType('/bali/notary/DigitalNotary', '$citeDocument', '$document', document, [
                     '/bali/collections/Catalog'
                 ]);
-                validator.validateType('/bali/notary/DigitalNotary', '$citeDocument', '$type', type, [
-                    '/javascript/Undefined',
-                    '/bali/elements/Symbol'
-                ]);
                 validateStructure('$citeDocument', 'document', document, 'document');
             }
-            type = type || bali.symbol('document');
 
             // extract the required attributes
             const timestamp = bali.moment();  // now
@@ -605,7 +597,6 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             const citation = bali.catalog({
                 $protocol: PROTOCOL,
                 $timestamp: timestamp,
-                $type: type,
                 $tag: tag,
                 $version: version,
                 $digest: digest
@@ -751,7 +742,6 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             citation = bali.catalog({
                 $protocol: PROTOCOL,
                 $timestamp: timestamp,
-                $type: '$document',
                 $tag: tag,
                 $version: version,
                 $digest: digest
@@ -833,9 +823,6 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
             case 'name':
                 if (parameterValue.isComponent && parameterValue.isType('/bali/elements/Name')) return;
                 break;
-            case 'symbol':
-                if (parameterValue.isComponent && parameterValue.isType('/bali/elements/Symbol')) return;
-                break;
             case 'tag':
                 if (parameterValue.isComponent && parameterValue.isType('/bali/elements/Tag')) return;
                 break;
@@ -848,14 +835,13 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
             case 'citation':
                 // A citation must have the following:
                 //  * a parameterized type of /bali/notary/Citation/v...
-                //  * exactly six specific attributes
+                //  * exactly five specific attributes
                 if (parameterValue.isComponent && parameterValue.isEqualTo(bali.pattern.NONE)) return;
-                if (parameterValue.isComponent && parameterValue.isType('/bali/collections/Catalog') && parameterValue.getSize() === 6) {
+                if (parameterValue.isComponent && parameterValue.isType('/bali/collections/Catalog') && parameterValue.getSize() === 5) {
                     validateStructure(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
                     validateStructure(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
                     validateStructure(functionName, parameterName + '.tag', parameterValue.getValue('$tag'), 'tag');
                     validateStructure(functionName, parameterName + '.version', parameterValue.getValue('$version'), 'version');
-                    validateStructure(functionName, parameterName + '.type', parameterValue.getValue('$type'), 'symbol');
                     validateStructure(functionName, parameterName + '.digest', parameterValue.getValue('$digest'), 'binary');
                     parameters = parameterValue.getParameters();
                     if (parameters && Object.keys(parameters).length === 1) {
