@@ -91,7 +91,7 @@ const SSM = function(directory, debug) {
     /**
      * This method returns a string describing the attributes of the SSM. It must not be an
      * asynchronous function since it is part of the JavaScript language.
-     * 
+     *
      * @returns {String} A string describing the attributes of the SSM.
      */
     this.toString = function() {
@@ -106,7 +106,7 @@ const SSM = function(directory, debug) {
 
     /**
      * This method returns the unique tag for the security module.
-     * 
+     *
      * @returns {Tag} The unique tag for the security module.
      */
     this.getTag = async function() {
@@ -134,7 +134,7 @@ const SSM = function(directory, debug) {
     /**
      * This method returns the version of the security protocol supported by this
      * security module.
-     * 
+     *
      * @returns {Version} The version string of the security protocol supported by this security
      * module.
      */
@@ -155,7 +155,7 @@ const SSM = function(directory, debug) {
 
     /**
      * This method generates a new public-private key pair.
-     * 
+     *
      * @returns {Binary} A binary string containing the new public key.
      */
     this.generateKeys = async function() {
@@ -193,7 +193,7 @@ const SSM = function(directory, debug) {
 
     /**
      * This method replaces the existing public-private key pair with a new one.
-     * 
+     *
      * @returns {Binary} A binary string containing the new public key.
      */
     this.rotateKeys = async function() {
@@ -235,7 +235,7 @@ const SSM = function(directory, debug) {
 
     /**
      * This method deletes any existing public-private key pairs.
-     * 
+     *
      * @returns {Boolean} Whether or not the keys were successfully erased.
      */
     this.eraseKeys = async function() {
@@ -299,7 +299,7 @@ const SSM = function(directory, debug) {
      * This allows a new certificate to be signed using the previous private key.
      * The resulting digital signature can then be verified using the corresponding
      * public key.
-     * 
+     *
      * @param {Buffer} bytes The bytes to be digitally signed.
      * @returns {Binary} A binary string containing the resulting digital signature.
      */
@@ -409,7 +409,7 @@ exports.SSM = SSM;
 /**
  * This function uses a configurator to store out the specified configuration catalog to
  * the local filesystem.
- * 
+ *
  * @param {Configurator} configurator A filesystem backed configurator.
  * @param {Catalog} configuration A catalog containing the current configuration to be stored.
  * @param {Boolean|Number} debug An optional number in the range [0..3] that controls
@@ -434,7 +434,7 @@ const storeConfiguration = async function(configurator, configuration, debug) {
 /**
  * This function uses a configurator to load the current configuration catalog from
  * the local filesystem.
- * 
+ *
  * @param {Configurator} configurator A filesystem backed configurator.
  * @param {Boolean|Number} debug An optional number in the range [0..3] that controls
  * the level of debugging that occurs:
@@ -470,7 +470,7 @@ const loadConfiguration = async function(configurator, debug) {
 /**
  * This function uses a configurator to delete the current configuration catalog from
  * the local filesystem.
- * 
+ *
  * @param {Configurator} configurator A filesystem backed configurator.
  * @param {Boolean|Number} debug An optional number in the range [0..3] that controls
  * the level of debugging that occurs:
