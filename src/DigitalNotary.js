@@ -276,7 +276,6 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             }
 
             // extract the required attributes
-            const timestamp = bali.moment();  // now
             const tag = document.getParameter('$tag');
             const version = document.getParameter('$version');
 
@@ -287,7 +286,6 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             // save the state of the certificate citation
             const citation = bali.catalog({
                 $protocol: PROTOCOL,
-                $timestamp: timestamp,
                 $tag: tag,
                 $version: version,
                 $digest: digest
@@ -584,7 +582,6 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             }
 
             // extract the required attributes
-            const timestamp = bali.moment();  // now
             const content = document.getValue('$content');
             const tag = content.getParameter('$tag');
             const version = content.getParameter('$version');
@@ -596,7 +593,6 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             // create the citation
             const citation = bali.catalog({
                 $protocol: PROTOCOL,
-                $timestamp: timestamp,
                 $tag: tag,
                 $version: version,
                 $digest: digest
@@ -741,7 +737,6 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             // save the state of the certificate citation
             citation = bali.catalog({
                 $protocol: PROTOCOL,
-                $timestamp: timestamp,
                 $tag: tag,
                 $version: version,
                 $digest: digest
@@ -837,9 +832,8 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
                 //  * a parameterized type of /bali/notary/Citation/v...
                 //  * exactly five specific attributes
                 if (parameterValue.isComponent && parameterValue.isEqualTo(bali.pattern.NONE)) return;
-                if (parameterValue.isComponent && parameterValue.isType('/bali/collections/Catalog') && parameterValue.getSize() === 5) {
+                if (parameterValue.isComponent && parameterValue.isType('/bali/collections/Catalog') && parameterValue.getSize() === 4) {
                     validateStructure(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
-                    validateStructure(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
                     validateStructure(functionName, parameterName + '.tag', parameterValue.getValue('$tag'), 'tag');
                     validateStructure(functionName, parameterName + '.version', parameterValue.getValue('$version'), 'version');
                     validateStructure(functionName, parameterName + '.digest', parameterValue.getValue('$digest'), 'binary');
