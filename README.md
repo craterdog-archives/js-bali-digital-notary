@@ -15,10 +15,9 @@ npm install bali-digital-notary
 ```
 Then add the following line to your NodeJS modules:
 ```
-const bali = require('bali-component-framework').api();
-const account = bali.tag();  // new random account tag
-const securityModule = require('bali-digital-notary').ssm();
-const notary = require('bali-digital-notary').notary(securityModule, account);
+const debug = 1;  // debugging level: [0..3]
+const securityModule = require('bali-digital-notary').ssm(directory, debug);
+const notary = require('bali-digital-notary').notary(securityModule, account, directory, debug);
 ```
 
 ### Contributing
