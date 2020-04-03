@@ -697,7 +697,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             const timestamp = bali.moment();  // now
             var citation = configuration.getValue('$citation');
             const tag = citation.getValue('$tag');
-            const version = citation.getValue('$version').nextVersion();
+            const version = bali.version.nextVersion(citation.getValue('$version'));
 
             // create the new notary certificate body
             const document = bali.catalog({
