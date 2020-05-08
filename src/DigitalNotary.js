@@ -838,21 +838,22 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
                     validateStructure(functionName, parameterName + '.version', parameterValue.getValue('$version'), 'version');
                     validateStructure(functionName, parameterName + '.digest', parameterValue.getValue('$digest'), 'binary');
                     parameters = parameterValue.getParameters();
-                    if (parameters && Object.keys(parameters).length === 1) {
-                        validateStructure(functionName, parameterName + '.parameters.type', parameters['$type'], 'name');
-                        if (parameters['$type'].toString().startsWith('/bali/notary/Citation/v')) return;
+                    if (parameters && parameters.getSize() === 1) {
+                        const name = parameters.getValue('$type');
+                        validateStructure(functionName, parameterName + '.parameters.type', name, 'name');
+                        if (name.toString().startsWith('/bali/notary/Citation/v')) return;
                     }
                 }
                 break;
             case 'content':
                 // Content must be parameterized with exactly 5 specific parameters
                 parameters = parameterValue.getParameters();
-                if (parameters && Object.keys(parameters).length === 5) {
-                    validateStructure(functionName, parameterName + '.parameters.type', parameters['$type'], 'name');
-                    validateStructure(functionName, parameterName + '.parameters.tag', parameters['$tag'], 'tag');
-                    validateStructure(functionName, parameterName + '.parameters.version', parameters['$version'], 'version');
-                    validateStructure(functionName, parameterName + '.parameters.permissions', parameters['$permissions'], 'name');
-                    validateStructure(functionName, parameterName + '.parameters.previous', parameters['$previous'], 'citation');
+                if (parameters && parameters.getSize() === 5) {
+                    validateStructure(functionName, parameterName + '.parameters.type', parameters.getValue('$type'), 'name');
+                    validateStructure(functionName, parameterName + '.parameters.tag', parameters.getValue('$tag'), 'tag');
+                    validateStructure(functionName, parameterName + '.parameters.version', parameters.getValue('$version'), 'version');
+                    validateStructure(functionName, parameterName + '.parameters.permissions', parameters.getValue('$permissions'), 'name');
+                    validateStructure(functionName, parameterName + '.parameters.previous', parameters.getValue('$previous'), 'citation');
                     return;
                 }
                 break;
@@ -865,14 +866,14 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
                     validateStructure(functionName, parameterName + '.publicKey', parameterValue.getValue('$publicKey'), 'binary');
                     validateStructure(functionName, parameterName + '.algorithms', parameterValue.getValue('$algorithms'), 'catalog');
                     parameters = parameterValue.getParameters();
-                    if (parameters && Object.keys(parameters).length === 5) {
-                        validateStructure(functionName, parameterName + '.parameters.type', parameters['$type'], 'name');
-                        validateStructure(functionName, parameterName + '.parameters.tag', parameters['$tag'], 'tag');
-                        validateStructure(functionName, parameterName + '.parameters.version', parameters['$version'], 'version');
-                        validateStructure(functionName, parameterName + '.parameters.permissions', parameters['$permissions'], 'name');
-                        validateStructure(functionName, parameterName + '.parameters.previous', parameters['$previous'], 'citation');
-                        if (parameters['$type'].toString().startsWith('/bali/notary/Certificate/v') &&
-                            parameters['$permissions'].toString().startsWith('/bali/permissions/public/v')) return;
+                    if (parameters && parameters.getSize() === 5) {
+                        validateStructure(functionName, parameterName + '.parameters.type', parameters.getValue('$type'), 'name');
+                        validateStructure(functionName, parameterName + '.parameters.tag', parameters.getValue('$tag'), 'tag');
+                        validateStructure(functionName, parameterName + '.parameters.version', parameters.getValue('$version'), 'version');
+                        validateStructure(functionName, parameterName + '.parameters.permissions', parameters.getValue('$permissions'), 'name');
+                        validateStructure(functionName, parameterName + '.parameters.previous', parameters.getValue('$previous'), 'citation');
+                        if (parameters.getValue('$type').toString().startsWith('/bali/notary/Certificate/v') &&
+                            parameters.getValue('$permissions').toString().startsWith('/bali/permissions/public/v')) return;
                     }
                 }
                 break;
@@ -891,14 +892,15 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
                     validateStructure(functionName, parameterName + '.signature', parameterValue.getValue('$signature'), 'binary');
                     parameters = parameterValue.getValue('$content').getParameters();
                     if (parameters) {
-                        if (parameters['$type']) validateStructure(functionName, parameterName + '.parameters.type', parameters['$type'], 'name');
-                        validateStructure(functionName, parameterName + '.parameters.tag', parameters['$tag'], 'tag');
-                        validateStructure(functionName, parameterName + '.parameters.version', parameters['$version'], 'version');
-                        validateStructure(functionName, parameterName + '.parameters.permissions', parameters['$permissions'], 'name');
-                        validateStructure(functionName, parameterName + '.parameters.previous', parameters['$previous'], 'citation');
+                        const name = parameters.getValue('$type');
+                        if (name) validateStructure(functionName, parameterName + '.parameters.type', name, 'name');
+                        validateStructure(functionName, parameterName + '.parameters.tag', parameters.getValue('$tag'), 'tag');
+                        validateStructure(functionName, parameterName + '.parameters.version', parameters.getValue('$version'), 'version');
+                        validateStructure(functionName, parameterName + '.parameters.permissions', parameters.getValue('$permissions'), 'name');
+                        validateStructure(functionName, parameterName + '.parameters.previous', parameters.getValue('$previous'), 'citation');
                         parameters = parameterValue.getParameters();
-                        if (parameters && Object.keys(parameters).length === 1) {
-                            if (parameters['$type'].toString().startsWith('/bali/notary/Document/v')) return;
+                        if (parameters && parameters.getSize() === 1) {
+                            if (parameters.getValue('$type').toString().startsWith('/bali/notary/Document/v')) return;
                         }
                     }
                 }
