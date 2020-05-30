@@ -150,29 +150,110 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     };
 
     /**
-     * This method returns a document citation referencing the notary certificate associated
-     * with the current notary key.
+     * This method generates a citation to the specified document.
      *
-     * @returns {Catalog} A document citation referencing the notary certificate associated
-     * with the current notary key.
+     * @param {Catalog} document The document to be cited.
+     * @returns {Catalog} A citation to the document.
      */
-    this.getCitation = async function() {
+    this.citeDocument = async function(document) {
         try {
-            // check current state
-            if (!configuration) {
-                configuration = await loadConfiguration(configurator, debug);
-                controller = bali.controller(REQUESTS, STATES, configuration.getValue('$state').toString(), debug);
+            // validate the argument
+            if (debug > 1) {
+                const validator = bali.validator(debug);
+                validator.validateType('/bali/notary/DigitalNotary', '$citeDocument', '$document', document, [
+                    '/bali/collections/Catalog'
+                ]);
+                validateStructure('$citeDocument', 'document', document, 'document');
             }
-            const state = controller.transitionState('$getCitation');  // NOTE: straight to transition...
-            configuration.setValue('$state', state);
-            await storeConfiguration(configurator, configuration, debug);
-            return configuration.getValue('$citation');
+
+            // extract the required attributes
+            const tag = document.getParameter('$tag');
+            const version = document.getParameter('$version');
+
+            // generate a digest of the document
+            const bytes = Buffer.from(document.toString(), 'utf8');
+            const digest = await securityModule.digestBytes(bytes);
+
+            // create the citation
+            const citation = bali.catalog({
+                $protocol: PROTOCOL,
+                $tag: tag,
+                $version: version,
+                $digest: digest
+            }, {
+                $type: '/bali/notary/Citation/v1'
+            });
+
+            return citation;
         } catch (cause) {
             const exception = bali.exception({
                 $module: '/bali/notary/DigitalNotary',
-                $procedure: '$getCitation',
+                $procedure: '$citeDocument',
                 $exception: '$unexpected',
-                $text: 'An unexpected error occurred while attempting to retrieve the certificate citation.'
+                $document: document,
+                $text: 'An unexpected error occurred while attempting to cite a document.'
+            }, cause);
+            if (debug > 0) console.error(exception.toString());
+            throw exception;
+        }
+    };
+
+    /**
+     * This method determines whether or not the specified document citation matches
+     * the specified document. The citation only matches if its digest matches
+     * the digest of the document exactly.
+     *
+     * @param {Catalog} citation A document citation allegedly referring to the
+     * specified document.
+     * @param {Catalog} document The document to be tested.
+     * @returns {Boolean} Whether or not the citation matches the specified document.
+     */
+    this.citationMatches = async function(citation, document) {
+        try {
+            // validate the arguments
+            if (debug > 1) {
+                const validator = bali.validator(debug);
+                validator.validateType('/bali/notary/DigitalNotary', '$citationMatches', '$citation', citation, [
+                    '/bali/collections/Catalog'
+                ]);
+                validateStructure('$citationMatches', 'citation', citation, 'citation');
+                validator.validateType('/bali/notary/DigitalNotary', '$citationMatches', '$document', document, [
+                    '/bali/collections/Catalog'
+                ]);
+                validateStructure('$citationMatches', 'document', document, 'document');
+            }
+            const requiredProtocol = citation.getValue('$protocol').toString();
+            var requiredModule;
+            if (requiredProtocol === PROTOCOL) {
+                requiredModule = securityModule;  // use the current one
+            } else {
+                requiredModule = PROTOCOLS[requiredProtocol];
+                if (!requiredModule) {
+                    const exception = bali.exception({
+                        $module: '/bali/notary/DigitalNotary',
+                        $procedure: '$citationMatches',
+                        $exception: '$unsupportedProtocol',
+                        $expected: Object.keys(PROTOCOLS),
+                        $actual: requiredProtocol,
+                        $text: 'Attempted to use an unsupported version of the notary protocol.'
+                    });
+                    throw exception;
+                }
+            }
+            const bytes = Buffer.from(document.toString(), 'utf8');
+            var digest = await requiredModule.digestBytes(bytes);
+
+            const result = digest.isEqualTo(citation.getValue('$digest'));
+
+            return result;
+        } catch (cause) {
+            const exception = bali.exception({
+                $module: '/bali/notary/DigitalNotary',
+                $procedure: '$citationMatches',
+                $exception: '$unexpected',
+                $citation: citation,
+                $document: document,
+                $text: 'An unexpected error occurred while attempting to match a citation to a document.'
             }, cause);
             if (debug > 0) console.error(exception.toString());
             throw exception;
@@ -309,6 +390,36 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 $exception: '$unexpected',
                 $certificate: certificate,
                 $text: 'An unexpected error occurred while attempting to activate the notary key.'
+            }, cause);
+            if (debug > 0) console.error(exception.toString());
+            throw exception;
+        }
+    };
+
+    /**
+     * This method returns a document citation referencing the notary certificate associated
+     * with the current notary key.
+     *
+     * @returns {Catalog} A document citation referencing the notary certificate associated
+     * with the current notary key.
+     */
+    this.getCitation = async function() {
+        try {
+            // check current state
+            if (!configuration) {
+                configuration = await loadConfiguration(configurator, debug);
+                controller = bali.controller(REQUESTS, STATES, configuration.getValue('$state').toString(), debug);
+            }
+            const state = controller.transitionState('$getCitation');  // NOTE: straight to transition...
+            configuration.setValue('$state', state);
+            await storeConfiguration(configurator, configuration, debug);
+            return configuration.getValue('$citation');
+        } catch (cause) {
+            const exception = bali.exception({
+                $module: '/bali/notary/DigitalNotary',
+                $procedure: '$getCitation',
+                $exception: '$unexpected',
+                $text: 'An unexpected error occurred while attempting to retrieve the certificate citation.'
             }, cause);
             if (debug > 0) console.error(exception.toString());
             throw exception;
@@ -558,118 +669,6 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 $document: document,
                 $certificate: certificate,
                 $text: 'An unexpected error occurred while attempting to validate a notarized document.'
-            }, cause);
-            if (debug > 0) console.error(exception.toString());
-            throw exception;
-        }
-    };
-
-    /**
-     * This method generates a document citation for the specified notarized document.
-     *
-     * @param {Catalog} document The notarized document to be cited.
-     * @returns {Catalog} A document citation for the notarized document.
-     */
-    this.citeDocument = async function(document) {
-        try {
-            // validate the argument
-            if (debug > 1) {
-                const validator = bali.validator(debug);
-                validator.validateType('/bali/notary/DigitalNotary', '$citeDocument', '$document', document, [
-                    '/bali/collections/Catalog'
-                ]);
-                validateStructure('$citeDocument', 'document', document, 'document');
-            }
-
-            // extract the required attributes
-            const content = document.getValue('$content');
-            const tag = content.getParameter('$tag');
-            const version = content.getParameter('$version');
-
-            // generate a digest of the document
-            const bytes = Buffer.from(document.toString(), 'utf8');
-            const digest = await securityModule.digestBytes(bytes);
-
-            // create the citation
-            const citation = bali.catalog({
-                $protocol: PROTOCOL,
-                $tag: tag,
-                $version: version,
-                $digest: digest
-            }, {
-                $type: '/bali/notary/Citation/v1'
-            });
-
-            return citation;
-        } catch (cause) {
-            const exception = bali.exception({
-                $module: '/bali/notary/DigitalNotary',
-                $procedure: '$citeDocument',
-                $exception: '$unexpected',
-                $document: document,
-                $text: 'An unexpected error occurred while attempting to cite a notarized document.'
-            }, cause);
-            if (debug > 0) console.error(exception.toString());
-            throw exception;
-        }
-    };
-
-    /**
-     * This method determines whether or not the specified document citation matches
-     * the specified notarized document. The citation only matches if its digest matches
-     * the digest of the notarized document exactly.
-     *
-     * @param {Catalog} citation A document citation allegedly referring to the
-     * specified notarized document.
-     * @param {Catalog} document The notarized document to be tested.
-     * @returns {Boolean} Whether or not the citation matches the specified notarized document.
-     */
-    this.citationMatches = async function(citation, document) {
-        try {
-            // validate the arguments
-            if (debug > 1) {
-                const validator = bali.validator(debug);
-                validator.validateType('/bali/notary/DigitalNotary', '$citationMatches', '$citation', citation, [
-                    '/bali/collections/Catalog'
-                ]);
-                validateStructure('$citationMatches', 'citation', citation, 'citation');
-                validator.validateType('/bali/notary/DigitalNotary', '$citationMatches', '$document', document, [
-                    '/bali/collections/Catalog'
-                ]);
-                validateStructure('$citationMatches', 'document', document, 'document');
-            }
-            const requiredProtocol = citation.getValue('$protocol').toString();
-            var requiredModule;
-            if (requiredProtocol === PROTOCOL) {
-                requiredModule = securityModule;  // use the current one
-            } else {
-                requiredModule = PROTOCOLS[requiredProtocol];
-                if (!requiredModule) {
-                    const exception = bali.exception({
-                        $module: '/bali/notary/DigitalNotary',
-                        $procedure: '$citationMatches',
-                        $exception: '$unsupportedProtocol',
-                        $expected: Object.keys(PROTOCOLS),
-                        $actual: requiredProtocol,
-                        $text: 'Attempted to use an unsupported version of the notary protocol.'
-                    });
-                    throw exception;
-                }
-            }
-            const bytes = Buffer.from(document.toString(), 'utf8');
-            var digest = await requiredModule.digestBytes(bytes);
-
-            const result = digest.isEqualTo(citation.getValue('$digest'));
-
-            return result;
-        } catch (cause) {
-            const exception = bali.exception({
-                $module: '/bali/notary/DigitalNotary',
-                $procedure: '$citationMatches',
-                $exception: '$unexpected',
-                $citation: citation,
-                $document: document,
-                $text: 'An unexpected error occurred while attempting to match a citation to a notarized document.'
             }, cause);
             if (debug > 0) console.error(exception.toString());
             throw exception;
