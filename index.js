@@ -9,7 +9,7 @@
  ************************************************************************/
 'use strict';
 
-const SSM = require('./src/v2/SSM').SSM;
+const SSMv2 = require('./src/v2/SSM').SSM;
 const DigitalNotary = require('./src/DigitalNotary').DigitalNotary;
 
 
@@ -27,11 +27,11 @@ const DigitalNotary = require('./src/DigitalNotary').DigitalNotary;
  * </pre>
  * @returns {Object} An object that implements the API for a software security module.
  */
-const ssm = function(directory, debug) {
-    const ssm = new SSM(directory, debug);
+const ssmV2 = function(directory, debug) {
+    const ssm = new SSMv2(directory, debug);
     return ssm;
 };
-exports.ssm = ssm;
+exports.ssmV2 = ssmV2;
 
 
 /**
@@ -75,7 +75,7 @@ exports.notary = notary;
  * @returns {Object} The new digital notary test instance.
  */
 const test = function(account, directory, debug) {
-    return notary(ssm(directory, debug), account, directory, debug);
+    return notary(ssmV2(directory, debug), account, directory, debug);
 };
 exports.test = test;
 
@@ -96,7 +96,7 @@ exports.test = test;
  * @returns {Object} The new digital notary service instance.
  */
 const service = function(debug) {
-    return notary(ssm(undefined, debug), undefined, undefined, debug);
+    return notary(ssmV2(undefined, debug), undefined, undefined, debug);
 };
 exports.service = service;
 
