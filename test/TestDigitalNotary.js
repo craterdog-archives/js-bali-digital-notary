@@ -118,13 +118,13 @@ describe('Bali Digital Notary™', function() {
             $version: 'v2.3',
             $digest: "'JB2NG73VTB957T9TZWT44KRZVQ467KWJ2MSJYT6YW2RQAYQMSR861XGM5ZCDCPNJYR612SJT9RFKHA9YZ5DJMLYC7N3127AY4QDVJ38'"
         }, {
-            $type: bali.component('/bali/notary/Citation/v1')
+            $type: '/bali/notary/Citation/v1'
         });
         const transaction = bali.catalog({
             $transactionId: bali.tag(),
             $timestamp: bali.moment(),
             $consumer: 'Derk Norton',
-            $merchant: bali.reference('https://www.starbucks.com/'),
+            $merchant: '<https://www.starbucks.com/>',
             $amount: 4.95
         }, {
             $type: '/acme/types/Transaction/v2.3',
