@@ -126,7 +126,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             $version: version,
             $digest: digest
         }, {
-            $type: bali.component('/bali/notary/Citation/v1')
+            $type: '/bali/notary/Citation/v1'
         });
     };
 
@@ -151,7 +151,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             $document: document,
             $certificate: certificate || bali.pattern.NONE  // 'none' for self-signed certificate
         }, {
-            $type: bali.component('/bali/notary/Contract/v1')
+            $type: '/bali/notary/Contract/v1'
         });
         const bytes = Buffer.from(contract.toString(), 'utf8');
         const signature = await securityModule.signBytes(bytes);
@@ -829,7 +829,7 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
                 break;
             case 'contract':
                 // A contract must have the following:
-                //  * a parameterized type of /bali/notary/Document/v...
+                //  * a parameterized type of /bali/notary/Contract/v...
                 //  * exactly five specific attributes including a $document attribute
                 //  * the $document attribute must be parameterized with at least four parameters
                 //  * the $document attribute may have a parameterized type as well
@@ -850,7 +850,7 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
                         validateStructure(functionName, parameterName + '.parameters.previous', parameters.getValue('$previous'), 'citation');
                         parameters = parameterValue.getParameters();
                         if (parameters && parameters.getSize() === 1) {
-                            if (parameters.getValue('$type').toString().startsWith('/bali/notary/Document/v')) return;
+                            if (parameters.getValue('$type').toString().startsWith('/bali/notary/Contract/v')) return;
                         }
                     }
                 }
