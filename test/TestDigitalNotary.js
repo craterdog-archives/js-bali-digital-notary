@@ -25,9 +25,17 @@ const service = api.service(debug);
 
 describe('Bali Digital Notary™', function() {
 
-    var notaryCertificate;
-    var certificateCitation;
-    var content = bali.component('[$foo: "bar"]($type: /bali/examples/Content/v1, $tag: #MFPCRNKS2SG20CD7VQ6KD329X7382KJY, $version: v1, $permissions: /bali/permissions/public/v1, $previous: none)');
+    var certificate;
+    var citation;
+    const document = bali.catalog({
+        $foo: 'bar'
+    }, {
+        $type: '/bali/examples/Content/v1',
+        $tag: '#MFPCRNKS2SG20CD7VQ6KD329X7382KJY',
+        $version: 'v1',
+        $permissions: '/bali/permissions/public/v1',
+        $previous: 'none'
+    });
     const style = 'https://bali-nebula.net/static/styles/BDN.css';
 
     describe('Test Key Generation', function() {
@@ -45,11 +53,11 @@ describe('Bali Digital Notary™', function() {
         });
 
         it('should generate the keys', async function() {
-            const catalog = await notary.generateKey();
-            notaryCertificate = await notary.notarizeDocument(catalog);
-            certificateCitation = await notary.activateKey(notaryCertificate);
-            expect(notaryCertificate).to.exist;
-            const html = notaryCertificate.toHTML(style) + '\n';  // add POSIX <EOL>
+            const publicKey = await notary.generateKey();
+            certificate = await notary.notarizeDocument(publicKey);
+            citation = await notary.activateKey(certificate);
+            expect(certificate).to.exist;
+            const html = certificate.toHTML(style) + '\n';  // add POSIX <EOL>
             fs.writeFileSync('test/html/certificate.html', html, 'utf8');
             await assert.rejects(async function() {
                 await service.generateKey();
@@ -57,9 +65,9 @@ describe('Bali Digital Notary™', function() {
         });
 
         it('should retrieve the certificate citation', async function() {
-            certificateCitation = await notary.getCitation();
-            expect(certificateCitation).to.exist;
-            const html = certificateCitation.toHTML(style) + '\n';  // add POSIX <EOL>
+            citation = await notary.getCitation();
+            expect(citation).to.exist;
+            const html = citation.toHTML(style) + '\n';  // add POSIX <EOL>
             fs.writeFileSync('test/html/citation.html', html, 'utf8');
             await assert.rejects(async function() {
                 await service.getCitation();
@@ -71,13 +79,13 @@ describe('Bali Digital Notary™', function() {
     describe('Test Certificate Validation', function() {
 
         it('should validate the certificate', async function() {
-            expect(notaryCertificate.getValue('$protocol').toString()).to.equal('v2');
-            var isValid = await notary.validDocument(notaryCertificate, notaryCertificate);
+            expect(certificate.getValue('$protocol').toString()).to.equal('v2');
+            var isValid = await notary.validContract(certificate, certificate);
             expect(isValid).to.equal(true);
         });
 
         it('should validate the citation for the certificate', async function() {
-            var isValid = await notary.citationMatches(certificateCitation, notaryCertificate);
+            var isValid = await notary.citationMatches(citation, certificate.getValue('$document'));
             expect(isValid).to.equal(true);
         });
 
@@ -95,34 +103,34 @@ describe('Bali Digital Notary™', function() {
         });
 
         it('should validate the credentials properly', async function() {
-            const isValid = await notary.validDocument(credentials, notaryCertificate);
+            const isValid = await notary.validContract(credentials, certificate);
             expect(isValid).to.equal(true);
         });
 
     });
 
     describe('Test Signing and Citations', function() {
-        var document, citation;
+        var contract, citation;
         const tag = bali.tag();
         const previous = bali.catalog({
-            $protocol: bali.version(),
+            $protocol: 'v1',
             $tag: tag,
-            $version: bali.version([2, 3]),
-            $digest: bali.component("'JB2NG73VTB957T9TZWT44KRZVQ467KWJ2MSJYT6YW2RQAYQMSR861XGM5ZCDCPNJYR612SJT9RFKHA9YZ5DJMLYC7N3127AY4QDVJ38'")
+            $version: 'v2.3',
+            $digest: "'JB2NG73VTB957T9TZWT44KRZVQ467KWJ2MSJYT6YW2RQAYQMSR861XGM5ZCDCPNJYR612SJT9RFKHA9YZ5DJMLYC7N3127AY4QDVJ38'"
         }, {
             $type: bali.component('/bali/notary/Citation/v1')
         });
         const transaction = bali.catalog({
             $transactionId: bali.tag(),
             $timestamp: bali.moment(),
-            $consumer: bali.text('Derk Norton'),
+            $consumer: 'Derk Norton',
             $merchant: bali.reference('https://www.starbucks.com/'),
             $amount: 4.95
         }, {
-            $type: bali.component('/acme/types/Transaction/v2.3'),
+            $type: '/acme/types/Transaction/v2.3',
             $tag: tag,
-            $version: bali.version([2, 4]),
-            $permissions: bali.component('/bali/permissions/public/v1'),
+            $version: 'v2.4',
+            $permissions: '/bali/permissions/public/v1',
             $previous: previous
         });
 
@@ -137,16 +145,16 @@ describe('Bali Digital Notary™', function() {
         });
 
         it('should notarize a document properly', async function() {
-            document = await notary.notarizeDocument(transaction);
-            const html = document.toHTML(style) + '\n';  // add POSIX <EOL>
-            fs.writeFileSync('test/html/document.html', html, 'utf8');
+            contract = await notary.notarizeDocument(transaction);
+            const html = contract.toHTML(style) + '\n';  // add POSIX <EOL>
+            fs.writeFileSync('test/html/contract.html', html, 'utf8');
             await assert.rejects(async function() {
                 await service.notarizeDocument(transaction);
             });
         });
 
-        it('should validate the notarized document properly', async function() {
-            var isValid = await service.validDocument(document, notaryCertificate);
+        it('should validate the contract properly', async function() {
+            var isValid = await service.validContract(contract, certificate);
             expect(isValid).to.equal(true);
         });
 
@@ -155,27 +163,27 @@ describe('Bali Digital Notary™', function() {
     describe('Test Key Rotation', function() {
 
         it('should refresh a notary key properly', async function() {
-            var newNotaryCertificate = await notary.refreshKey();
-            expect(newNotaryCertificate).to.exist;
-            const html = newNotaryCertificate.toHTML(style) + '\n';  // add POSIX <EOL>
+            var newCertificate = await notary.refreshKey();
+            expect(newCertificate).to.exist;
+            const html = newCertificate.toHTML(style) + '\n';  // add POSIX <EOL>
             fs.writeFileSync('test/html/certificateV2.html', html, 'utf8');
 
             await assert.rejects(async function() {
                 await service.refreshKey();
             });
 
-            var isValid = await notary.validDocument(newNotaryCertificate, notaryCertificate);
+            var isValid = await notary.validContract(newCertificate, certificate);
             expect(isValid).to.equal(true);
 
-            var document = await notary.notarizeDocument(content);
+            const contract = await notary.notarizeDocument(document);
 
-            isValid = await notary.validDocument(document, notaryCertificate);
+            isValid = await notary.validContract(contract, certificate);
             expect(isValid).to.equal(false);
 
-            isValid = await notary.validDocument(document, newNotaryCertificate);
+            isValid = await notary.validContract(contract, newCertificate);
             expect(isValid).to.equal(true);
 
-            notaryCertificate = newNotaryCertificate;
+            certificate = newCertificate;
         });
 
     });
@@ -183,19 +191,19 @@ describe('Bali Digital Notary™', function() {
     describe('Test Multiple Notarizations', function() {
 
         it('should notarized a document twice properly', async function() {
-            var document = await notary.notarizeDocument(content);
+            var contract = await notary.notarizeDocument(document);
 
-            var isValid = await notary.validDocument(document, notaryCertificate);
+            var isValid = await notary.validContract(contract, certificate);
             expect(isValid).to.equal(true);
 
             const copy = document.duplicate();
-            copy.setParameter('$tag', content.getParameter('$tag')),
-            copy.setParameter('$version', bali.component('v2'));
-            copy.setParameter('$permissions', bali.component('/bali/permissions/public/v1'));
-            copy.setParameter('$previous', bali.pattern.NONE);
-            document = await notary.notarizeDocument(copy);
+            copy.setParameter('$tag', document.getParameter('$tag')),
+            copy.setParameter('$version', 'v2');
+            copy.setParameter('$permissions', '/bali/permissions/public/v1');
+            copy.setParameter('$previous', 'none');
+            contract = await notary.notarizeDocument(copy);
 
-            isValid = await notary.validDocument(document, notaryCertificate);
+            isValid = await notary.validContract(contract, certificate);
             expect(isValid).to.equal(true);
         });
 
@@ -206,7 +214,7 @@ describe('Bali Digital Notary™', function() {
         it('should erase all keys properly', async function() {
             await notary.forgetKey();
             await assert.rejects(async function() {
-                await notary.notarizeDocument(content);
+                await notary.notarizeDocument(document);
             });
         });
 

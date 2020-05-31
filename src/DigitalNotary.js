@@ -10,17 +10,17 @@
 'use strict';
 
 /**
- * This class implements a digital notary object that is capable of performing the following
+ * This class implements a digital notary interface that is capable of performing the following
  * functions:
  * <pre>
- *   * generateKey - generate a new notary key and return the (unsigned) notary certificate
+ *   * generateKey - generate a new notary key and return the corresponding notary certificate
  *   * activateKey - activate the notary key and return a citation to the notary certificate
  *   * getCitation - retrieve the document citation for the notary certificate
- *   * generateCredentials - generates a new set of credentials that can be used for authentication.
- *   * notarizeDocument - digitally notarize a document using the current notary key
- *   * validDocument - check whether or not the notary seal on a notarized document is valid
- *   * citeDocument - create a document citation for a notarized document
- *   * citationMatches - check whether or not a citation matches its cited document
+ *   * generateCredentials - generate a new set of credentials that can be used for authentication.
+ *   * notarizeDocument - digitally notarize a document using the notary key
+ *   * validContract - check whether or not the notary seal on a contract is valid
+ *   * citeDocument - create a document citation for a document
+ *   * citationMatches - check whether or not a document citation matches its cited document
  *   * refreshKey - replace the existing notary key with new one
  *   * forgetKey - forget any knowledge of the notary key
  * </pre>
@@ -61,7 +61,7 @@ const STATES = {
 // PUBLIC FUNCTIONS
 
 /**
- * This function creates a new digital notary object.
+ * This function creates a new digital notary.
  *
  * @param {Object} securityModule An object that implements the security module interface.
  * @param {Tag} account A unique account tag for the owner of the digital notary.
@@ -101,6 +101,66 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
         const filename = account.getValue() + '.bali';
         configurator = bali.configurator(filename, directory, debug);
     }
+
+
+    // PRIVATE METHODS
+
+    const createDocument = function(type, attributes, tag, version, permissions, previous) {
+        return bali.catalog(attributes, {
+            $type: type,
+            $tag: tag || bali.tag(),
+            $version: version || 'v1',
+            $permissions: permissions || '/bali/permissions/public/v1',
+            $previous: previous || 'none'
+        });
+    };
+
+    const createCitation = async function(document) {
+        const tag = document.getParameter('$tag');
+        const version = document.getParameter('$version');
+        const bytes = Buffer.from(document.toString(), 'utf8');
+        const digest = await securityModule.digestBytes(bytes);
+        return bali.catalog({
+            $protocol: PROTOCOL,
+            $tag: tag,
+            $version: version,
+            $digest: digest
+        }, {
+            $type: bali.component('/bali/notary/Citation/v1')
+        });
+    };
+
+    const createCertificate = function(publicKey, tag, version, previous) {
+        const type = '/bali/notary/Certificate/v1';
+        const attributes = {
+            $publicKey: publicKey,
+            $algorithms: bali.catalog({
+                $digest: 'SHA512',
+                $signature: 'ED25519'
+            })
+        };
+        const permissions = '/bali/permissions/public/v1';
+        return createDocument(type, attributes, tag, version, permissions, previous);
+    };
+
+    const createContract = async function(document, certificate) {
+        const contract = bali.catalog({
+            $protocol: PROTOCOL,
+            $timestamp: bali.moment(),  // now
+            $account: account,
+            $document: document,
+            $certificate: certificate || bali.pattern.NONE  // 'none' for self-signed certificate
+        }, {
+            $type: bali.component('/bali/notary/Contract/v1')
+        });
+        const bytes = Buffer.from(contract.toString(), 'utf8');
+        const signature = await securityModule.signBytes(bytes);
+        contract.setValue('$signature', signature);
+        return contract;
+    };
+
+
+    // PUBLIC METHODS
 
     /**
      * This method returns a string describing the attributes of the digital notary. It must
@@ -157,7 +217,6 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
      */
     this.citeDocument = async function(document) {
         try {
-            // validate the argument
             if (debug > 1) {
                 const validator = bali.validator(debug);
                 validator.validateType('/bali/notary/DigitalNotary', '$citeDocument', '$document', document, [
@@ -165,26 +224,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 ]);
                 validateStructure('$citeDocument', 'document', document, 'document');
             }
-
-            // extract the required attributes
-            const tag = document.getParameter('$tag');
-            const version = document.getParameter('$version');
-
-            // generate a digest of the document
-            const bytes = Buffer.from(document.toString(), 'utf8');
-            const digest = await securityModule.digestBytes(bytes);
-
-            // create the citation
-            const citation = bali.catalog({
-                $protocol: PROTOCOL,
-                $tag: tag,
-                $version: version,
-                $digest: digest
-            }, {
-                $type: '/bali/notary/Citation/v1'
-            });
-
-            return citation;
+            return await createCitation(document);
         } catch (cause) {
             const exception = bali.exception({
                 $module: '/bali/notary/DigitalNotary',
@@ -210,7 +250,6 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
      */
     this.citationMatches = async function(citation, document) {
         try {
-            // validate the arguments
             if (debug > 1) {
                 const validator = bali.validator(debug);
                 validator.validateType('/bali/notary/DigitalNotary', '$citationMatches', '$citation', citation, [
@@ -222,6 +261,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 ]);
                 validateStructure('$citationMatches', 'document', document, 'document');
             }
+
             const requiredProtocol = citation.getValue('$protocol').toString();
             var requiredModule;
             if (requiredProtocol === PROTOCOL) {
@@ -261,9 +301,9 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     };
 
     /**
-     * This method generates a new notary key and returns the new (unsigned) notary certificate.
+     * This method generates a new notary key and returns the new corresponding notary certificate.
      *
-     * @returns {Catalog} The new (unsigned) notary certificate.
+     * @returns {Catalog} The new notary certificate.
      */
     this.generateKey = async function() {
         try {
@@ -278,24 +318,12 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             const publicKey = await securityModule.generateKeys();
 
             // create the new notary certificate
-            const certificate = bali.catalog({
-                $publicKey: publicKey,
-                $algorithms: bali.catalog({
-                    $digest: 'SHA512',
-                    $signature: 'ED25519'
-                })
-            }, {
-                $type: '/bali/notary/Certificate/v1',
-                $tag: bali.tag(),  // generate a new random tag
-                $version: bali.version(),  // initial version
-                $permissions: '/bali/permissions/public/v1',
-                $previous: bali.pattern.NONE
-            });
-            configuration.setValue('$certificate', certificate);
+            const certificate = createCertificate(publicKey);
 
             // update current state
             const state = controller.transitionState('$generateKey');
             configuration.setValue('$state', state);
+            configuration.setValue('$certificate', certificate);
             await storeConfiguration(configurator, configuration, debug);
 
             return certificate;
@@ -319,21 +347,21 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
      * The notary certificate in either case must be signed using the notary key that is local
      * to the user.
      *
-     * @param {Catalog} certificate The (signed) notary certificate for the new notary key.
+     * @param {Catalog} contract The notarized certificate for the new notary key.
      * @returns {Catalog} A document citation for the notarized certificate.
      */
-    this.activateKey = async function(certificate) {
+    this.activateKey = async function(contract) {
         try {
             // validate the argument
             if (debug > 1) {
                 const validator = bali.validator(debug);
-                validator.validateType('/bali/notary/DigitalNotary', '$activateKey', '$certificate', certificate, [
+                validator.validateType('/bali/notary/DigitalNotary', '$activateKey', '$contract', contract, [
                     '/bali/collections/Catalog'
                 ]);
-                validateStructure('$activateKey', 'certificate', certificate, 'document');
-                validateStructure('$activateKey', 'certificate', certificate.getValue('$content'), 'certificate');
+                validateStructure('$activateKey', 'contract', contract, 'contract');
+                validateStructure('$activateKey', 'contract', contract.getValue('$document'), 'certificate');
             }
-            if (debug > 2) console.log('certificate: ' + certificate + EOL);
+            if (debug > 2) console.log('contract: ' + contract + EOL);
 
             // check current state
             if (!configuration) {
@@ -343,43 +371,28 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             controller.validateEvent('$activateKey');
 
             // make sure its the same certificate
-            const document = certificate.getValue('$content');
-            if (!configuration.getValue('$certificate').isEqualTo(document)) {
+            const certificate = contract.getValue('$document');
+            if (!configuration.getValue('$certificate').isEqualTo(certificate)) {
                 const exception = bali.exception({
                     $module: '/bali/notary/DigitalNotary',
                     $procedure: '$activateKey',
                     $exception: '$invalidCertificate',
                     $certificate: certificate,
-                    $text: 'The certificate did not match the original notary certificate.'
+                    $text: 'The certificate does not match the original certificate.'
                 });
                 if (debug > 0) console.error(exception.toString());
                 throw exception;
             }
 
-            // extract the required attributes
-            const tag = document.getParameter('$tag');
-            const version = document.getParameter('$version');
-
-            // generate a digest of the certificate
-            const bytes = Buffer.from(certificate.toString(), 'utf8');
-            const digest = await securityModule.digestBytes(bytes);
-
-            // save the state of the certificate citation
-            const citation = bali.catalog({
-                $protocol: PROTOCOL,
-                $tag: tag,
-                $version: version,
-                $digest: digest
-            }, {
-                $type: bali.component('/bali/notary/Citation/v1')
-            });
+            // create the citation
+            const citation = await createCitation(certificate);
             if (debug > 2) console.log('citation: ' + citation + EOL);
-            configuration.setValue('$citation', citation);
-            configuration.setValue('$certificate', certificate);
 
             // update current state
             const state = controller.transitionState('$activateKey');
             configuration.setValue('$state', state);
+            configuration.setValue('$citation', citation);
+            configuration.setValue('$certificate', certificate);
             await storeConfiguration(configurator, configuration, debug);
 
             return citation;
@@ -388,7 +401,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 $module: '/bali/notary/DigitalNotary',
                 $procedure: '$activateKey',
                 $exception: '$unexpected',
-                $certificate: certificate,
+                $contract: contract,
                 $text: 'An unexpected error occurred while attempting to activate the notary key.'
             }, cause);
             if (debug > 0) console.error(exception.toString());
@@ -397,11 +410,11 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     };
 
     /**
-     * This method returns a document citation referencing the notary certificate associated
-     * with the current notary key.
+     * This method returns a document citation to the notary certificate associated with the
+     * current notary key.
      *
-     * @returns {Catalog} A document citation referencing the notary certificate associated
-     * with the current notary key.
+     * @returns {Catalog} A document citation to the notary certificate associated with the
+     * current notary key.
      */
     this.getCitation = async function() {
         try {
@@ -433,7 +446,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
      *
      * @param {Tag} salt An optional random tag that was generated by the process or service
      * requesting authentication.
-     * @returns {Catalog} The notarized credentials.
+     * @returns {Catalog} A contract containing the notarized credentials.
      */
     this.generateCredentials = async function(salt) {
         try {
@@ -454,37 +467,21 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             controller.validateEvent('$generateCredentials');
 
             // create the new credentials
-            const credentials = bali.catalog({
-                $salt: salt || bali.tag()  // generate the salt if necessary
-            }, {
-                $type: '/bali/notary/Credentials/v1',
-                $tag: bali.tag(),  // generate a new random tag
-                $version: bali.version(),  // initial version
-                $permissions: '/bali/permissions/private/v1',
-                $previous: bali.pattern.NONE
-            });
+            const type = '/bali/notary/Credentials/v1';
+            const attributes = {$salt: salt || bali.tag()};
+            const credentials = createDocument(type, attributes);
 
             // notarize the credentials
-            const document = bali.catalog({
-                $protocol: PROTOCOL,
-                $timestamp: bali.moment(),  // now
-                $account: account,
-                $content: credentials,
-                $certificate: configuration.getValue('$citation')
-            }, {
-                $type: bali.component('/bali/notary/Document/v1')
-            });
-            const bytes = Buffer.from(document.toString(), 'utf8');
-            const signature = await securityModule.signBytes(bytes);
-            document.setValue('$signature', signature);
-            if (debug > 2) console.log('credentials: ' + document + EOL);
+            const certificate = configuration.getValue('$citation');
+            const contract = await createContract(credentials, certificate);
+            if (debug > 2) console.log('notarized credentials: ' + contract + EOL);
 
             // update current state
             const state = controller.transitionState('$generateCredentials');
             configuration.setValue('$state', state);
             await storeConfiguration(configurator, configuration, debug);
 
-            return document;
+            return contract;
         } catch (cause) {
             const exception = bali.exception({
                 $module: '/bali/notary/DigitalNotary',
@@ -499,7 +496,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     };
 
     /**
-     * This method digitally signs the specified document content using the notary key maintained
+     * This method digitally signs the specified document using the notary key maintained
      * by the security module. The document must be parameterized with the following parameters:
      * <pre>
      *  * $tag - a unique identifier for the document
@@ -509,20 +506,20 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
      *  * $previous - a citation to the previous version of the document (or bali.pattern.NONE)
      * </pre>
      *
-     * The newly notarized document is returned.
+     * A contract containing the newly notarized document is returned.
      *
-     * @param {Catalog} content The document content to be notarized.
-     * @returns {Catalog} A newly notarized document containing the content.
+     * @param {Catalog} document The document to be notarized.
+     * @returns {Catalog} A contract containing the newly notarized document.
      */
-    this.notarizeDocument = async function(content) {
+    this.notarizeDocument = async function(document) {
         try {
             // validate the argument
             if (debug > 1) {
                 const validator = bali.validator(debug);
-                validator.validateType('/bali/notary/DigitalNotary', '$notarizeDocument', '$content', content, [
+                validator.validateType('/bali/notary/DigitalNotary', '$notarizeDocument', '$document', document, [
                     '/bali/collections/Catalog'
                 ]);
-                validateStructure('$notarizeDocument', 'content', content, 'content');
+                validateStructure('$notarizeDocument', 'document', document, 'document');
             }
 
             // check current state
@@ -532,35 +529,23 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             }
             controller.validateEvent('$notarizeDocument');
 
-            // create the document
-            const citation = configuration.getValue('$citation');
-            const document = bali.catalog({
-                $protocol: PROTOCOL,
-                $timestamp: bali.moment(),  // now
-                $account: account,
-                $content: content,
-                $certificate: citation || bali.pattern.NONE  // 'none' for self-signed certificate
-            }, {
-                $type: bali.component('/bali/notary/Document/v1')
-            });
-
-            // notarize the document
-            const bytes = Buffer.from(document.toString(), 'utf8');
-            const signature = await securityModule.signBytes(bytes);
-            document.setValue('$signature', signature);
+            // create the contract
+            const certificate = configuration.getValue('$citation');
+            const contract = await createContract(document, certificate);
+            if (debug > 2) console.log('notarized document: ' + contract + EOL);
 
             // update current state
             const state = controller.transitionState('$notarizeDocument');
             configuration.setValue('$state', state);
             await storeConfiguration(configurator, configuration, debug);
 
-            return document;
+            return contract;
         } catch (cause) {
             const exception = bali.exception({
                 $module: '/bali/notary/DigitalNotary',
                 $procedure: '$notarizeDocument',
                 $exception: '$unexpected',
-                $content: content,
+                $document: document,
                 $text: 'An unexpected error occurred while attempting to notarize a document.'
             }, cause);
             if (debug > 0) console.error(exception.toString());
@@ -569,55 +554,55 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     };
 
     /**
-     * This method determines whether or not the notary seal on the specified notarized
-     * document is valid.
+     * This method determines whether or not the digital signature on the specified contract
+     * is valid.
      *
-     * @param {Catalog} document The notarized document to be tested.
-     * @param {Catalog} certificate A notarized document containing the notary certificate for the
-     * notary key that allegedly notarized the specified document.
-     * @returns {Boolean} Whether or not the notary seal on the document is valid.
+     * @param {Catalog} contract The contract to be tested.
+     * @param {Catalog} certificate A contract containing the notarized certificate for the
+     * notary key that allegedly notarized the specified contract.
+     * @returns {Boolean} Whether or not the digital signature on the contract is valid.
      */
-    this.validDocument = async function(document, certificate) {
+    this.validContract = async function(contract, certificate) {
         try {
             // validate the arguments
             if (debug > 1) {
                 const validator = bali.validator(debug);
-                validator.validateType('/bali/notary/DigitalNotary', '$validDocument', '$document', document, [
+                validator.validateType('/bali/notary/DigitalNotary', '$validContract', '$contract', contract, [
                     '/bali/collections/Catalog'
                 ]);
-                validateStructure('$validDocument', 'document', document, 'document');
-                validator.validateType('/bali/notary/DigitalNotary', '$validDocument', '$certificate', certificate, [
+                validateStructure('$validContract', 'contract', contract, 'contract');
+                validator.validateType('/bali/notary/DigitalNotary', '$validContract', '$certificate', certificate, [
                     '/bali/collections/Catalog'
                 ]);
-                validateStructure('$validDocument', 'certificate', certificate, 'document');
-                validateStructure('$validDocument', 'certificate', certificate.getValue('$content'), 'certificate');
+                validateStructure('$validContract', 'certificate', certificate, 'contract');
+                validateStructure('$validContract', 'certificate', certificate.getValue('$document'), 'certificate');
 
                 // make sure account tags match
-                const documentAccount = document.getValue('$account');
+                const contractAccount = contract.getValue('$account');
                 const certificateAccount = certificate.getValue('$account');
-                if (!documentAccount.isEqualTo(certificateAccount)) {
+                if (!contractAccount.isEqualTo(certificateAccount)) {
                     const exception = bali.exception({
                         $module: '/bali/notary/DigitalNotary',
-                        $procedure: '$validDocument',
+                        $procedure: '$validContract',
                         $exception: '$accountMismatch',
-                        $document: document,
+                        $contract: contract,
                         $certificate: certificate,
-                        $text: 'The account tags for the document and certificate must match.'
+                        $text: 'The account tags for the contract and certificate must match.'
                     });
                     throw exception;
                 }
 
                 // make sure protocol versions match
-                const documentProtocol = document.getValue('$protocol');
+                const contractProtocol = contract.getValue('$protocol');
                 const certificateProtocol = certificate.getValue('$protocol');
-                if (!documentProtocol.isEqualTo(certificateProtocol)) {
+                if (!contractProtocol.isEqualTo(certificateProtocol)) {
                     const exception = bali.exception({
                         $module: '/bali/notary/DigitalNotary',
-                        $procedure: '$validDocument',
+                        $procedure: '$validContract',
                         $exception: '$protocolMismatch',
-                        $document: document,
+                        $contract: contract,
                         $certificate: certificate,
-                        $text: 'The protocol versions for the document and certificate must match.'
+                        $text: 'The protocol versions for the contract and certificate must match.'
                     });
                     throw exception;
                 }
@@ -625,7 +610,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
 
             // find a security module that is compatible with the protocol
             var requiredModule;
-            const requiredProtocol = document.getValue('$protocol').toString();
+            const requiredProtocol = contract.getValue('$protocol').toString();
             if (requiredProtocol === PROTOCOL) {
                 requiredModule = securityModule;  // use the current one
             } else {
@@ -633,7 +618,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 if (!requiredModule) {
                     const exception = bali.exception({
                         $module: '/bali/notary/DigitalNotary',
-                        $procedure: '$validDocument',
+                        $procedure: '$validContract',
                         $exception: '$unsupportedProtocol',
                         $expected: Object.keys(PROTOCOLS),
                         $actual: requiredProtocol,
@@ -643,20 +628,20 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 }
             }
 
-            // separate the signature from the document
-            const catalog = bali.catalog.extraction(document, bali.list([
+            // separate the signature from the contract
+            const catalog = bali.catalog.extraction(contract, [
                 '$protocol',
                 '$timestamp',
                 '$account',
-                '$content',
+                '$document',
                 '$certificate'
-            ]));
-            const signature = document.getValue('$signature');
+            ]);
+            const signature = contract.getValue('$signature');
 
             // extract the public key from the certificate
-            const publicKey = certificate.getValue('$content').getValue('$publicKey');
+            const publicKey = certificate.getValue('$document').getValue('$publicKey');
 
-            // validate the signature against the document
+            // validate the signature against the unsigned contract
             const bytes = Buffer.from(catalog.toString(), 'utf8');
             const result = await requiredModule.validSignature(publicKey, signature, bytes);
 
@@ -664,11 +649,11 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
         } catch (cause) {
             const exception = bali.exception({
                 $module: '/bali/notary/DigitalNotary',
-                $procedure: '$validDocument',
+                $procedure: '$validContract',
                 $exception: '$unexpected',
-                $document: document,
+                $contract: contract,
                 $certificate: certificate,
-                $text: 'An unexpected error occurred while attempting to validate a notarized document.'
+                $text: 'An unexpected error occurred while attempting to validate a contract.'
             }, cause);
             if (debug > 0) console.error(exception.toString());
             throw exception;
@@ -676,11 +661,11 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     };
 
     /**
-     * This method replaces an existing public-private key pair with a new one. It returns
-     * a new public notary certificate.  Note, while refreshing the key the old private key
-     * is used to sign the new certificate before it is destroyed.
+     * This method replaces an existing public-private key pair with a new one. It returns a
+     * notarized certificate for the new notary key.  Note, while refreshing the key the old
+     * notary key is used to sign the new certificate before it is destroyed.
      *
-     * @returns {Catalog} The new notary certificate.
+     * @returns {Catalog} The notarized certificate for the new notary key.
      */
     this.refreshKey = async function() {
         try {
@@ -693,64 +678,30 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
 
             // generate a new public-private key pair
             const publicKey = await securityModule.rotateKeys();
-            const timestamp = bali.moment();  // now
-            var citation = configuration.getValue('$citation');
-            const tag = citation.getValue('$tag');
-            const version = bali.version.nextVersion(citation.getValue('$version'));
+            var previous = configuration.getValue('$citation');
+            const tag = previous.getValue('$tag');
+            const version = bali.version.nextVersion(previous.getValue('$version'));
 
-            // create the new notary certificate body
-            const document = bali.catalog({
-                $publicKey: publicKey,
-                $algorithms: bali.catalog({
-                    $digest: 'SHA512',
-                    $signature: 'ED25519'
-                })
-            }, {
-                $type: '/bali/notary/Certificate/v1',
-                $tag: tag,
-                $version: version,
-                $permissions: '/bali/permissions/public/v1',
-                $previous: citation
-            });
-
-            // create a notarized certificate
-            const certificate = bali.catalog({
-                $protocol: PROTOCOL,
-                $timestamp: timestamp,
-                $account: account,
-                $content: document,
-                $certificate: citation
-            }, {
-                $type: bali.component('/bali/notary/Document/v1')
-            });
-            var bytes = Buffer.from(certificate.toString(), 'utf8');
-            const signature = await securityModule.signBytes(bytes);
-            certificate.setValue('$signature', signature);
+            // create the new notary certificate
+            const certificate = createCertificate(publicKey, tag, version, previous);
             if (debug > 2) console.log('certificate: ' + certificate + EOL);
-            configuration.setValue('$certificate', certificate);
 
-            // generate a digest of the certificate
-            bytes = Buffer.from(certificate.toString(), 'utf8');
-            const digest = await securityModule.digestBytes(bytes);
-
-            // save the state of the certificate citation
-            citation = bali.catalog({
-                $protocol: PROTOCOL,
-                $tag: tag,
-                $version: version,
-                $digest: digest
-            }, {
-                $type: bali.component('/bali/notary/Citation/v1')
-            });
+            // create a citation to the certificate
+            const citation = await createCitation(certificate);
             if (debug > 2) console.log('citation: ' + citation + EOL);
-            configuration.setValue('$citation', citation);
+
+            // notarize the new certificate
+            const contract = await createContract(certificate, previous);
+            if (debug > 2) console.log('notarized certificate: ' + contract + EOL);
 
             // update current state
             const state = controller.transitionState('$refreshKey');
             configuration.setValue('$state', state);
+            configuration.setValue('$certificate', certificate);
+            configuration.setValue('$citation', citation);
             await storeConfiguration(configurator, configuration, debug);
 
-            return certificate;
+            return contract;
         } catch (cause) {
             const exception = bali.exception({
                 $module: '/bali/notary/DigitalNotary',
@@ -844,7 +795,7 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
                     }
                 }
                 break;
-            case 'content':
+            case 'document':
                 // Content must be parameterized with exactly 5 specific parameters
                 parameters = parameterValue.getParameters();
                 if (parameters && parameters.getSize() === 5) {
@@ -876,20 +827,20 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
                     }
                 }
                 break;
-            case 'document':
-                // A document must have the following:
+            case 'contract':
+                // A contract must have the following:
                 //  * a parameterized type of /bali/notary/Document/v...
-                //  * exactly five specific attributes including a $content attribute
-                //  * the $content attribute must be parameterized with at least four parameters
-                //  * the $content attribute may have a parameterized type as well
+                //  * exactly five specific attributes including a $document attribute
+                //  * the $document attribute must be parameterized with at least four parameters
+                //  * the $document attribute may have a parameterized type as well
                 if (parameterValue.isComponent && parameterValue.isType('/bali/collections/Catalog') && parameterValue.getSize() === 6) {
                     validateStructure(functionName, parameterName + '.protocol', parameterValue.getValue('$protocol'), 'version');
                     validateStructure(functionName, parameterName + '.timestamp', parameterValue.getValue('$timestamp'), 'moment');
                     validateStructure(functionName, parameterName + '.account', parameterValue.getValue('$account'), 'tag');
-                    validateStructure(functionName, parameterName + '.content', parameterValue.getValue('$content'), 'content');
+                    validateStructure(functionName, parameterName + '.document', parameterValue.getValue('$document'), 'document');
                     validateStructure(functionName, parameterName + '.certificate', parameterValue.getValue('$certificate'), 'citation');
                     validateStructure(functionName, parameterName + '.signature', parameterValue.getValue('$signature'), 'binary');
-                    parameters = parameterValue.getValue('$content').getParameters();
+                    parameters = parameterValue.getValue('$document').getParameters();
                     if (parameters) {
                         const name = parameters.getValue('$type');
                         if (name) validateStructure(functionName, parameterName + '.parameters.type', name, 'name');
