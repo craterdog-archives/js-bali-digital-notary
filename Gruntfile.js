@@ -50,8 +50,14 @@ module.exports = function(grunt) {
       clientConfig: {
         target: 'web',
         mode: 'development',
-        node: {
-          fs: "empty"  // required work-around for webpack bug
+        resolve: {
+            fallback: {
+                "os": false,
+                "fs": false,
+                "path": false,
+                "url": false,
+                "crypto": false
+            }
         },
         entry: './index.js',
         output: {
