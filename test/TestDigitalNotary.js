@@ -79,13 +79,13 @@ describe('Bali Digital Notary™', function() {
     describe('Test Certificate Validation', function() {
 
         it('should validate the certificate', async function() {
-            expect(certificate.getValue('$protocol').toString()).to.equal('v2');
+            expect(certificate.getAttribute('$protocol').toString()).to.equal('v2');
             var isValid = await notary.validContract(certificate, certificate);
             expect(isValid).to.equal(true);
         });
 
         it('should validate the citation for the certificate', async function() {
-            var isValid = await notary.citationMatches(citation, certificate.getValue('$document'));
+            var isValid = await notary.citationMatches(citation, certificate.getAttribute('$document'));
             expect(isValid).to.equal(true);
         });
 

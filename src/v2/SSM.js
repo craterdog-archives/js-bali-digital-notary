@@ -114,10 +114,10 @@ const SSM = function(directory, debug) {
             // load the current configuration if necessary
             if (!configuration) {
                 configuration = await loadConfiguration(configurator, debug);
-                controller = bali.controller(REQUESTS, STATES, configuration.getValue('$state').toString(), debug);
+                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), debug);
             }
 
-            return configuration.getValue('$tag');
+            return configuration.getAttribute('$tag');
         } catch (cause) {
             const exception = bali.exception({
                 $module: '/bali/notary/' + PROTOCOL + '/SSM',
@@ -163,22 +163,22 @@ const SSM = function(directory, debug) {
             // check the current state
             if (!configuration) {
                 configuration = await loadConfiguration(configurator, debug);
-                controller = bali.controller(REQUESTS, STATES, configuration.getValue('$state').toString(), debug);
+                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), debug);
             }
             controller.validateEvent('$generateKeys');
 
             // generate a new key pair
             const seed = signer.createSeed();
             const raw = signer.createKeyPair(seed);
-            configuration.setValue('$publicKey', bali.binary(raw.publicKey));
-            configuration.setValue('$privateKey', bali.binary(raw.secretKey));
+            configuration.setAttribute('$publicKey', bali.binary(raw.publicKey));
+            configuration.setAttribute('$privateKey', bali.binary(raw.secretKey));
 
             // update the configuration
             const state = controller.transitionState('$generateKeys');
-            configuration.setValue('$state', state);
+            configuration.setAttribute('$state', state);
             await storeConfiguration(configurator, configuration, debug);
 
-            return configuration.getValue('$publicKey');
+            return configuration.getAttribute('$publicKey');
         } catch (cause) {
             const exception = bali.exception({
                 $module: '/bali/notary/' + PROTOCOL + '/SSM',
@@ -201,26 +201,26 @@ const SSM = function(directory, debug) {
             // check the current state
             if (!configuration) {
                 configuration = await loadConfiguration(configurator, debug);
-                controller = bali.controller(REQUESTS, STATES, configuration.getValue('$state').toString(), debug);
+                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), debug);
             }
             controller.validateEvent('$rotateKeys');
 
             // save the previous key pair
-            configuration.setValue('$previousPublicKey', configuration.getValue('$publicKey'));
-            configuration.setValue('$previousPrivateKey', configuration.getValue('$privateKey'));
+            configuration.setAttribute('$previousPublicKey', configuration.getAttribute('$publicKey'));
+            configuration.setAttribute('$previousPrivateKey', configuration.getAttribute('$privateKey'));
 
             // generate a new key pair
             const seed = signer.createSeed();
             const raw = signer.createKeyPair(seed);
-            configuration.setValue('$publicKey', bali.binary(raw.publicKey));
-            configuration.setValue('$privateKey', bali.binary(raw.secretKey));
+            configuration.setAttribute('$publicKey', bali.binary(raw.publicKey));
+            configuration.setAttribute('$privateKey', bali.binary(raw.secretKey));
 
             // update the configuration
             const state = controller.transitionState('$rotateKeys');
-            configuration.setValue('$state', state);
+            configuration.setAttribute('$state', state);
             await storeConfiguration(configurator, configuration, debug);
 
-            return configuration.getValue('$publicKey');
+            return configuration.getAttribute('$publicKey');
         } catch (cause) {
             const exception = bali.exception({
                 $module: '/bali/notary/' + PROTOCOL + '/SSM',
@@ -316,21 +316,21 @@ const SSM = function(directory, debug) {
             // check the current state
             if (!configuration) {
                 configuration = await loadConfiguration(configurator, debug);
-                controller = bali.controller(REQUESTS, STATES, configuration.getValue('$state').toString(), debug);
+                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), debug);
             }
             controller.validateEvent('$signBytes');
 
             // retrieve the keys
             var privateKey;
-            var publicKey = configuration.getValue('$previousPublicKey');
+            var publicKey = configuration.getAttribute('$previousPublicKey');
             if (publicKey) {
                 // the bytes define a certificate containing the new public key, so sign
                 // it using the old private key to enforce a valid certificate chain
-                privateKey = configuration.getValue('$previousPrivateKey');
-                configuration.removeValues(['$previousPublicKey', '$previousPrivateKey']);
+                privateKey = configuration.getAttribute('$previousPrivateKey');
+                configuration.removeAttributes(['$previousPublicKey', '$previousPrivateKey']);
             } else {
-                publicKey = configuration.getValue('$publicKey');
-                privateKey = configuration.getValue('$privateKey');
+                publicKey = configuration.getAttribute('$publicKey');
+                privateKey = configuration.getAttribute('$privateKey');
             }
 
             // digitally sign the bytes using the private key
@@ -338,7 +338,7 @@ const SSM = function(directory, debug) {
 
             // update the configuration
             const state = controller.transitionState('$signBytes');
-            configuration.setValue('$state', state);
+            configuration.setAttribute('$state', state);
             await storeConfiguration(configurator, configuration, debug);
 
             return bali.binary(signature);
