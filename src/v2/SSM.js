@@ -29,7 +29,7 @@
  * </pre>
  */
 const hasher = require('crypto');
-const signer = require('supercop.js');
+const signer = require('supercop');
 const bali = require('bali-component-framework').api();
 
 
@@ -169,7 +169,7 @@ const SSM = function(directory, debug) {
 
             // generate a new key pair
             const seed = signer.createSeed();
-            const raw = signer.createKeyPair(seed);
+            const raw = await signer.createKeyPair(seed);
             configuration.setAttribute('$publicKey', bali.binary(raw.publicKey));
             configuration.setAttribute('$privateKey', bali.binary(raw.secretKey));
 
@@ -211,7 +211,7 @@ const SSM = function(directory, debug) {
 
             // generate a new key pair
             const seed = signer.createSeed();
-            const raw = signer.createKeyPair(seed);
+            const raw = await signer.createKeyPair(seed);
             configuration.setAttribute('$publicKey', bali.binary(raw.publicKey));
             configuration.setAttribute('$privateKey', bali.binary(raw.secretKey));
 
@@ -334,7 +334,7 @@ const SSM = function(directory, debug) {
             }
 
             // digitally sign the bytes using the private key
-            const signature = signer.sign(bytes, publicKey.getValue(), privateKey.getValue());
+            const signature = await signer.sign(bytes, publicKey.getValue(), privateKey.getValue());
 
             // update the configuration
             const state = controller.transitionState('$signBytes');
@@ -383,7 +383,7 @@ const SSM = function(directory, debug) {
             }
 
             // check the signature on the bytes
-            const isValid = signer.verify(signature.getValue(), bytes, aPublicKey.getValue());
+            const isValid = await signer.verify(signature.getValue(), bytes, aPublicKey.getValue());
 
             return isValid;
         } catch (cause) {
