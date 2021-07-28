@@ -17,7 +17,7 @@ const DigitalNotary = require('./src/DigitalNotary').DigitalNotary;
  * This function returns an object that implements the API for a software security module.
  *
  * @param {String} directory An optional directory to be used for local configuration storage.
- * @param {Boolean|Number} debug An optional number in the range [0..3] that controls
+ * @param {Boolean|Number} debug An optional number in the range 0..3 that controls
  * the level of debugging that occurs:
  * <pre>
  *   0 (or false): debugging turned off
@@ -41,7 +41,7 @@ exports.ssmV2 = ssmV2;
  * @param {Object} securityModule An object that implements the security module interface.
  * @param {Tag} account A unique account tag for the owner of the digital notary.
  * @param {String} directory An optional directory to be used for local configuration storage.
- * @param {Boolean|Number} debug An optional number in the range [0..3] that controls
+ * @param {Boolean|Number} debug An optional number in the range 0..3 that controls
  * the level of debugging that occurs:
  * <pre>
  *   0 (or false): debugging turned off
@@ -64,7 +64,7 @@ exports.notary = notary;
  *
  * @param {Tag} account A unique tag for the account of the owner of the digital notary.
  * @param {String} directory The top level directory to be used for local configuration.
- * @param {Boolean|Number} debug An optional number in the range [0..3] that controls the level of
+ * @param {Boolean|Number} debug An optional number in the range 0..3 that controls the level of
  * debugging that occurs:
  * <pre>
  *   0 (or false): no logging
@@ -85,7 +85,7 @@ exports.test = test;
  * for public notary certificate based operations only.  No private notary key should be
  * generated for this instance.
  *
- * @param {Boolean|Number} debug An optional number in the range [0..3] that controls the level of
+ * @param {Boolean|Number} debug An optional number in the range 0..3 that controls the level of
  * debugging that occurs:
  * <pre>
  *   0 (or false): no logging
