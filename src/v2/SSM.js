@@ -35,9 +35,6 @@ const bali = require('bali-component-framework').api();
 
 // PRIVATE CONSTANTS
 
-// the POSIX end of line character
-const EOL = '\n';
-
 // the algorithms for this version of the protocol
 const PROTOCOL = 'v2';
 const DIGEST = 'sha512';
@@ -417,7 +414,7 @@ exports.SSM = SSM;
  */
 const storeConfiguration = async function(configurator, configuration, debug) {
     try {
-        await configurator.store(configuration.toString() + EOL);
+        await configurator.store(configuration.toDocument());
     } catch (cause) {
         const exception = bali.exception({
             $module: '/bali/notary/' + PROTOCOL + '/SSM',
@@ -451,7 +448,7 @@ const loadConfiguration = async function(configurator, debug) {
                 $tag: bali.tag(),  // new random tag
                 $state: '$keyless'
             });
-            await configurator.store(configuration.toString() + EOL);
+            await configurator.store(configuration.toDocument());
         }
         return configuration;
     } catch (cause) {

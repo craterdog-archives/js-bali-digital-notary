@@ -34,9 +34,6 @@ const SSMv2 = require('./v2/SSM').SSM;
 
 // PRIVATE CONSTANTS
 
-// the POSIX end of line character
-const EOL = '\n';
-
 // import the supported validation only protocols (in preferred order)
 const PROTOCOLS = {
 //  ...
@@ -361,7 +358,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 validateStructure('$activateKey', 'contract', contract, 'contract');
                 validateStructure('$activateKey', 'contract', contract.getAttribute('$document'), 'certificate');
             }
-            if (debug > 2) console.log('contract: ' + contract + EOL);
+            if (debug > 2) console.log('contract: ' + contract.toDocument());
 
             // check current state
             if (!configuration) {
@@ -386,7 +383,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
 
             // create the citation
             const citation = await createCitation(certificate);
-            if (debug > 2) console.log('citation: ' + citation + EOL);
+            if (debug > 2) console.log('citation: ' + citation.toDocument());
 
             // update current state
             const state = controller.transitionState('$activateKey');
@@ -474,7 +471,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             // notarize the credentials
             const certificate = configuration.getAttribute('$citation');
             const contract = await createContract(credentials, certificate);
-            if (debug > 2) console.log('notarized credentials: ' + contract + EOL);
+            if (debug > 2) console.log('notarized credentials: ' + contract.toDocument());
 
             // update current state
             const state = controller.transitionState('$generateCredentials');
@@ -532,7 +529,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             // create the contract
             const certificate = configuration.getAttribute('$citation');
             const contract = await createContract(document, certificate);
-            if (debug > 2) console.log('notarized document: ' + contract + EOL);
+            if (debug > 2) console.log('notarized document: ' + contract.toDocument());
 
             // update current state
             const state = controller.transitionState('$notarizeDocument');
@@ -684,15 +681,15 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
 
             // create the new notary certificate
             const certificate = createCertificate(publicKey, tag, version, previous);
-            if (debug > 2) console.log('certificate: ' + certificate + EOL);
+            if (debug > 2) console.log('certificate: ' + certificate.toDocument());
 
             // create a citation to the certificate
             const citation = await createCitation(certificate);
-            if (debug > 2) console.log('citation: ' + citation + EOL);
+            if (debug > 2) console.log('citation: ' + citation.toDocument());
 
             // notarize the new certificate
             const contract = await createContract(certificate, previous);
-            if (debug > 2) console.log('notarized certificate: ' + contract + EOL);
+            if (debug > 2) console.log('notarized certificate: ' + contract.toDocument());
 
             // update current state
             const state = controller.transitionState('$refreshKey');
@@ -884,7 +881,7 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
 const storeConfiguration = async function(configurator, configuration, debug) {
     try {
         if (!configurator) throw Error('The digital notary is configured for public certificate operations only.');
-        await configurator.store(configuration.toString() + EOL);
+        await configurator.store(configuration.toDocument());
     } catch (cause) {
         const exception = bali.exception({
             $module: '/bali/notary/DigitalNotary',
@@ -918,7 +915,7 @@ const loadConfiguration = async function(configurator, debug) {
             configuration = bali.catalog({
                 $state: '$limited'
             });
-            await configurator.store(configuration.toString() + EOL);
+            await configurator.store(configuration.toDocument());
         }
         return configuration;
     } catch (cause) {
