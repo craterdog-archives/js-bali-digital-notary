@@ -42,14 +42,14 @@ describe('Bali Digital Notary™', function() {
         pfs.mkdir('test/html', {recursive: true, mode: 0o700});
 
         it('should return the correct account tag', async function() {
-            expect(notary.getAccount().isEqualTo(account)).to.equal(true);
+            expect(bali.areEqual(notary.getAccount(), account)).to.equal(true);
             expect(service.getAccount()).to.equal(undefined);
         });
 
         it('should return the protocols', async function() {
             const protocols = notary.getProtocols();
             expect(protocols).to.exist;
-            expect(protocols.isEqualTo(service.getProtocols())).to.equal(true);
+            expect(bali.areEqual(protocols, service.getProtocols())).to.equal(true);
         });
 
         it('should generate the keys', async function() {
@@ -57,7 +57,7 @@ describe('Bali Digital Notary™', function() {
             certificate = await notary.notarizeDocument(publicKey);
             citation = await notary.activateKey(certificate);
             expect(certificate).to.exist;
-            const html = certificate.toHTML(style);
+            const html = bali.html(certificate, style);
             pfs.writeFile('test/html/certificate.html', html, 'utf8');
             await assert.rejects(async function() {
                 await service.generateKey();
@@ -67,7 +67,7 @@ describe('Bali Digital Notary™', function() {
         it('should retrieve the certificate citation', async function() {
             citation = await notary.getCitation();
             expect(citation).to.exist;
-            const html = citation.toHTML(style);
+            const html = bali.html(citation, style);
             pfs.writeFile('test/html/citation.html', html, 'utf8');
             await assert.rejects(async function() {
                 await service.getCitation();
@@ -98,7 +98,7 @@ describe('Bali Digital Notary™', function() {
             const salt = bali.tag();
             credentials = await notary.generateCredentials(salt);
             expect(credentials).to.exist;
-            const html = credentials.toHTML(style);
+            const html = bali.html(credentials, style);
             pfs.writeFile('test/html/credentials.html', html, 'utf8');
         });
 
@@ -146,7 +146,7 @@ describe('Bali Digital Notary™', function() {
 
         it('should notarize a document properly', async function() {
             contract = await notary.notarizeDocument(transaction);
-            const html = contract.toHTML(style);
+            const html = bali.html(contract, style);
             pfs.writeFile('test/html/contract.html', html, 'utf8');
             await assert.rejects(async function() {
                 await service.notarizeDocument(transaction);
@@ -165,7 +165,7 @@ describe('Bali Digital Notary™', function() {
         it('should refresh a notary key properly', async function() {
             var newCertificate = await notary.refreshKey();
             expect(newCertificate).to.exist;
-            const html = newCertificate.toHTML(style);
+            const html = bali.html(newCertificate, style);
             pfs.writeFile('test/html/certificateV2.html', html, 'utf8');
 
             await assert.rejects(async function() {
@@ -196,7 +196,7 @@ describe('Bali Digital Notary™', function() {
             var isValid = await notary.validContract(contract, certificate);
             expect(isValid).to.equal(true);
 
-            const copy = document.duplicate();
+            const copy = bali.duplicate(document);
             copy.setParameter('$tag', document.getParameter('$tag')),
             copy.setParameter('$version', 'v2');
             copy.setParameter('$permissions', '/bali/permissions/public/v1');

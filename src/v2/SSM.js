@@ -73,8 +73,7 @@ const SSM = function(directory, debug) {
     // validate the arguments
     if (debug === null || debug === undefined) debug = 0;  // default is off
     if (debug > 1) {
-        const validator = bali.validator(debug);
-        validator.validateType('/bali/notary/' + PROTOCOL + '/SSM', '$SSM', '$directory', directory, [
+        bali.Component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$SSM', '$directory', directory, [
             '/javascript/Undefined',
             '/javascript/String'
         ]);
@@ -266,8 +265,7 @@ const SSM = function(directory, debug) {
         try {
             // validate the arguments
             if (debug > 1) {
-                const validator = bali.validator(debug);
-                validator.validateType('/bali/notary/' + PROTOCOL + '/SSM', '$digestBytes', '$bytes', bytes, [
+                bali.Component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$digestBytes', '$bytes', bytes, [
                     '/nodejs/Buffer'
                 ]);
             }
@@ -304,8 +302,7 @@ const SSM = function(directory, debug) {
         try {
             // validate the arguments
             if (debug > 1) {
-                const validator = bali.validator(debug);
-                validator.validateType('/bali/notary/' + PROTOCOL + '/SSM', '$signBytes', '$bytes', bytes, [
+                bali.Component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$signBytes', '$bytes', bytes, [
                     '/nodejs/Buffer'
                 ]);
             }
@@ -367,14 +364,13 @@ const SSM = function(directory, debug) {
         try {
             // validate the arguments
             if (debug > 1) {
-                const validator = bali.validator(debug);
-                validator.validateType('/bali/notary/' + PROTOCOL + '/SSM', '$validSignature', '$aPublicKey', aPublicKey, [
-                    '/bali/elements/Binary'
+                bali.Component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$validSignature', '$aPublicKey', aPublicKey, [
+                    '/bali/strings/Binary'
                 ]);
-                validator.validateType('/bali/notary/' + PROTOCOL + '/SSM', '$validSignature', '$signature', signature, [
-                    '/bali/elements/Binary'
+                bali.Component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$validSignature', '$signature', signature, [
+                    '/bali/strings/Binary'
                 ]);
-                validator.validateType('/bali/notary/' + PROTOCOL + '/SSM', '$validSignature', '$bytes', bytes, [
+                bali.Component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$validSignature', '$bytes', bytes, [
                     '/nodejs/Buffer'
                 ]);
             }
@@ -414,7 +410,7 @@ exports.SSM = SSM;
  */
 const storeConfiguration = async function(configurator, configuration, debug) {
     try {
-        await configurator.store(configuration.toDocument());
+        await configurator.store(bali.document(configuration));
     } catch (cause) {
         const exception = bali.exception({
             $module: '/bali/notary/' + PROTOCOL + '/SSM',
@@ -448,7 +444,7 @@ const loadConfiguration = async function(configurator, debug) {
                 $tag: bali.tag(),  // new random tag
                 $state: '$keyless'
             });
-            await configurator.store(configuration.toDocument());
+            await configurator.store(bali.document(configuration));
         }
         return configuration;
     } catch (cause) {

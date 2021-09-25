@@ -78,15 +78,14 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     // validate the arguments
     if (debug === null || debug === undefined) debug = 0;  // default is off
     if (debug > 1) {
-        const validator = bali.validator(debug);
-        validator.validateType('/bali/notary/DigitalNotary', '$DigitalNotary', '$securityModule', securityModule, [
+        bali.Component.validateArgument('/bali/notary/DigitalNotary', '$DigitalNotary', '$securityModule', securityModule, [
             '/javascript/Object'
         ]);
-        validator.validateType('/bali/notary/DigitalNotary', '$DigitalNotary', '$account', account, [
+        bali.Component.validateArgument('/bali/notary/DigitalNotary', '$DigitalNotary', '$account', account, [
             '/javascript/Undefined',
             '/bali/elements/Tag'
         ]);
-        validator.validateType('/bali/notary/DigitalNotary', '$DigitalNotary', '$directory', directory, [
+        bali.Component.validateArgument('/bali/notary/DigitalNotary', '$DigitalNotary', '$directory', directory, [
             '/javascript/Undefined',
             '/javascript/String'
         ]);
@@ -215,8 +214,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     this.citeDocument = async function(document) {
         try {
             if (debug > 1) {
-                const validator = bali.validator(debug);
-                validator.validateType('/bali/notary/DigitalNotary', '$citeDocument', '$document', document, [
+                bali.Component.validateArgument('/bali/notary/DigitalNotary', '$citeDocument', '$document', document, [
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$citeDocument', 'document', document, 'document');
@@ -248,12 +246,11 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     this.citationMatches = async function(citation, document) {
         try {
             if (debug > 1) {
-                const validator = bali.validator(debug);
-                validator.validateType('/bali/notary/DigitalNotary', '$citationMatches', '$citation', citation, [
+                bali.Component.validateArgument('/bali/notary/DigitalNotary', '$citationMatches', '$citation', citation, [
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$citationMatches', 'citation', citation, 'citation');
-                validator.validateType('/bali/notary/DigitalNotary', '$citationMatches', '$document', document, [
+                bali.Component.validateArgument('/bali/notary/DigitalNotary', '$citationMatches', '$document', document, [
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$citationMatches', 'document', document, 'document');
@@ -280,7 +277,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             const bytes = Buffer.from(document.toString(), 'utf8');
             var digest = await requiredModule.digestBytes(bytes);
 
-            const result = digest.isEqualTo(citation.getAttribute('$digest'));
+            const result = bali.areEqual(digest, citation.getAttribute('$digest'));
 
             return result;
         } catch (cause) {
@@ -351,14 +348,13 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
         try {
             // validate the argument
             if (debug > 1) {
-                const validator = bali.validator(debug);
-                validator.validateType('/bali/notary/DigitalNotary', '$activateKey', '$contract', contract, [
+                bali.Component.validateArgument('/bali/notary/DigitalNotary', '$activateKey', '$contract', contract, [
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$activateKey', 'contract', contract, 'contract');
                 validateStructure('$activateKey', 'contract', contract.getAttribute('$document'), 'certificate');
             }
-            if (debug > 2) console.log('contract: ' + contract.toDocument());
+            if (debug > 2) console.log('contract: ' + bali.document(contract));
 
             // check current state
             if (!configuration) {
@@ -369,7 +365,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
 
             // make sure its the same certificate
             const certificate = contract.getAttribute('$document');
-            if (!configuration.getAttribute('$certificate').isEqualTo(certificate)) {
+            if (!bali.areEqual(configuration.getAttribute('$certificate'), certificate)) {
                 const exception = bali.exception({
                     $module: '/bali/notary/DigitalNotary',
                     $procedure: '$activateKey',
@@ -383,7 +379,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
 
             // create the citation
             const citation = await createCitation(certificate);
-            if (debug > 2) console.log('citation: ' + citation.toDocument());
+            if (debug > 2) console.log('citation: ' + bali.document(citation));
 
             // update current state
             const state = controller.transitionState('$activateKey');
@@ -449,8 +445,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
         try {
             // validate the argument
             if (debug > 1) {
-                const validator = bali.validator(debug);
-                validator.validateType('/bali/notary/DigitalNotary', '$generateCredentials', '$salt', salt, [
+                bali.Component.validateArgument('/bali/notary/DigitalNotary', '$generateCredentials', '$salt', salt, [
                     '/javascript/Undefined',
                     '/bali/elements/Tag'
                 ]);
@@ -471,7 +466,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             // notarize the credentials
             const certificate = configuration.getAttribute('$citation');
             const contract = await createContract(credentials, certificate);
-            if (debug > 2) console.log('notarized credentials: ' + contract.toDocument());
+            if (debug > 2) console.log('notarized credentials: ' + bali.document(contract));
 
             // update current state
             const state = controller.transitionState('$generateCredentials');
@@ -512,8 +507,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
         try {
             // validate the argument
             if (debug > 1) {
-                const validator = bali.validator(debug);
-                validator.validateType('/bali/notary/DigitalNotary', '$notarizeDocument', '$document', document, [
+                bali.Component.validateArgument('/bali/notary/DigitalNotary', '$notarizeDocument', '$document', document, [
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$notarizeDocument', 'document', document, 'document');
@@ -529,7 +523,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             // create the contract
             const certificate = configuration.getAttribute('$citation');
             const contract = await createContract(document, certificate);
-            if (debug > 2) console.log('notarized document: ' + contract.toDocument());
+            if (debug > 2) console.log('notarized document: ' + bali.document(contract));
 
             // update current state
             const state = controller.transitionState('$notarizeDocument');
@@ -563,12 +557,11 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
         try {
             // validate the arguments
             if (debug > 1) {
-                const validator = bali.validator(debug);
-                validator.validateType('/bali/notary/DigitalNotary', '$validContract', '$contract', contract, [
+                bali.Component.validateArgument('/bali/notary/DigitalNotary', '$validContract', '$contract', contract, [
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$validContract', 'contract', contract, 'contract');
-                validator.validateType('/bali/notary/DigitalNotary', '$validContract', '$certificate', certificate, [
+                bali.Component.validateArgument('/bali/notary/DigitalNotary', '$validContract', '$certificate', certificate, [
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$validContract', 'certificate', certificate, 'contract');
@@ -577,7 +570,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 // make sure account tags match
                 const contractAccount = contract.getAttribute('$account');
                 const certificateAccount = certificate.getAttribute('$account');
-                if (!contractAccount.isEqualTo(certificateAccount)) {
+                if (!bali.areEqual(contractAccount, certificateAccount)) {
                     const exception = bali.exception({
                         $module: '/bali/notary/DigitalNotary',
                         $procedure: '$validContract',
@@ -592,7 +585,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 // make sure protocol versions match
                 const contractProtocol = contract.getAttribute('$protocol');
                 const certificateProtocol = certificate.getAttribute('$protocol');
-                if (!contractProtocol.isEqualTo(certificateProtocol)) {
+                if (!bali.areEqual(contractProtocol, certificateProtocol)) {
                     const exception = bali.exception({
                         $module: '/bali/notary/DigitalNotary',
                         $procedure: '$validContract',
@@ -681,15 +674,15 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
 
             // create the new notary certificate
             const certificate = createCertificate(publicKey, tag, version, previous);
-            if (debug > 2) console.log('certificate: ' + certificate.toDocument());
+            if (debug > 2) console.log('certificate: ' + bali.document(certificate));
 
             // create a citation to the certificate
             const citation = await createCitation(certificate);
-            if (debug > 2) console.log('citation: ' + citation.toDocument());
+            if (debug > 2) console.log('citation: ' + bali.document(citation));
 
             // notarize the new certificate
             const contract = await createContract(certificate, previous);
-            if (debug > 2) console.log('notarized certificate: ' + contract.toDocument());
+            if (debug > 2) console.log('notarized certificate: ' + bali.document(contract));
 
             // update current state
             const state = controller.transitionState('$refreshKey');
@@ -757,19 +750,19 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
         var parameters;
         switch (parameterType) {
             case 'binary':
-                if (parameterValue.isComponent && parameterValue.isType('/bali/elements/Binary')) return;
+                if (parameterValue.isComponent && parameterValue.isType('/bali/strings/Binary')) return;
                 break;
             case 'moment':
                 if (parameterValue.isComponent && parameterValue.isType('/bali/elements/Moment')) return;
                 break;
             case 'name':
-                if (parameterValue.isComponent && parameterValue.isType('/bali/elements/Name')) return;
+                if (parameterValue.isComponent && parameterValue.isType('/bali/strings/Name')) return;
                 break;
             case 'tag':
                 if (parameterValue.isComponent && parameterValue.isType('/bali/elements/Tag')) return;
                 break;
             case 'version':
-                if (parameterValue.isComponent && parameterValue.isType('/bali/elements/Version')) return;
+                if (parameterValue.isComponent && parameterValue.isType('/bali/strings/Version')) return;
                 break;
             case 'catalog':
                 if (parameterValue.isComponent && parameterValue.isType('/bali/collections/Catalog')) return;
@@ -778,7 +771,7 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
                 // A citation must have the following:
                 //  * a parameterized type of /bali/notary/Citation/v...
                 //  * exactly five specific attributes
-                if (parameterValue.isComponent && parameterValue.isEqualTo(bali.pattern.NONE)) return;
+                if (parameterValue.isComponent && bali.areEqual(parameterValue, bali.pattern.NONE)) return;
                 if (parameterValue.isComponent && parameterValue.isType('/bali/collections/Catalog') && parameterValue.getSize() === 4) {
                     validateStructure(functionName, parameterName + '.protocol', parameterValue.getAttribute('$protocol'), 'version');
                     validateStructure(functionName, parameterName + '.tag', parameterValue.getAttribute('$tag'), 'tag');
@@ -881,7 +874,7 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
 const storeConfiguration = async function(configurator, configuration, debug) {
     try {
         if (!configurator) throw Error('The digital notary is configured for public certificate operations only.');
-        await configurator.store(configuration.toDocument());
+        await configurator.store(bali.document(configuration));
     } catch (cause) {
         const exception = bali.exception({
             $module: '/bali/notary/DigitalNotary',
@@ -915,7 +908,7 @@ const loadConfiguration = async function(configurator, debug) {
             configuration = bali.catalog({
                 $state: '$limited'
             });
-            await configurator.store(configuration.toDocument());
+            await configurator.store(bali.document(configuration));
         }
         return configuration;
     } catch (cause) {
