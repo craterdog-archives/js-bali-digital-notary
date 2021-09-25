@@ -78,14 +78,14 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     // validate the arguments
     if (debug === null || debug === undefined) debug = 0;  // default is off
     if (debug > 1) {
-        bali.Component.validateArgument('/bali/notary/DigitalNotary', '$DigitalNotary', '$securityModule', securityModule, [
+        bali.component.validateArgument('/bali/notary/DigitalNotary', '$DigitalNotary', '$securityModule', securityModule, [
             '/javascript/Object'
         ]);
-        bali.Component.validateArgument('/bali/notary/DigitalNotary', '$DigitalNotary', '$account', account, [
+        bali.component.validateArgument('/bali/notary/DigitalNotary', '$DigitalNotary', '$account', account, [
             '/javascript/Undefined',
             '/bali/elements/Tag'
         ]);
-        bali.Component.validateArgument('/bali/notary/DigitalNotary', '$DigitalNotary', '$directory', directory, [
+        bali.component.validateArgument('/bali/notary/DigitalNotary', '$DigitalNotary', '$directory', directory, [
             '/javascript/Undefined',
             '/javascript/String'
         ]);
@@ -214,7 +214,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     this.citeDocument = async function(document) {
         try {
             if (debug > 1) {
-                bali.Component.validateArgument('/bali/notary/DigitalNotary', '$citeDocument', '$document', document, [
+                bali.component.validateArgument('/bali/notary/DigitalNotary', '$citeDocument', '$document', document, [
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$citeDocument', 'document', document, 'document');
@@ -246,11 +246,11 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     this.citationMatches = async function(citation, document) {
         try {
             if (debug > 1) {
-                bali.Component.validateArgument('/bali/notary/DigitalNotary', '$citationMatches', '$citation', citation, [
+                bali.component.validateArgument('/bali/notary/DigitalNotary', '$citationMatches', '$citation', citation, [
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$citationMatches', 'citation', citation, 'citation');
-                bali.Component.validateArgument('/bali/notary/DigitalNotary', '$citationMatches', '$document', document, [
+                bali.component.validateArgument('/bali/notary/DigitalNotary', '$citationMatches', '$document', document, [
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$citationMatches', 'document', document, 'document');
@@ -348,7 +348,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
         try {
             // validate the argument
             if (debug > 1) {
-                bali.Component.validateArgument('/bali/notary/DigitalNotary', '$activateKey', '$contract', contract, [
+                bali.component.validateArgument('/bali/notary/DigitalNotary', '$activateKey', '$contract', contract, [
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$activateKey', 'contract', contract, 'contract');
@@ -445,7 +445,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
         try {
             // validate the argument
             if (debug > 1) {
-                bali.Component.validateArgument('/bali/notary/DigitalNotary', '$generateCredentials', '$salt', salt, [
+                bali.component.validateArgument('/bali/notary/DigitalNotary', '$generateCredentials', '$salt', salt, [
                     '/javascript/Undefined',
                     '/bali/elements/Tag'
                 ]);
@@ -507,7 +507,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
         try {
             // validate the argument
             if (debug > 1) {
-                bali.Component.validateArgument('/bali/notary/DigitalNotary', '$notarizeDocument', '$document', document, [
+                bali.component.validateArgument('/bali/notary/DigitalNotary', '$notarizeDocument', '$document', document, [
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$notarizeDocument', 'document', document, 'document');
@@ -557,11 +557,11 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
         try {
             // validate the arguments
             if (debug > 1) {
-                bali.Component.validateArgument('/bali/notary/DigitalNotary', '$validContract', '$contract', contract, [
+                bali.component.validateArgument('/bali/notary/DigitalNotary', '$validContract', '$contract', contract, [
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$validContract', 'contract', contract, 'contract');
-                bali.Component.validateArgument('/bali/notary/DigitalNotary', '$validContract', '$certificate', certificate, [
+                bali.component.validateArgument('/bali/notary/DigitalNotary', '$validContract', '$certificate', certificate, [
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$validContract', 'certificate', certificate, 'contract');

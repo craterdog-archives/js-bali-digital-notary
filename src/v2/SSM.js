@@ -73,7 +73,7 @@ const SSM = function(directory, debug) {
     // validate the arguments
     if (debug === null || debug === undefined) debug = 0;  // default is off
     if (debug > 1) {
-        bali.Component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$SSM', '$directory', directory, [
+        bali.component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$SSM', '$directory', directory, [
             '/javascript/Undefined',
             '/javascript/String'
         ]);
@@ -265,7 +265,7 @@ const SSM = function(directory, debug) {
         try {
             // validate the arguments
             if (debug > 1) {
-                bali.Component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$digestBytes', '$bytes', bytes, [
+                bali.component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$digestBytes', '$bytes', bytes, [
                     '/nodejs/Buffer'
                 ]);
             }
@@ -302,7 +302,7 @@ const SSM = function(directory, debug) {
         try {
             // validate the arguments
             if (debug > 1) {
-                bali.Component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$signBytes', '$bytes', bytes, [
+                bali.component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$signBytes', '$bytes', bytes, [
                     '/nodejs/Buffer'
                 ]);
             }
@@ -364,13 +364,13 @@ const SSM = function(directory, debug) {
         try {
             // validate the arguments
             if (debug > 1) {
-                bali.Component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$validSignature', '$aPublicKey', aPublicKey, [
+                bali.component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$validSignature', '$aPublicKey', aPublicKey, [
                     '/bali/strings/Binary'
                 ]);
-                bali.Component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$validSignature', '$signature', signature, [
+                bali.component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$validSignature', '$signature', signature, [
                     '/bali/strings/Binary'
                 ]);
-                bali.Component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$validSignature', '$bytes', bytes, [
+                bali.component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$validSignature', '$bytes', bytes, [
                     '/nodejs/Buffer'
                 ]);
             }
