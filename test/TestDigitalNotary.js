@@ -30,10 +30,10 @@ describe('Bali Digital Notary™', function() {
     const document = bali.catalog({
         $foo: 'bar'
     }, {
-        $type: '/bali/examples/Content/v1',
+        $type: '/nebula/examples/Content/v1',
         $tag: '#MFPCRNKS2SG20CD7VQ6KD329X7382KJY',
         $version: 'v1',
-        $permissions: '/bali/permissions/public/v1',
+        $permissions: '/nebula/permissions/public/v1',
         $previous: 'none'
     });
     const style = 'https://bali-nebula.net/static/styles/BDN.css';
@@ -118,7 +118,7 @@ describe('Bali Digital Notary™', function() {
             $version: 'v2.3',
             $digest: "'JB2NG73VTB957T9TZWT44KRZVQ467KWJ2MSJYT6YW2RQAYQMSR861XGM5ZCDCPNJYR612SJT9RFKHA9YZ5DJMLYC7N3127AY4QDVJ38'"
         }, {
-            $type: '/bali/notary/Citation/v1'
+            $type: '/nebula/notary/Citation/v1'
         });
         const transaction = bali.catalog({
             $transactionId: bali.tag(),
@@ -130,7 +130,7 @@ describe('Bali Digital Notary™', function() {
             $type: '/acme/types/Transaction/v2.3',
             $tag: tag,
             $version: 'v2.4',
-            $permissions: '/bali/permissions/public/v1',
+            $permissions: '/nebula/permissions/public/v1',
             $previous: previous
         });
 
@@ -199,7 +199,7 @@ describe('Bali Digital Notary™', function() {
             const copy = bali.duplicate(document);
             copy.setParameter('$tag', document.getParameter('$tag')),
             copy.setParameter('$version', 'v2');
-            copy.setParameter('$permissions', '/bali/permissions/public/v1');
+            copy.setParameter('$permissions', '/nebula/permissions/public/v1');
             copy.setParameter('$previous', 'none');
             contract = await notary.notarizeDocument(copy);
 

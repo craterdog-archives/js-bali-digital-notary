@@ -106,7 +106,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             $type: type,
             $tag: tag || bali.tag(),
             $version: version || 'v1',
-            $permissions: permissions || '/bali/permissions/public/v1',
+            $permissions: permissions || '/nebula/permissions/public/v1',
             $previous: previous || 'none'
         });
     };
@@ -122,12 +122,12 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             $version: version,
             $digest: digest
         }, {
-            $type: '/bali/notary/Citation/v1'
+            $type: '/nebula/notary/Citation/v1'
         });
     };
 
     const createCertificate = function(publicKey, tag, version, previous) {
-        const type = '/bali/notary/Certificate/v1';
+        const type = '/nebula/notary/Certificate/v1';
         const attributes = {
             $publicKey: publicKey,
             $algorithms: bali.catalog({
@@ -135,7 +135,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 $signature: 'ED25519'
             })
         };
-        const permissions = '/bali/permissions/public/v1';
+        const permissions = '/nebula/permissions/public/v1';
         return createDocument(type, attributes, tag, version, permissions, previous);
     };
 
@@ -147,7 +147,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             $document: document,
             $certificate: certificate || bali.pattern.NONE  // 'none' for self-signed certificate
         }, {
-            $type: '/bali/notary/Contract/v1'
+            $type: '/nebula/notary/Contract/v1'
         });
         const bytes = Buffer.from(contract.toString(), 'utf8');
         const signature = await securityModule.signBytes(bytes);
@@ -459,7 +459,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             controller.validateEvent('$generateCredentials');
 
             // create the new credentials
-            const type = '/bali/notary/Credentials/v1';
+            const type = '/nebula/notary/Credentials/v1';
             const attributes = {$salt: salt || bali.tag()};
             const credentials = createDocument(type, attributes);
 
@@ -781,7 +781,7 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
                     if (parameters && parameters.getSize() === 1) {
                         const name = parameters.getAttribute('$type');
                         validateStructure(functionName, parameterName + '.parameters.type', name, 'name');
-                        if (name.toString().startsWith('/bali/notary/Citation/v')) return;
+                        if (name.toString().startsWith('/nebula/notary/Citation/v')) return;
                     }
                 }
                 break;
@@ -812,8 +812,8 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
                         validateStructure(functionName, parameterName + '.parameters.version', parameters.getAttribute('$version'), 'version');
                         validateStructure(functionName, parameterName + '.parameters.permissions', parameters.getAttribute('$permissions'), 'name');
                         validateStructure(functionName, parameterName + '.parameters.previous', parameters.getAttribute('$previous'), 'citation');
-                        if (parameters.getAttribute('$type').toString().startsWith('/bali/notary/Certificate/v') &&
-                            parameters.getAttribute('$permissions').toString().startsWith('/bali/permissions/public/v')) return;
+                        if (parameters.getAttribute('$type').toString().startsWith('/nebula/notary/Certificate/v') &&
+                            parameters.getAttribute('$permissions').toString().startsWith('/nebula/permissions/public/v')) return;
                     }
                 }
                 break;
@@ -840,7 +840,7 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
                         validateStructure(functionName, parameterName + '.parameters.previous', parameters.getAttribute('$previous'), 'citation');
                         parameters = parameterValue.getParameters();
                         if (parameters && parameters.getSize() === 1) {
-                            if (parameters.getAttribute('$type').toString().startsWith('/bali/notary/Contract/v')) return;
+                            if (parameters.getAttribute('$type').toString().startsWith('/nebula/notary/Contract/v')) return;
                         }
                     }
                 }
