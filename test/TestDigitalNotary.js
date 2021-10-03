@@ -57,7 +57,7 @@ describe('Bali Digital Notary™', function() {
             certificate = await notary.notarizeDocument(publicKey);
             citation = await notary.activateKey(certificate);
             expect(certificate).to.exist;
-            const html = bali.html(certificate, style);
+            const html = bali.html(certificate, 'TITLE', style);
             pfs.writeFile('test/html/certificate.html', html, 'utf8');
             await assert.rejects(async function() {
                 await service.generateKey();
@@ -67,7 +67,7 @@ describe('Bali Digital Notary™', function() {
         it('should retrieve the certificate citation', async function() {
             citation = await notary.getCitation();
             expect(citation).to.exist;
-            const html = bali.html(citation, style);
+            const html = bali.html(citation, 'TITLE', style);
             pfs.writeFile('test/html/citation.html', html, 'utf8');
             await assert.rejects(async function() {
                 await service.getCitation();
@@ -98,7 +98,7 @@ describe('Bali Digital Notary™', function() {
             const salt = bali.tag();
             credentials = await notary.generateCredentials(salt);
             expect(credentials).to.exist;
-            const html = bali.html(credentials, style);
+            const html = bali.html(credentials, 'TITLE', style);
             pfs.writeFile('test/html/credentials.html', html, 'utf8');
         });
 
@@ -146,7 +146,7 @@ describe('Bali Digital Notary™', function() {
 
         it('should notarize a document properly', async function() {
             contract = await notary.notarizeDocument(transaction);
-            const html = bali.html(contract, style);
+            const html = bali.html(contract, 'TITLE', style);
             pfs.writeFile('test/html/contract.html', html, 'utf8');
             await assert.rejects(async function() {
                 await service.notarizeDocument(transaction);
@@ -165,7 +165,7 @@ describe('Bali Digital Notary™', function() {
         it('should refresh a notary key properly', async function() {
             var newCertificate = await notary.refreshKey();
             expect(newCertificate).to.exist;
-            const html = bali.html(newCertificate, style);
+            const html = bali.html(newCertificate, 'TITLE', style);
             pfs.writeFile('test/html/certificateV2.html', html, 'utf8');
 
             await assert.rejects(async function() {
