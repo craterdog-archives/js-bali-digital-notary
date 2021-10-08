@@ -16,20 +16,20 @@ const DigitalNotary = require('./src/DigitalNotary').DigitalNotary;
 /**
  * This function returns an object that implements the API for a software security module.
  *
- * @param {String} directory An optional directory to be used for local configuration storage.
- * @param {Boolean|Number} debug An optional number in the range 0..3 that controls
- * the level of debugging that occurs:
+ * An optional debug argument may be specified that controls the level of debugging that
+ * should be applied during execution. The allowed levels are as follows:
  * <pre>
- *   0 (or false): debugging turned off
- *   1 (or true): log exceptions to console.error
- *   2: perform argument validation and log exceptions to console.error
- *   3: perform argument validation and log exceptions to console.error and debug info to console.log
+ *   0: no debugging is applied (this is the default value and has the best performance)
+ *   1: log any exceptions to console.error before throwing them
+ *   2: perform argument validation checks on each call (poor performance)
+ *   3: log interesting arguments, states and results to console.log
  * </pre>
+ *
+ * @param {String} directory An optional directory to be used for local configuration storage.
  * @returns {Object} An object that implements the API for a software security module.
  */
 const ssmV2 = function(directory, debug) {
-    const ssm = new SSMv2(directory, debug);
-    return ssm;
+    return new SSMv2(directory, debug);
 };
 exports.ssmV2 = ssmV2;
 
@@ -38,22 +38,22 @@ exports.ssmV2 = ssmV2;
  * This function returns an object that implements the API for a digital notary including
  * the functions that require access to the private key.
  *
+ * An optional debug argument may be specified that controls the level of debugging that
+ * should be applied during execution. The allowed levels are as follows:
+ * <pre>
+ *   0: no debugging is applied (this is the default value and has the best performance)
+ *   1: log any exceptions to console.error before throwing them
+ *   2: perform argument validation checks on each call (poor performance)
+ *   3: log interesting arguments, states and results to console.log
+ * </pre>
+ *
  * @param {Object} securityModule An object that implements the security module interface.
  * @param {Tag} account A unique account tag for the owner of the digital notary.
  * @param {String} directory An optional directory to be used for local configuration storage.
- * @param {Boolean|Number} debug An optional number in the range 0..3 that controls
- * the level of debugging that occurs:
- * <pre>
- *   0 (or false): debugging turned off
- *   1 (or true): log exceptions to console.error
- *   2: perform argument validation and log exceptions to console.error
- *   3: perform argument validation and log exceptions to console.error and debug info to console.log
- * </pre>
  * @returns {Object} An object that implements the API for a digital notary.
  */
 const notary = function(securityModule, account, directory, debug) {
-    const notary = new DigitalNotary(securityModule, account, directory, debug);
-    return notary;
+    return new DigitalNotary(securityModule, account, directory, debug);
 };
 exports.notary = notary;
 
@@ -62,16 +62,17 @@ exports.notary = notary;
  * This function initializes a digital notary test implementation configured with a local software
  * security module (SSM). It should ONLY be used for testing purposes.
  *
+ * An optional debug argument may be specified that controls the level of debugging that
+ * should be applied during execution. The allowed levels are as follows:
+ * <pre>
+ *   0: no debugging is applied (this is the default value and has the best performance)
+ *   1: log any exceptions to console.error before throwing them
+ *   2: perform argument validation checks on each call (poor performance)
+ *   3: log interesting arguments, states and results to console.log
+ * </pre>
+ *
  * @param {Tag} account A unique tag for the account of the owner of the digital notary.
  * @param {String} directory The top level directory to be used for local configuration.
- * @param {Boolean|Number} debug An optional number in the range 0..3 that controls the level of
- * debugging that occurs:
- * <pre>
- *   0 (or false): no logging
- *   1 (or true): log exceptions to console.error
- *   2: perform argument validation and log exceptions to console.error
- *   3: perform argument validation and log exceptions to console.error and debug info to console.log
- * </pre>
  * @returns {Object} The new digital notary test instance.
  */
 const test = function(account, directory, debug) {
@@ -85,14 +86,15 @@ exports.test = test;
  * for public notary certificate based operations only.  No private notary key should be
  * generated for this instance.
  *
- * @param {Boolean|Number} debug An optional number in the range 0..3 that controls the level of
- * debugging that occurs:
+ * An optional debug argument may be specified that controls the level of debugging that
+ * should be applied during execution. The allowed levels are as follows:
  * <pre>
- *   0 (or false): no logging
- *   1 (or true): log exceptions to console.error
- *   2: perform argument validation and log exceptions to console.error
- *   3: perform argument validation and log exceptions to console.error and debug info to console.log
+ *   0: no debugging is applied (this is the default value and has the best performance)
+ *   1: log any exceptions to console.error before throwing them
+ *   2: perform argument validation checks on each call (poor performance)
+ *   3: log interesting arguments, states and results to console.log
  * </pre>
+ *
  * @returns {Object} The new digital notary service instance.
  */
 const service = function(debug) {

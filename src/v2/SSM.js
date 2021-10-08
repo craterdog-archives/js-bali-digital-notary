@@ -28,6 +28,7 @@
  *   * eraseKeys - erases any trace of the public-private key pair
  * </pre>
  */
+const moduleName = '/bali/notary/v2/SSM';
 const hasher = require('crypto');
 const signer = require('supercop');
 const bali = require('bali-component-framework').api();
@@ -52,28 +53,27 @@ const STATES = {
 };
 
 
-// PUBLIC FUNCTIONS
-
 /**
- * This function creates a new instance of a software security module (SSM).
+ * This constructor creates a new instance of a software security module (SSM).
+ *
+ * An optional debug argument may be specified that controls the level of debugging that
+ * should be applied during execution. The allowed levels are as follows:
+ * <pre>
+ *   0: no debugging is applied (this is the default value and has the best performance)
+ *   1: log any exceptions to console.error before throwing them
+ *   2: perform argument validation checks on each call (poor performance)
+ *   3: log interesting arguments, states and results to console.log
+ * </pre>
  *
  * @param {String} directory An optional directory to be used for local configuration storage. If
  * no directory is specified, a directory called '.bali/' is created in the home directory.
- * @param {Boolean|Number} debug An optional number in the range 0..3 that controls the level of
- * debugging that occurs:
- * <pre>
- *   0 (or false): no logging
- *   1 (or true): log exceptions to console.error
- *   2: perform argument validation and log exceptions to console.error
- *   3: perform argument validation and log exceptions to console.error and debug info to console.log
- * </pre>
  * @returns {Object} The new software security module.
  */
 const SSM = function(directory, debug) {
     // validate the arguments
-    if (debug === null || debug === undefined) debug = 0;  // default is off
-    if (debug > 1) {
-        bali.component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$SSM', '$directory', directory, [
+    this.debug = debug || 0;  // default is off
+    if (this.debug > 1) {
+        bali.component.validateArgument(moduleName, '$SSM', '$directory', directory, [
             '/javascript/Undefined',
             '/javascript/String'
         ]);
@@ -81,7 +81,7 @@ const SSM = function(directory, debug) {
 
     // setup the configuration
     const filename = 'SSM' + PROTOCOL + '.bali';
-    const configurator = bali.configurator(filename, directory, debug);
+    const configurator = bali.configurator(filename, directory, this.debug);
     var configuration, controller;
 
     /**
@@ -92,7 +92,7 @@ const SSM = function(directory, debug) {
      */
     this.toString = function() {
         const catalog = bali.catalog({
-            $module: '/bali/notary/' + PROTOCOL + '/SSM',
+            $module: moduleName,
             $protocol: PROTOCOL,
             $digest: DIGEST,
             $signature: SIGNATURE
@@ -109,19 +109,19 @@ const SSM = function(directory, debug) {
         try {
             // load the current configuration if necessary
             if (!configuration) {
-                configuration = await loadConfiguration(configurator, debug);
-                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), debug);
+                configuration = await loadConfiguration(configurator, this.debug);
+                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), this.debug);
             }
 
             return configuration.getAttribute('$tag');
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/' + PROTOCOL + '/SSM',
+                $module: moduleName,
                 $procedure: '$getTag',
                 $exception: '$unexpected',
                 $text: 'The tag for the security module could not be retrieved.'
             }, cause);
-            if (debug > 0) console.error(exception.toString());
+            if (this.debug > 0) console.error(exception.toString());
             throw exception;
         }
     };
@@ -139,12 +139,12 @@ const SSM = function(directory, debug) {
             return bali.component(PROTOCOL);
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/' + PROTOCOL + '/SSM',
+                $module: moduleName,
                 $procedure: '$getProtocol',
                 $exception: '$unexpected',
                 $text: 'The protocol supported by the security module could not be retrieved.'
             }, cause);
-            if (debug > 0) console.error(exception.toString());
+            if (this.debug > 0) console.error(exception.toString());
             throw exception;
         }
     };
@@ -158,8 +158,8 @@ const SSM = function(directory, debug) {
         try {
             // check the current state
             if (!configuration) {
-                configuration = await loadConfiguration(configurator, debug);
-                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), debug);
+                configuration = await loadConfiguration(configurator, this.debug);
+                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), this.debug);
             }
             controller.validateEvent('$generateKeys');
 
@@ -172,17 +172,17 @@ const SSM = function(directory, debug) {
             // update the configuration
             const state = controller.transitionState('$generateKeys');
             configuration.setAttribute('$state', state);
-            await storeConfiguration(configurator, configuration, debug);
+            await storeConfiguration(configurator, configuration, this.debug);
 
             return configuration.getAttribute('$publicKey');
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/' + PROTOCOL + '/SSM',
+                $module: moduleName,
                 $procedure: '$generateKeys',
                 $exception: '$unexpected',
                 $text: 'A new key pair could not be generated.'
             }, cause);
-            if (debug > 0) console.error(exception.toString());
+            if (this.debug > 0) console.error(exception.toString());
             throw exception;
         }
     };
@@ -196,8 +196,8 @@ const SSM = function(directory, debug) {
         try {
             // check the current state
             if (!configuration) {
-                configuration = await loadConfiguration(configurator, debug);
-                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), debug);
+                configuration = await loadConfiguration(configurator, this.debug);
+                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), this.debug);
             }
             controller.validateEvent('$rotateKeys');
 
@@ -214,17 +214,17 @@ const SSM = function(directory, debug) {
             // update the configuration
             const state = controller.transitionState('$rotateKeys');
             configuration.setAttribute('$state', state);
-            await storeConfiguration(configurator, configuration, debug);
+            await storeConfiguration(configurator, configuration, this.debug);
 
             return configuration.getAttribute('$publicKey');
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/' + PROTOCOL + '/SSM',
+                $module: moduleName,
                 $procedure: '$rotateKeys',
                 $exception: '$unexpected',
                 $text: 'The key pair could not be rotated.'
             }, cause);
-            if (debug > 0) console.error(exception.toString());
+            if (this.debug > 0) console.error(exception.toString());
             throw exception;
         }
     };
@@ -237,18 +237,18 @@ const SSM = function(directory, debug) {
     this.eraseKeys = async function() {
         try {
             // delete the current configuration
-            await deleteConfiguration(configurator, debug);
+            await deleteConfiguration(configurator, this.debug);
             configuration = undefined;
 
             return true;
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/' + PROTOCOL + '/SSM',
+                $module: moduleName,
                 $procedure: '$eraseKeys',
                 $exception: '$unexpected',
                 $text: 'The keys could not be erased.'
             }, cause);
-            if (debug > 0) console.error(exception.toString());
+            if (this.debug > 0) console.error(exception.toString());
             throw exception;
         }
     };
@@ -264,8 +264,8 @@ const SSM = function(directory, debug) {
     this.digestBytes = async function(bytes) {
         try {
             // validate the arguments
-            if (debug > 1) {
-                bali.component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$digestBytes', '$bytes', bytes, [
+            if (this.debug > 1) {
+                bali.component.validateArgument(moduleName, '$digestBytes', '$bytes', bytes, [
                     '/nodejs/Buffer'
                 ]);
             }
@@ -278,12 +278,12 @@ const SSM = function(directory, debug) {
             return bali.binary(digest);
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/' + PROTOCOL + '/SSM',
+                $module: moduleName,
                 $procedure: '$digestBytes',
                 $exception: '$unexpected',
                 $text: 'A digest of the bytes could not be generated.'
             }, cause);
-            if (debug > 0) console.error(exception.toString());
+            if (this.debug > 0) console.error(exception.toString());
             throw exception;
         }
     };
@@ -301,16 +301,16 @@ const SSM = function(directory, debug) {
     this.signBytes = async function(bytes) {
         try {
             // validate the arguments
-            if (debug > 1) {
-                bali.component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$signBytes', '$bytes', bytes, [
+            if (this.debug > 1) {
+                bali.component.validateArgument(moduleName, '$signBytes', '$bytes', bytes, [
                     '/nodejs/Buffer'
                 ]);
             }
 
             // check the current state
             if (!configuration) {
-                configuration = await loadConfiguration(configurator, debug);
-                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), debug);
+                configuration = await loadConfiguration(configurator, this.debug);
+                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), this.debug);
             }
             controller.validateEvent('$signBytes');
 
@@ -333,17 +333,17 @@ const SSM = function(directory, debug) {
             // update the configuration
             const state = controller.transitionState('$signBytes');
             configuration.setAttribute('$state', state);
-            await storeConfiguration(configurator, configuration, debug);
+            await storeConfiguration(configurator, configuration, this.debug);
 
             return bali.binary(signature);
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/' + PROTOCOL + '/SSM',
+                $module: moduleName,
                 $procedure: '$signBytes',
                 $exception: '$unexpected',
                 $text: 'A digital signature of the bytes could not be generated.'
             }, cause);
-            if (debug > 0) console.error(exception.toString());
+            if (this.debug > 0) console.error(exception.toString());
             throw exception;
         }
     };
@@ -363,14 +363,14 @@ const SSM = function(directory, debug) {
     this.validSignature = async function(aPublicKey, signature, bytes) {
         try {
             // validate the arguments
-            if (debug > 1) {
-                bali.component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$validSignature', '$aPublicKey', aPublicKey, [
+            if (this.debug > 1) {
+                bali.component.validateArgument(moduleName, '$validSignature', '$aPublicKey', aPublicKey, [
                     '/bali/strings/Binary'
                 ]);
-                bali.component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$validSignature', '$signature', signature, [
+                bali.component.validateArgument(moduleName, '$validSignature', '$signature', signature, [
                     '/bali/strings/Binary'
                 ]);
-                bali.component.validateArgument('/bali/notary/' + PROTOCOL + '/SSM', '$validSignature', '$bytes', bytes, [
+                bali.component.validateArgument(moduleName, '$validSignature', '$bytes', bytes, [
                     '/nodejs/Buffer'
                 ]);
             }
@@ -381,12 +381,12 @@ const SSM = function(directory, debug) {
             return isValid;
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/' + PROTOCOL + '/SSM',
+                $module: moduleName,
                 $procedure: '$validSignature',
                 $exception: '$unexpected',
                 $text: 'The digital signature of the bytes could not be validated.'
             }, cause);
-            if (debug > 0) console.error(exception.toString());
+            if (this.debug > 0) console.error(exception.toString());
             throw exception;
         }
     };
@@ -413,7 +413,7 @@ const storeConfiguration = async function(configurator, configuration, debug) {
         await configurator.store(bali.document(configuration));
     } catch (cause) {
         const exception = bali.exception({
-            $module: '/bali/notary/' + PROTOCOL + '/SSM',
+            $module: moduleName,
             $procedure: '$storeConfiguration',
             $exception: '$storageException',
             $text: 'The attempt to store the current configuration failed.'
@@ -449,7 +449,7 @@ const loadConfiguration = async function(configurator, debug) {
         return configuration;
     } catch (cause) {
         const exception = bali.exception({
-            $module: '/bali/notary/' + PROTOCOL + '/SSM',
+            $module: moduleName,
             $procedure: '$loadConfiguration',
             $exception: '$storageException',
             $text: 'The attempt to load the current configuration failed.'
@@ -473,7 +473,7 @@ const deleteConfiguration = async function(configurator, debug) {
         await configurator.delete();
     } catch (cause) {
         const exception = bali.exception({
-            $module: '/bali/notary/' + PROTOCOL + '/SSM',
+            $module: moduleName,
             $procedure: '$deleteConfiguration',
             $exception: '$storageException',
             $text: 'The attempt to delete the current configuration failed.'

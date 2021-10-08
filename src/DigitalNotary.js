@@ -26,6 +26,7 @@
  * </pre>
  * All cryptographic operations are delegated to a security module.
  */
+const moduleName = '/bali/notary/DigitalNotary';
 const bali = require('bali-component-framework').api();
 const SSMv2 = require('./v2/SSM').SSM;
 //const SSMv3 = require('./v3/SSM').SSM;
@@ -49,43 +50,42 @@ const REQUESTS = [  //                        possible request types
 ];
 const STATES = {
 //   current                                   allowed next states
-    $limited: [ '$pending',     undefined,      undefined,           undefined,           undefined,        undefined ],
-    $pending: [  undefined,    '$enabled',      undefined,           undefined,          '$pending',        undefined ],
-    $enabled: [  undefined,     undefined,     '$enabled',          '$enabled',          '$enabled',       '$enabled' ]
+    $limited: [ '$pending',     undefined,      undefined,         undefined,             undefined,         undefined ],
+    $pending: [  undefined,    '$enabled',      undefined,         undefined,            '$pending',         undefined ],
+    $enabled: [  undefined,     undefined,     '$enabled',        '$enabled',            '$enabled',         '$enabled' ]
 };
 
 
-// PUBLIC FUNCTIONS
-
 /**
- * This function creates a new digital notary.
+ * This constructor creates a new digital notary.
+ *
+ * An optional debug argument may be specified that controls the level of debugging that
+ * should be applied during execution. The allowed levels are as follows:
+ * <pre>
+ *   0: no debugging is applied (this is the default value and has the best performance)
+ *   1: log any exceptions to console.error before throwing them
+ *   2: perform argument validation checks on each call (poor performance)
+ *   3: log interesting arguments, states and results to console.log
+ * </pre>
  *
  * @param {Object} securityModule An object that implements the security module interface.
  * @param {Tag} account A unique account tag for the owner of the digital notary.
  * @param {String} directory An optional directory to be used for local configuration storage. If
  * no directory is specified, a directory called '.bali/' is created in the home directory.
- * @param {Boolean|Number} debug An optional number in the range 0..3 that controls
- * the level of debugging that occurs:
- * <pre>
- *   0 (or false): debugging turned off
- *   1 (or true): log exceptions to console.error
- *   2: perform argument validation and log exceptions to console.error
- *   3: perform argument validation and log exceptions to console.error and debug info to console.log
- * </pre>
  * @returns {Object} An object that implements the API for a digital notary.
  */
 const DigitalNotary = function(securityModule, account, directory, debug) {
     // validate the arguments
-    if (debug === null || debug === undefined) debug = 0;  // default is off
-    if (debug > 1) {
-        bali.component.validateArgument('/bali/notary/DigitalNotary', '$DigitalNotary', '$securityModule', securityModule, [
+    this.debug = debug || 0;  // default is off
+    if (this.debug > 1) {
+        bali.component.validateArgument(moduleName, '$DigitalNotary', '$securityModule', securityModule, [
             '/javascript/Object'
         ]);
-        bali.component.validateArgument('/bali/notary/DigitalNotary', '$DigitalNotary', '$account', account, [
+        bali.component.validateArgument(moduleName, '$DigitalNotary', '$account', account, [
             '/javascript/Undefined',
             '/bali/elements/Tag'
         ]);
-        bali.component.validateArgument('/bali/notary/DigitalNotary', '$DigitalNotary', '$directory', directory, [
+        bali.component.validateArgument(moduleName, '$DigitalNotary', '$directory', directory, [
             '/javascript/Undefined',
             '/javascript/String'
         ]);
@@ -95,7 +95,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     if (account) {
         // create a configurator to manage the key and state configuration
         const filename = account.getValue() + '.bali';
-        configurator = bali.configurator(filename, directory, debug);
+        configurator = bali.configurator(filename, directory, this.debug);
     }
 
 
@@ -166,7 +166,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
      */
     this.toString = function() {
         const catalog = bali.catalog({
-            $module: '/bali/notary/DigitalNotary',
+            $module: moduleName,
             $protocol: PROTOCOL,
             $account: account
         });
@@ -184,12 +184,12 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             return bali.list(Object.keys(PROTOCOLS));
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/DigitalNotary',
+                $module: moduleName,
                 $procedure: '$getProtocols',
                 $exception: '$unexpected',
                 $text: 'An unexpected error occurred while attempting to retrieve the supported security protocols.'
             }, cause);
-            if (debug > 0) console.error(exception.toString());
+            if (this.debug > 0) console.error(exception.toString());
             throw exception;
         }
     };
@@ -213,8 +213,8 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
      */
     this.citeDocument = async function(document) {
         try {
-            if (debug > 1) {
-                bali.component.validateArgument('/bali/notary/DigitalNotary', '$citeDocument', '$document', document, [
+            if (this.debug > 1) {
+                bali.component.validateArgument(moduleName, '$citeDocument', '$document', document, [
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$citeDocument', 'document', document, 'document');
@@ -222,13 +222,13 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             return await createCitation(document);
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/DigitalNotary',
+                $module: moduleName,
                 $procedure: '$citeDocument',
                 $exception: '$unexpected',
                 $document: document,
                 $text: 'An unexpected error occurred while attempting to cite a document.'
             }, cause);
-            if (debug > 0) console.error(exception.toString());
+            if (this.debug > 0) console.error(exception.toString());
             throw exception;
         }
     };
@@ -245,12 +245,12 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
      */
     this.citationMatches = async function(citation, document) {
         try {
-            if (debug > 1) {
-                bali.component.validateArgument('/bali/notary/DigitalNotary', '$citationMatches', '$citation', citation, [
+            if (this.debug > 1) {
+                bali.component.validateArgument(moduleName, '$citationMatches', '$citation', citation, [
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$citationMatches', 'citation', citation, 'citation');
-                bali.component.validateArgument('/bali/notary/DigitalNotary', '$citationMatches', '$document', document, [
+                bali.component.validateArgument(moduleName, '$citationMatches', '$document', document, [
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$citationMatches', 'document', document, 'document');
@@ -264,7 +264,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 requiredModule = PROTOCOLS[requiredProtocol];
                 if (!requiredModule) {
                     const exception = bali.exception({
-                        $module: '/bali/notary/DigitalNotary',
+                        $module: moduleName,
                         $procedure: '$citationMatches',
                         $exception: '$unsupportedProtocol',
                         $expected: Object.keys(PROTOCOLS),
@@ -282,14 +282,14 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             return result;
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/DigitalNotary',
+                $module: moduleName,
                 $procedure: '$citationMatches',
                 $exception: '$unexpected',
                 $citation: citation,
                 $document: document,
                 $text: 'An unexpected error occurred while attempting to match a citation to a document.'
             }, cause);
-            if (debug > 0) console.error(exception.toString());
+            if (this.debug > 0) console.error(exception.toString());
             throw exception;
         }
     };
@@ -303,8 +303,8 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
         try {
             // check current state
             if (!configuration) {
-                configuration = await loadConfiguration(configurator, debug);
-                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), debug);
+                configuration = await loadConfiguration(configurator, this.debug);
+                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), this.debug);
             }
             controller.validateEvent('$generateKey');
 
@@ -318,17 +318,17 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             const state = controller.transitionState('$generateKey');
             configuration.setAttribute('$state', state);
             configuration.setAttribute('$certificate', certificate);
-            await storeConfiguration(configurator, configuration, debug);
+            await storeConfiguration(configurator, configuration, this.debug);
 
             return certificate;
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/DigitalNotary',
+                $module: moduleName,
                 $procedure: '$generateKey',
                 $exception: '$unexpected',
                 $text: 'An unexpected error occurred while attempting to generate the notary key.'
             }, cause);
-            if (debug > 0) console.error(exception.toString());
+            if (this.debug > 0) console.error(exception.toString());
             throw exception;
         }
     };
@@ -347,19 +347,19 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     this.activateKey = async function(contract) {
         try {
             // validate the argument
-            if (debug > 1) {
-                bali.component.validateArgument('/bali/notary/DigitalNotary', '$activateKey', '$contract', contract, [
+            if (this.debug > 1) {
+                bali.component.validateArgument(moduleName, '$activateKey', '$contract', contract, [
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$activateKey', 'contract', contract, 'contract');
                 validateStructure('$activateKey', 'contract', contract.getAttribute('$document'), 'certificate');
             }
-            if (debug > 2) console.log('contract: ' + bali.document(contract));
+            if (this.debug > 2) console.log('contract: ' + bali.document(contract));
 
             // check current state
             if (!configuration) {
-                configuration = await loadConfiguration(configurator, debug);
-                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), debug);
+                configuration = await loadConfiguration(configurator, this.debug);
+                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), this.debug);
             }
             controller.validateEvent('$activateKey');
 
@@ -367,37 +367,37 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             const certificate = contract.getAttribute('$document');
             if (!bali.areEqual(configuration.getAttribute('$certificate'), certificate)) {
                 const exception = bali.exception({
-                    $module: '/bali/notary/DigitalNotary',
+                    $module: moduleName,
                     $procedure: '$activateKey',
                     $exception: '$invalidCertificate',
                     $certificate: certificate,
                     $text: 'The certificate does not match the original certificate.'
                 });
-                if (debug > 0) console.error(exception.toString());
+                if (this.debug > 0) console.error(exception.toString());
                 throw exception;
             }
 
             // create the citation
             const citation = await createCitation(certificate);
-            if (debug > 2) console.log('citation: ' + bali.document(citation));
+            if (this.debug > 2) console.log('citation: ' + bali.document(citation));
 
             // update current state
             const state = controller.transitionState('$activateKey');
             configuration.setAttribute('$state', state);
             configuration.setAttribute('$citation', citation);
             configuration.setAttribute('$certificate', certificate);
-            await storeConfiguration(configurator, configuration, debug);
+            await storeConfiguration(configurator, configuration, this.debug);
 
             return citation;
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/DigitalNotary',
+                $module: moduleName,
                 $procedure: '$activateKey',
                 $exception: '$unexpected',
                 $contract: contract,
                 $text: 'An unexpected error occurred while attempting to activate the notary key.'
             }, cause);
-            if (debug > 0) console.error(exception.toString());
+            if (this.debug > 0) console.error(exception.toString());
             throw exception;
         }
     };
@@ -413,21 +413,21 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
         try {
             // check current state
             if (!configuration) {
-                configuration = await loadConfiguration(configurator, debug);
-                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), debug);
+                configuration = await loadConfiguration(configurator, this.debug);
+                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), this.debug);
             }
             const state = controller.transitionState('$getCitation');  // NOTE: straight to transition...
             configuration.setAttribute('$state', state);
-            await storeConfiguration(configurator, configuration, debug);
+            await storeConfiguration(configurator, configuration, this.debug);
             return configuration.getAttribute('$citation');
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/DigitalNotary',
+                $module: moduleName,
                 $procedure: '$getCitation',
                 $exception: '$unexpected',
                 $text: 'An unexpected error occurred while attempting to retrieve the certificate citation.'
             }, cause);
-            if (debug > 0) console.error(exception.toString());
+            if (this.debug > 0) console.error(exception.toString());
             throw exception;
         }
     };
@@ -444,8 +444,8 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     this.generateCredentials = async function(salt) {
         try {
             // validate the argument
-            if (debug > 1) {
-                bali.component.validateArgument('/bali/notary/DigitalNotary', '$generateCredentials', '$salt', salt, [
+            if (this.debug > 1) {
+                bali.component.validateArgument(moduleName, '$generateCredentials', '$salt', salt, [
                     '/javascript/Undefined',
                     '/bali/elements/Tag'
                 ]);
@@ -453,8 +453,8 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
 
             // check current state
             if (!configuration) {
-                configuration = await loadConfiguration(configurator, debug);
-                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), debug);
+                configuration = await loadConfiguration(configurator, this.debug);
+                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), this.debug);
             }
             controller.validateEvent('$generateCredentials');
 
@@ -466,23 +466,23 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             // notarize the credentials
             const certificate = configuration.getAttribute('$citation');
             const contract = await createContract(credentials, certificate);
-            if (debug > 2) console.log('notarized credentials: ' + bali.document(contract));
+            if (this.debug > 2) console.log('notarized credentials: ' + bali.document(contract));
 
             // update current state
             const state = controller.transitionState('$generateCredentials');
             configuration.setAttribute('$state', state);
-            await storeConfiguration(configurator, configuration, debug);
+            await storeConfiguration(configurator, configuration, this.debug);
 
             return contract;
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/DigitalNotary',
+                $module: moduleName,
                 $procedure: '$generateCredentials',
                 $exception: '$unexpected',
                 $salt: salt,
                 $text: 'An unexpected error occurred while attempting to generate credentials.'
             }, cause);
-            if (debug > 0) console.error(exception.toString());
+            if (this.debug > 0) console.error(exception.toString());
             throw exception;
         }
     };
@@ -506,8 +506,8 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     this.notarizeDocument = async function(document) {
         try {
             // validate the argument
-            if (debug > 1) {
-                bali.component.validateArgument('/bali/notary/DigitalNotary', '$notarizeDocument', '$document', document, [
+            if (this.debug > 1) {
+                bali.component.validateArgument(moduleName, '$notarizeDocument', '$document', document, [
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$notarizeDocument', 'document', document, 'document');
@@ -515,31 +515,31 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
 
             // check current state
             if (!configuration) {
-                configuration = await loadConfiguration(configurator, debug);
-                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), debug);
+                configuration = await loadConfiguration(configurator, this.debug);
+                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), this.debug);
             }
             controller.validateEvent('$notarizeDocument');
 
             // create the contract
             const certificate = configuration.getAttribute('$citation');
             const contract = await createContract(document, certificate);
-            if (debug > 2) console.log('notarized document: ' + bali.document(contract));
+            if (this.debug > 2) console.log('notarized document: ' + bali.document(contract));
 
             // update current state
             const state = controller.transitionState('$notarizeDocument');
             configuration.setAttribute('$state', state);
-            await storeConfiguration(configurator, configuration, debug);
+            await storeConfiguration(configurator, configuration, this.debug);
 
             return contract;
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/DigitalNotary',
+                $module: moduleName,
                 $procedure: '$notarizeDocument',
                 $exception: '$unexpected',
                 $document: document,
                 $text: 'An unexpected error occurred while attempting to notarize a document.'
             }, cause);
-            if (debug > 0) console.error(exception.toString());
+            if (this.debug > 0) console.error(exception.toString());
             throw exception;
         }
     };
@@ -556,12 +556,12 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
     this.validContract = async function(contract, certificate) {
         try {
             // validate the arguments
-            if (debug > 1) {
-                bali.component.validateArgument('/bali/notary/DigitalNotary', '$validContract', '$contract', contract, [
+            if (this.debug > 1) {
+                bali.component.validateArgument(moduleName, '$validContract', '$contract', contract, [
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$validContract', 'contract', contract, 'contract');
-                bali.component.validateArgument('/bali/notary/DigitalNotary', '$validContract', '$certificate', certificate, [
+                bali.component.validateArgument(moduleName, '$validContract', '$certificate', certificate, [
                     '/bali/collections/Catalog'
                 ]);
                 validateStructure('$validContract', 'certificate', certificate, 'contract');
@@ -572,7 +572,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 const certificateAccount = certificate.getAttribute('$account');
                 if (!bali.areEqual(contractAccount, certificateAccount)) {
                     const exception = bali.exception({
-                        $module: '/bali/notary/DigitalNotary',
+                        $module: moduleName,
                         $procedure: '$validContract',
                         $exception: '$accountMismatch',
                         $contract: contract,
@@ -587,7 +587,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 const certificateProtocol = certificate.getAttribute('$protocol');
                 if (!bali.areEqual(contractProtocol, certificateProtocol)) {
                     const exception = bali.exception({
-                        $module: '/bali/notary/DigitalNotary',
+                        $module: moduleName,
                         $procedure: '$validContract',
                         $exception: '$protocolMismatch',
                         $contract: contract,
@@ -607,7 +607,7 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
                 requiredModule = PROTOCOLS[requiredProtocol];
                 if (!requiredModule) {
                     const exception = bali.exception({
-                        $module: '/bali/notary/DigitalNotary',
+                        $module: moduleName,
                         $procedure: '$validContract',
                         $exception: '$unsupportedProtocol',
                         $expected: Object.keys(PROTOCOLS),
@@ -638,14 +638,14 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
             return result;
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/DigitalNotary',
+                $module: moduleName,
                 $procedure: '$validContract',
                 $exception: '$unexpected',
                 $contract: contract,
                 $certificate: certificate,
                 $text: 'An unexpected error occurred while attempting to validate a contract.'
             }, cause);
-            if (debug > 0) console.error(exception.toString());
+            if (this.debug > 0) console.error(exception.toString());
             throw exception;
         }
     };
@@ -661,8 +661,8 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
         try {
             // check current state
             if (!configuration) {
-                configuration = await loadConfiguration(configurator, debug);
-                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), debug);
+                configuration = await loadConfiguration(configurator, this.debug);
+                controller = bali.controller(REQUESTS, STATES, configuration.getAttribute('$state').toString(), this.debug);
             }
             controller.validateEvent('$refreshKey');
 
@@ -674,32 +674,32 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
 
             // create the new notary certificate
             const certificate = createCertificate(publicKey, tag, version, previous);
-            if (debug > 2) console.log('certificate: ' + bali.document(certificate));
+            if (this.debug > 2) console.log('certificate: ' + bali.document(certificate));
 
             // create a citation to the certificate
             const citation = await createCitation(certificate);
-            if (debug > 2) console.log('citation: ' + bali.document(citation));
+            if (this.debug > 2) console.log('citation: ' + bali.document(citation));
 
             // notarize the new certificate
             const contract = await createContract(certificate, previous);
-            if (debug > 2) console.log('notarized certificate: ' + bali.document(contract));
+            if (this.debug > 2) console.log('notarized certificate: ' + bali.document(contract));
 
             // update current state
             const state = controller.transitionState('$refreshKey');
             configuration.setAttribute('$state', state);
             configuration.setAttribute('$certificate', certificate);
             configuration.setAttribute('$citation', citation);
-            await storeConfiguration(configurator, configuration, debug);
+            await storeConfiguration(configurator, configuration, this.debug);
 
             return contract;
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/DigitalNotary',
+                $module: moduleName,
                 $procedure: '$refreshKey',
                 $exception: '$unexpected',
                 $text: 'An unexpected error occurred while attempting to refresh the notary key.'
             }, cause);
-            if (debug > 0) console.error(exception.toString());
+            if (this.debug > 0) console.error(exception.toString());
             throw exception;
         }
     };
@@ -712,17 +712,17 @@ const DigitalNotary = function(securityModule, account, directory, debug) {
         try {
             // erase the state of the digital notary
             await securityModule.eraseKeys();
-            await deleteConfiguration(configurator, debug);
+            await deleteConfiguration(configurator, this.debug);
             configuration = undefined;
 
         } catch (cause) {
             const exception = bali.exception({
-                $module: '/bali/notary/DigitalNotary',
+                $module: moduleName,
                 $procedure: '$forgetKey',
                 $exception: '$unexpected',
                 $text: 'An unexpected error occurred while attempting to forget the notary key.'
             }, cause);
-            if (debug > 0) console.error(exception.toString());
+            if (this.debug > 0) console.error(exception.toString());
             throw exception;
         }
     };
@@ -848,7 +848,7 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
         }
     }
     const exception = bali.exception({
-        $module: '/bali/notary/DigitalNotary',
+        $module: moduleName,
         $procedure: functionName,
         $exception: '$invalidParameter',
         $parameter: parameterName,
@@ -859,8 +859,6 @@ const validateStructure = function(functionName, parameterName, parameterValue, 
     throw exception;
 };
 
-
-// PRIVATE FUNCTIONS
 
 /**
  * This function uses a configurator to store out the specified configuration catalog to
@@ -877,7 +875,7 @@ const storeConfiguration = async function(configurator, configuration, debug) {
         await configurator.store(bali.document(configuration));
     } catch (cause) {
         const exception = bali.exception({
-            $module: '/bali/notary/DigitalNotary',
+            $module: moduleName,
             $procedure: '$storeConfiguration',
             $exception: '$storageException',
             $text: 'The attempt to store the current configuration failed.'
@@ -913,7 +911,7 @@ const loadConfiguration = async function(configurator, debug) {
         return configuration;
     } catch (cause) {
         const exception = bali.exception({
-            $module: '/bali/notary/DigitalNotary',
+            $module: moduleName,
             $procedure: '$loadConfiguration',
             $exception: '$storageException',
             $text: 'The attempt to load the current configuration failed.'
@@ -938,7 +936,7 @@ const deleteConfiguration = async function(configurator, debug) {
         await configurator.delete();
     } catch (cause) {
         const exception = bali.exception({
-            $module: '/bali/notary/DigitalNotary',
+            $module: moduleName,
             $procedure: '$deleteConfiguration',
             $exception: '$storageException',
             $text: 'The attempt to delete the current configuration failed.'
